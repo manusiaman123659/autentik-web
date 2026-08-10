@@ -1,0 +1,516 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2, Plus, Trash2, Save } from "lucide-react";
+import { upsertProduct } from "@/lib/actions/products";
+import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
+import type { ProductType } from "@/lib/validations/productSchema";
+import type { ProductRow } from "@/lib/admin-data";
+
+interface FeatureInput {
+  label: string;
+  value: string;
+}
+
+export interface ProductFormValues {
+  id?: string;
+  productType: ProductType;
+  slug: string;
+  name: string;
+  brand: string;
+  category: string;
+  description: string;
+  brandColor: string;
+  categoryColor: string;
+  imageUrl: string;
+  features: string[];
+  specs: FeatureInput[];
+  isActive: boolean;
+  seoTitle: string;
+  seoDescription: string;
+  sku?: string;
+  price?: string;
+  compareAtPrice?: string;
+  weightGrams?: string;
+  stock?: string;
+  lowStockThreshold?: string;
+  variants: { name: string; options: string }[];
+  isStoreVisible: boolean;
+}
+
+function toFormValues(product: ProductRow | undefined, productType: ProductType): ProductFormValues {
+  return {
+    id: product?.id,
+    productType,
+    slug: product?.slug ?? "",
+    name: product?.name ?? "",
+    brand: product?.brand ?? "",
+    category: product?.category ?? "",
+    description: product?.description ?? "",
+    brandColor: product?.brand_color ?? "#0EA5A0",
+    categoryColor: product?.category_color ?? "#0B1F3A",
+    imageUrl: product?.image_url ?? "",
+    features: Array.isArray(product?.features)
+      ? product.features.map((f) => String(f ?? "")).filter(Boolean)
+      : [],
+    specs: Array.isArray(product?.specs)
+      ? product.specs.map((s) => ({ label: s?.label ?? "", value: s?.value ?? "" }))
+      : [],
+    isActive: product?.is_active ?? true,
+    seoTitle: product?.seo_title ?? "",
+    seoDescription: product?.seo_description ?? "",
+    sku: product?.sku ? String(product.sku) : "",
+    price: product?.price != null ? String(product.price) : "",
+    compareAtPrice: product?.compare_at_price != null ? String(product.compare_at_price) : "",
+    weightGrams: product?.weight_grams != null ? String(product.weight_grams) : "",
+    stock: product?.stock != null ? String(product.stock) : "",
+    lowStockThreshold: product?.low_stock_threshold != null ? String(product.low_stock_threshold) : "5",
+    variants: Array.isArray(product?.variants)
+      ? product.variants.map((v) => ({
+          name: v?.name ?? "",
+          options: Array.isArray(v?.options) ? v.options.join(", ") : "",
+        }))
+      : [],
+    isStoreVisible: product?.is_store_visible ?? true,
+  };
+}
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16) || 0;
+  const g = parseInt(h.slice(2, 4), 16) || 0;
+  const b = parseInt(h.slice(4, 6), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+export default function ProductForm({
+  productType,
+  initial,
+}: {
+  productType: ProductType;
+  initial?: ProductRow;
+}) {
+  const router = useRouter();
+  const [form, setForm] = useState<ProductFormValues>(() => toFormValues(initial, productType));
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  const isSparepart = productType === "sparepart";
+
+  const set = <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[key as string];
+      return next;
+    });
+  };
+
+  const setSpec = (index: number, key: "label" | "value", value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      specs: prev.specs.map((s, i) => (i === index ? { ...s, [key]: value } : s)),
+    }));
+  };
+
+  const setFeature = (index: number, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      features: prev.features.map((f, i) => (i === index ? value : f)),
+    }));
+  };
+
+  const setVariant = (index: number, key: "name" | "options", value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      variants: prev.variants.map((v, i) => (i === index ? { ...v, [key]: value } : v)),
+    }));
+  };
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    setErrors({});
+    const payload = {
+      ...form,
+      productType,
+      specs: form.specs.filter((s) => s.label.trim() || s.value.trim()),
+      features: form.features.filter((f) => f.trim()),
+      variants: form.variants
+        .map((v) => ({ name: v.name.trim(), options: v.options.split(",").map((o) => o.trim()).filter(Boolean) }))
+        .filter((v) => v.name),
+    };
+    const result = await upsertProduct(payload);
+    setSaving(false);
+    if (!result.success) {
+      setErrors(result.errors ?? {});
+      return;
+    }
+    router.push(isSparepart ? "/admin/sparepart" : "/admin/produk");
+    router.refresh();
+  };
+
+  return (
+    <div className="max-w-4xl space-y-6">
+      {Object.keys(errors).length > 0 && (
+        <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-4 py-3">
+          <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">Terdapat kesalahan pada isian:</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            {Object.entries(errors).map(([k, v]) => (
+              <li key={k} className="text-xs text-red-600 dark:text-red-400">
+                {k}: {v}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <h2 className="text-base font-bold text-slate-900 dark:text-white mb-5">Informasi Dasar</h2>
+        <div className="grid sm:grid-cols-2 gap-5">
+          <div>
+            <label className={labelClass}>Nama Produk</label>
+            <input
+              className={inputClass}
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+              placeholder="Nama produk"
+            />
+            <FieldError message={errors.name} />
+          </div>
+          <div>
+            <label className={labelClass}>Slug (URL)</label>
+            <input
+              className={inputClass}
+              value={form.slug}
+              onChange={(e) => set("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+              placeholder="nama-produk"
+            />
+            <FieldError message={errors.slug} />
+          </div>
+          <div>
+            <label className={labelClass}>Merek</label>
+            <input className={inputClass} value={form.brand} onChange={(e) => set("brand", e.target.value)} placeholder="Talpha" />
+            <FieldError message={errors.brand} />
+          </div>
+          <div>
+            <label className={labelClass}>Kategori</label>
+            <input className={inputClass} value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="IoT Monitoring" />
+            <FieldError message={errors.category} />
+          </div>
+          <div>
+            <label className={labelClass}>Warna Merek</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                className="w-12 h-11 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
+                value={/^#[0-9a-fA-F]{6}$/.test(form.brandColor) ? form.brandColor : "#0EA5A0"}
+                onChange={(e) => set("brandColor", e.target.value)}
+              />
+              <input
+                className={inputClass}
+                value={form.brandColor}
+                onChange={(e) => set("brandColor", e.target.value)}
+                placeholder="#0EA5A0"
+              />
+            </div>
+            <FieldError message={errors.brandColor} />
+          </div>
+          <div>
+            <label className={labelClass}>Warna Kategori</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                className="w-12 h-11 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
+                value={/^#[0-9a-fA-F]{6}$/.test(form.categoryColor) ? form.categoryColor : "#0B1F3A"}
+                onChange={(e) => set("categoryColor", e.target.value)}
+              />
+              <input
+                className={inputClass}
+                value={form.categoryColor}
+                onChange={(e) => set("categoryColor", e.target.value)}
+                placeholder="#0B1F3A"
+              />
+            </div>
+            <FieldError message={errors.categoryColor} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>URL Gambar</label>
+            <input
+              className={inputClass}
+              value={form.imageUrl}
+              onChange={(e) => set("imageUrl", e.target.value)}
+              placeholder="/images/... atau https://..."
+            />
+            <FieldError message={errors.imageUrl} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Deskripsi</label>
+            <textarea
+              className={`${inputClass} min-h-[110px]`}
+              value={form.description}
+              onChange={(e) => set("description", e.target.value)}
+              placeholder="Deskripsi produk"
+            />
+            <FieldError message={errors.description} />
+          </div>
+        </div>
+      </section>
+
+      {isSparepart && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-5">Stok & Harga Jual</h2>
+          <div className="grid sm:grid-cols-3 gap-5">
+            <div>
+              <label className={labelClass}>SKU</label>
+              <input className={inputClass} value={form.sku ?? ""} onChange={(e) => set("sku", e.target.value)} placeholder="TAL-PRB-001" />
+              <FieldError message={errors.sku} />
+            </div>
+            <div>
+              <label className={labelClass}>Harga (Rp)</label>
+              <input
+                type="number"
+                min={0}
+                className={inputClass}
+                value={form.price ?? ""}
+                onChange={(e) => set("price", e.target.value)}
+                placeholder="150000"
+              />
+              <FieldError message={errors.price} />
+            </div>
+            <div>
+              <label className={labelClass}>Harga Coret (opsional)</label>
+              <input
+                type="number"
+                min={0}
+                className={inputClass}
+                value={form.compareAtPrice ?? ""}
+                onChange={(e) => set("compareAtPrice", e.target.value)}
+                placeholder="200000"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Berat (gram)</label>
+              <input
+                type="number"
+                min={0}
+                className={inputClass}
+                value={form.weightGrams ?? ""}
+                onChange={(e) => set("weightGrams", e.target.value)}
+                placeholder="500"
+              />
+              <FieldError message={errors.weightGrams} />
+            </div>
+            <div>
+              <label className={labelClass}>Stok</label>
+              <input
+                type="number"
+                min={0}
+                className={inputClass}
+                value={form.stock ?? ""}
+                onChange={(e) => set("stock", e.target.value)}
+                placeholder="10"
+              />
+              <FieldError message={errors.stock} />
+            </div>
+            <div>
+              <label className={labelClass}>Batas Stok Menipis</label>
+              <input
+                type="number"
+                min={0}
+                className={inputClass}
+                value={form.lowStockThreshold ?? "5"}
+                onChange={(e) => set("lowStockThreshold", e.target.value)}
+                placeholder="5"
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">Keunggulan</h2>
+          <button
+            type="button"
+            onClick={() => set("features", [...form.features, ""])}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0EA5A0] hover:underline"
+          >
+            <Plus size={14} />
+            Tambah
+          </button>
+        </div>
+        {form.features.length === 0 && (
+          <p className="text-xs text-slate-400 mb-4">Belum ada keunggulan. Klik &quot;Tambah&quot; untuk menulis poin.</p>
+        )}
+        <div className="space-y-2">
+          {form.features.map((f, i) => (
+            <div key={i} className="flex gap-2 items-start">
+              <div
+                className="mt-2.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ background: hexToRgba(form.brandColor, 1) }}
+              />
+              <input
+                className={inputClass}
+                value={f}
+                onChange={(e) => setFeature(i, e.target.value)}
+                placeholder="Poin keunggulan produk"
+              />
+              <button
+                type="button"
+                onClick={() => set("features", form.features.filter((_, x) => x !== i))}
+                className="mt-2 text-slate-400 hover:text-red-500 transition-colors"
+                aria-label="Hapus poin"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">Spesifikasi</h2>
+          <button
+            type="button"
+            onClick={() => set("specs", [...form.specs, { label: "", value: "" }])}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0EA5A0] hover:underline"
+          >
+            <Plus size={14} />
+            Tambah
+          </button>
+        </div>
+        {form.specs.length === 0 && (
+          <p className="text-xs text-slate-400 mb-4">Belum ada spesifikasi. Klik &quot;Tambah&quot; untuk menulis label &amp; nilai.</p>
+        )}
+        <div className="space-y-2">
+          {form.specs.map((s, i) => (
+            <div key={i} className="flex gap-2 items-start">
+              <input
+                className={inputClass}
+                value={s.label}
+                onChange={(e) => setSpec(i, "label", e.target.value)}
+                placeholder="Label (mis. Tipe Sensor)"
+              />
+              <input
+                className={inputClass}
+                value={s.value}
+                onChange={(e) => setSpec(i, "value", e.target.value)}
+                placeholder="Nilai (mis. PT100 RTD)"
+              />
+              <button
+                type="button"
+                onClick={() => set("specs", form.specs.filter((_, x) => x !== i))}
+                className="mt-2 text-slate-400 hover:text-red-500 transition-colors"
+                aria-label="Hapus spesifikasi"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {isSparepart && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Varian (opsional)</h2>
+            <button
+              type="button"
+              onClick={() => set("variants", [...form.variants, { name: "", options: "" }])}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0EA5A0] hover:underline"
+            >
+              <Plus size={14} />
+              Tambah
+            </button>
+          </div>
+          {form.variants.length === 0 && (
+            <p className="text-xs text-slate-400 mb-4">Misalnya varian &quot;Panjang&quot; dengan opsi &quot;1m, 3m, 5m&quot;.</p>
+          )}
+          <div className="space-y-2">
+            {form.variants.map((v, i) => (
+              <div key={i} className="flex gap-2 items-start">
+                <input
+                  className={inputClass}
+                  value={v.name}
+                  onChange={(e) => setVariant(i, "name", e.target.value)}
+                  placeholder="Nama varian (mis. Panjang)"
+                />
+                <input
+                  className={inputClass}
+                  value={v.options}
+                  onChange={(e) => setVariant(i, "options", e.target.value)}
+                  placeholder="Opsi, dipisah koma (mis. 1m, 3m, 5m)"
+                />
+                <button
+                  type="button"
+                  onClick={() => set("variants", form.variants.filter((_, x) => x !== i))}
+                  className="mt-2 text-slate-400 hover:text-red-500 transition-colors"
+                  aria-label="Hapus varian"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <h2 className="text-base font-bold text-slate-900 dark:text-white mb-5">SEO & Status</h2>
+        <div className="grid sm:grid-cols-2 gap-5">
+          <div>
+            <label className={labelClass}>Judul SEO</label>
+            <input className={inputClass} value={form.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} />
+          </div>
+          <div>
+            <label className={labelClass}>Deskripsi SEO</label>
+            <input className={inputClass} value={form.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} />
+          </div>
+        </div>
+        <div className="mt-5 space-y-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(e) => set("isActive", e.target.checked)}
+              className="w-4 h-4 rounded accent-[#0EA5A0]"
+            />
+            <span className="text-sm text-slate-700 dark:text-slate-300">Aktif & tampil di situs</span>
+          </label>
+          {isSparepart && (
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.isStoreVisible}
+                onChange={(e) => set("isStoreVisible", e.target.checked)}
+                className="w-4 h-4 rounded accent-[#0EA5A0]"
+              />
+              <span className="text-sm text-slate-700 dark:text-slate-300">Tampil di halaman Store</span>
+            </label>
+          )}
+        </div>
+      </section>
+
+      <div className="flex items-center justify-end gap-3 pt-2 pb-10">
+        <button
+          type="button"
+          onClick={() => router.push(isSparepart ? "/admin/sparepart" : "/admin/produk")}
+          className="px-5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        >
+          Batal
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={saving}
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0C8C87] transition-colors disabled:opacity-60"
+        >
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          Simpan Produk
+        </button>
+      </div>
+    </div>
+  );
+}
