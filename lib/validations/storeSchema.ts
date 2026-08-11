@@ -54,6 +54,27 @@ export const manualOrderSchema = z.object({
 
 export type ManualOrderFormData = z.infer<typeof manualOrderSchema>;
 
+export const checkoutOrderSchema = z.object({
+  customerName: z.string().min(2, "Nama pembeli minimal 2 karakter"),
+  customerEmail: z.string().email("Format email tidak valid").or(z.literal("")).default(""),
+  customerPhone: z.string().default(""),
+  address: z.string().min(8, "Alamat minimal 8 karakter"),
+  city: z.string().min(2, "Kota wajib diisi"),
+  province: z.string().min(2, "Provinsi wajib diisi"),
+  postalCode: z.string().default(""),
+  notes: z.string().default(""),
+  items: z
+    .array(
+      z.object({
+        productId: z.string().min(1, "ID produk tidak valid"),
+        quantity: z.coerce.number().int().min(1).max(999, "Jumlah maksimal 999"),
+      })
+    )
+    .min(1, "Minimal 1 item pesanan"),
+});
+
+export type CheckoutOrderFormData = z.input<typeof checkoutOrderSchema>;
+
 export const storeSettingsSchema = z.object({
   currency: z.string().min(1, "Mata uang wajib diisi"),
   enableShipping: z.boolean().default(false),

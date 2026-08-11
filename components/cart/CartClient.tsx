@@ -213,16 +213,15 @@ export default function CartClient() {
                 </span>
               </div>
 
-              <button
-                type="button"
-                disabled
-                title="Checkout tersedia di fitur yang akan datang (TODO cart/checkout)"
-                className="mt-6 w-full py-3.5 rounded-xl font-semibold text-white bg-[#0EA5A0] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              <Link
+                href="/store/checkout"
+                className="mt-6 w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
               >
                 Checkout
-              </button>
+                <ChevronRight size={16} />
+              </Link>
               <p className="text-[11px] text-slate-400 text-center mt-2 font-light">
-                Checkout tersedia di fitur berikutnya.
+                Pembayaran transfer, dikonfirmasi manual oleh tim kami.
               </p>
             </div>
           </div>

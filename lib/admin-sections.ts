@@ -24,8 +24,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Toko Sparepart",
     items: [
       { key: "orders", href: "/admin/orders", label: "Pesanan", description: "Proses pesanan sparepart: status bayar & kirim" },
-      { key: "sparepart", href: "/admin/sparepart", label: "Katalog Sparepart", description: "Produk bertipe sparepart yang tampil di /store" },
-      { key: "stok", href: "/admin/stok", label: "Stok & Varian", description: "Kelola jumlah stok, varian, dan berat produk" },
+      { key: "sparepart", href: "/admin/sparepart", label: "Katalog Sparepart", description: "Sparepart yang tampil di /store" },
+      { key: "stok", href: "/admin/stok", label: "Stok & Varian", description: "Kelola jumlah stok, varian, dan berat sparepart" },
     ],
   },
   {

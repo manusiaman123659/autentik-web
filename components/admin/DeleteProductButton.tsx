@@ -44,7 +44,7 @@ export default function DeleteProductButton({
       </button>
       {open && (
         <ConfirmDialog
-          title={`Hapus ${name ? `"${name}"` : "produk ini"}?`}
+          title={`Hapus ${name ? `"${name}"` : "item ini"}?`}
           description="Apakah Anda yakin? Data yang dihapus tidak dapat dipulihkan."
           onConfirm={handleConfirm}
           onCancel={() => setOpen(false)}

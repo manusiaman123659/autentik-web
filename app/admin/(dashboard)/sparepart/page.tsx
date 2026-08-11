@@ -16,7 +16,7 @@ export default async function AdminSparepartPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Katalog Sparepart"
-        description="Produk bertipe sparepart yang tampil di halaman /store"
+        description="Sparepart yang tampil di halaman /store"
         actionLabel="Tambah Sparepart"
         actionHref="/admin/sparepart/new"
       />
