@@ -64,8 +64,8 @@ export async function markMessageRead(id: string, isRead: boolean): Promise<Acti
   }
 
   await recordAudit("inquiry.read_toggled", "contact_message", id, { is_read: isRead });
-  revalidatePath("/admin/inquiries");
-  revalidatePath("/admin/inquiries/" + id);
+  revalidatePath("/admin/inquiry");
+  revalidatePath("/admin/inquiry/" + id);
   revalidatePath("/admin");
 
   return { success: true, message: isRead ? "Pesan ditandai sudah dibaca." : "Pesan ditandai belum dibaca." };

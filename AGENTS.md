@@ -43,7 +43,8 @@ The admin CMS (`app/admin/`) writes to Supabase (products, orders, etc.), but th
 ## Forms & API routes
 - **Public-facing forms** (contact form, login) use react-hook-form + `@hookform/resolvers` + **zod v4**; schemas live in `lib/validations/*.ts` and are shared between client forms and server handlers.
 - **Admin forms** (e.g. `ProductForm` under `/admin/produk`, `/admin/sparepart`) do **not** use react-hook-form. They use local `useState` for field state and call a server action directly on submit. Follow this pattern for new admin forms — don't introduce react-hook-form into `app/admin/`.
-- `app/api/contact` validates with zod `safeParse` then only `console.log` — email/DB integration is an explicit TODO. Keep response shape `{ success, message, errors? }`.
+- **Admin image upload**: `ProductForm` uploads images client-side via the browser Supabase client (`utils/supabase/client.ts`) to the public `media` bucket (staff-only `storage.objects` RLS policies in `0004_media_storage_policies.sql`) and stores the resulting public URL in `products.image_url`. No URL input field.
+- `app/api/contact` validates with zod `safeParse` then inserts the submission into the `contact_messages` table (anon insert via RLS) — it surfaces in `/admin/inquiry`. Keep response shape `{ success, message, errors? }`.
 
 ## Admin data & server action patterns
 - **`lib/admin-data.ts`** is a server-only data layer (uses `cookies()`) for reading admin data (dashboard stats, orders, inquiries, etc). **Never import it into a client component** — same constraint as `lib/admin.ts` below, but this one is for data fetching rather than auth.

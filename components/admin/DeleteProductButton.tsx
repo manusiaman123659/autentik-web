@@ -37,7 +37,7 @@ export default function DeleteProductButton({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600 hover:underline transition-colors"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:border-red-300 dark:hover:border-red-700 transition-colors"
       >
         <Trash2 size={13} />
         Hapus
@@ -45,7 +45,7 @@ export default function DeleteProductButton({
       {open && (
         <ConfirmDialog
           title={`Hapus ${name ? `"${name}"` : "produk ini"}?`}
-          description="Produk akan dihapus permanen dari database. Tindakan ini tidak dapat dibatalkan."
+          description="Apakah Anda yakin? Data yang dihapus tidak dapat dipulihkan."
           onConfirm={handleConfirm}
           onCancel={() => setOpen(false)}
           busy={busy}

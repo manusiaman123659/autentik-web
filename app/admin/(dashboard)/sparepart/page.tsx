@@ -86,7 +86,7 @@ export default async function AdminSparepartPage() {
                     >
                       Edit
                     </Link>
-                    <DeleteProductButton id={p.id} redirectTo="/admin/sparepart" />
+                    <DeleteProductButton id={p.id} name={p.name} redirectTo="/admin/sparepart" />
                   </Td>
                 </tr>
               );

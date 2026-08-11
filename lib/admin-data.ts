@@ -283,9 +283,35 @@ export async function listProductsByType(
   return (data ?? []) as ProductRow[];
 }
 
+export async function listStoreProducts(): Promise<ProductRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("product_type", "sparepart")
+    .eq("is_store_visible", true)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[admin-data] store products", error);
+    return [];
+  }
+  return (data ?? []) as ProductRow[];
+}
+
 export async function getProduct(id: string): Promise<ProductRow | null> {
   const supabase = await getSupabase();
   const { data, error } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+  if (error || !data) return null;
+  return data as ProductRow;
+}
+
+export async function getProductBySlug(slug: string): Promise<ProductRow | null> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
   if (error || !data) return null;
   return data as ProductRow;
 }

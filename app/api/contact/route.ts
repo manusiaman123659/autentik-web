@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { contactSchema } from "@/lib/validations/contactSchema";
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,16 +21,24 @@ export async function POST(request: NextRequest) {
 
     const { fullName, email, company, industry, message } = parsed.data;
 
-    // TODO: Integrasi email (Resend/Nodemailer) saat konfigurasi siap
-    // Untuk saat ini, log ke console dan return success
-    console.log("📧 Inquiry baru diterima:", {
-      fullName,
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+
+    const { error } = await supabase.from("contact_messages").insert({
+      full_name: fullName,
       email,
       company,
       industry,
       message,
-      timestamp: new Date().toISOString(),
     });
+
+    if (error) {
+      console.error("Contact API insert error:", error);
+      return NextResponse.json(
+        { success: false, message: "Terjadi kesalahan server" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       {

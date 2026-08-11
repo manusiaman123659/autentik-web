@@ -1,10 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, Trash2, Save } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Save,
+  Upload,
+  Wand2,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { upsertProduct } from "@/lib/actions/products";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
+import { createClient } from "@/utils/supabase/client";
 import type { ProductType } from "@/lib/validations/productSchema";
 import type { ProductRow } from "@/lib/admin-data";
 
@@ -84,6 +95,125 @@ const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+
+const normalizeHex = (value: string, fallback: string) => {
+  const v = value.trim().toLowerCase();
+  if (/^[0-9a-f]{6}$/.test(v)) return `#${v}`;
+  if (/^#[0-9a-f]{6}$/.test(v)) return v;
+  return fallback;
+};
+
+function ColorField({
+  label,
+  value,
+  fallback,
+  onChange,
+  errorMessage,
+}: {
+  label: string;
+  value: string;
+  fallback: string;
+  onChange: (hex: string) => void;
+  errorMessage?: string;
+}) {
+  const normalized = /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
+  return (
+    <div>
+      <label className={labelClass}>{label}</label>
+      <div className="flex items-center gap-3">
+        <div className="relative flex-shrink-0">
+          <input
+            type="color"
+            className="w-12 h-11 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
+            value={normalized}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          <span
+            className="pointer-events-none absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-8 h-2 rounded-full border border-slate-200 dark:border-slate-700"
+            style={{ background: normalized }}
+          />
+        </div>
+        <input
+          className={`${inputClass} font-mono`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={(e) => onChange(normalizeHex(e.target.value, fallback))}
+          placeholder="cth. #0EA5A0"
+          maxLength={7}
+        />
+      </div>
+      <FieldError message={errorMessage} />
+    </div>
+  );
+}
+
+interface RowDragProps {
+  index: number;
+  count: number;
+  onItemDrop: (source: number, target: number) => void;
+  onMove: (source: number, target: number) => void;
+}
+
+function RowDragHandle({ index, count, onItemDrop, onMove }: RowDragProps) {
+  const dragSourceRef = useRef<number | null>(null);
+  return (
+    <div className="mt-2.5 flex items-center gap-0.5 flex-shrink-0">
+      <span
+        draggable
+        onDragStart={(e) => {
+          dragSourceRef.current = index;
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", String(index));
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const source = dragSourceRef.current ?? Number(e.dataTransfer.getData("text/plain"));
+          dragSourceRef.current = null;
+          if (source === index) return;
+          onItemDrop(source, index);
+        }}
+        onDragEnd={() => {
+          dragSourceRef.current = null;
+        }}
+        className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded transition-colors"
+        title="Tahan & seret untuk mengubah urutan"
+      >
+        <GripVertical size={16} />
+      </span>
+      <button
+        type="button"
+        onClick={() => onMove(index, index - 1)}
+        disabled={index === 0}
+        className="p-0.5 text-slate-300 hover:text-[#0EA5A0] disabled:opacity-30 disabled:hover:text-slate-300 transition-colors"
+        aria-label="Pindah ke atas"
+      >
+        <ArrowUp size={14} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onMove(index, index + 1)}
+        disabled={index === count - 1}
+        className="p-0.5 text-slate-300 hover:text-[#0EA5A0] disabled:opacity-30 disabled:hover:text-slate-300 transition-colors"
+        aria-label="Pindah ke bawah"
+      >
+        <ArrowDown size={14} />
+      </button>
+    </div>
+  );
+}
+
 export default function ProductForm({
   productType,
   initial,
@@ -95,6 +225,9 @@ export default function ProductForm({
   const [form, setForm] = useState<ProductFormValues>(() => toFormValues(initial, productType));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isSparepart = productType === "sparepart";
 
@@ -126,6 +259,71 @@ export default function ProductForm({
       ...prev,
       variants: prev.variants.map((v, i) => (i === index ? { ...v, [key]: value } : v)),
     }));
+  };
+
+  const moveItem = <T,>(arr: T[], from: number, to: number): T[] => {
+    if (to < 0 || to >= arr.length || from === to) return arr;
+    const next = [...arr];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    return next;
+  };
+
+  const reorderAction = <T,>(
+    key: "features" | "specs" | "variants",
+    source: number,
+    target: number
+  ) => {
+    setForm((prev) => {
+      const list = prev[key] as unknown as T[];
+      return { ...prev, [key]: moveItem(list, source, target) as never };
+    });
+  };
+
+  const handleFileChange = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadError("");
+    if (!file.type.startsWith("image/")) {
+      setUploadError("File harus berupa gambar (PNG, JPG, WEBP, dll).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("Ukuran gambar maksimal 5MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const supabase = createClient();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        setUploadError("Sesi Anda telah berakhir. Silakan masuk kembali.");
+        return;
+      }
+
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
+      const path = `products/${productType}/${Date.now()}-${safeName}`;
+      const { error } = await supabase.storage.from("media").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (error) {
+        if (error.message.toLowerCase().includes("row-level security")) {
+          setUploadError("Gagal mengunggah: kebijakan akses storage belum diterapkan di Supabase (jalankan migrasi 0004).");
+        } else {
+          setUploadError("Gagal mengunggah gambar. " + error.message);
+        }
+        return;
+      }
+      const { data } = supabase.storage.from("media").getPublicUrl(path);
+      set("imageUrl", data.publicUrl);
+    } catch {
+      setUploadError("Terjadi kesalahan saat mengunggah gambar.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -180,12 +378,24 @@ export default function ProductForm({
           </div>
           <div>
             <label className={labelClass}>Slug (URL)</label>
-            <input
-              className={inputClass}
-              value={form.slug}
-              onChange={(e) => set("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
-              placeholder="nama-produk"
-            />
+            <div className="flex items-stretch gap-2">
+              <input
+                className={inputClass}
+                value={form.slug}
+                onChange={(e) => set("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+                placeholder="nama-produk"
+              />
+              <button
+                type="button"
+                onClick={() => set("slug", slugify(form.name))}
+                disabled={!form.name.trim()}
+                title="Generate slug otomatis dari nama produk"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                <Wand2 size={15} />
+                Auto
+              </button>
+            </div>
             <FieldError message={errors.slug} />
           </div>
           <div>
@@ -198,51 +408,78 @@ export default function ProductForm({
             <input className={inputClass} value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="IoT Monitoring" />
             <FieldError message={errors.category} />
           </div>
-          <div>
-            <label className={labelClass}>Warna Merek</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                className="w-12 h-11 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
-                value={/^#[0-9a-fA-F]{6}$/.test(form.brandColor) ? form.brandColor : "#0EA5A0"}
-                onChange={(e) => set("brandColor", e.target.value)}
-              />
-              <input
-                className={inputClass}
-                value={form.brandColor}
-                onChange={(e) => set("brandColor", e.target.value)}
-                placeholder="#0EA5A0"
-              />
-            </div>
-            <FieldError message={errors.brandColor} />
-          </div>
-          <div>
-            <label className={labelClass}>Warna Kategori</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                className="w-12 h-11 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
-                value={/^#[0-9a-fA-F]{6}$/.test(form.categoryColor) ? form.categoryColor : "#0B1F3A"}
-                onChange={(e) => set("categoryColor", e.target.value)}
-              />
-              <input
-                className={inputClass}
-                value={form.categoryColor}
-                onChange={(e) => set("categoryColor", e.target.value)}
-                placeholder="#0B1F3A"
-              />
-            </div>
-            <FieldError message={errors.categoryColor} />
-          </div>
+          <ColorField
+            label="Warna Merek"
+            value={form.brandColor}
+            fallback="#0EA5A0"
+            onChange={(hex) => set("brandColor", hex)}
+            errorMessage={errors.brandColor}
+          />
+          <ColorField
+            label="Warna Kategori"
+            value={form.categoryColor}
+            fallback="#0B1F3A"
+            onChange={(hex) => set("categoryColor", hex)}
+            errorMessage={errors.categoryColor}
+          />
           <div className="sm:col-span-2">
-            <label className={labelClass}>URL Gambar</label>
+            <label className={labelClass}>Gambar Produk</label>
             <input
-              className={inputClass}
-              value={form.imageUrl}
-              onChange={(e) => set("imageUrl", e.target.value)}
-              placeholder="/images/... atau https://..."
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                void handleFileChange(e.target.files?.[0]);
+                e.target.value = "";
+              }}
             />
-            <FieldError message={errors.imageUrl} />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="w-full rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-[#0EA5A0] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden"
+            >
+              {form.imageUrl ? (
+                <div className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={form.imageUrl}
+                    alt=""
+                    className="w-full h-52 object-cover"
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 text-transparent group-hover:bg-black/40 group-hover:text-white transition-colors font-semibold text-sm">
+                    <Upload size={18} />
+                    Ubah gambar
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-10 px-4">
+                  {uploading ? (
+                    <Loader2 size={28} className="animate-spin text-[#0EA5A0]" />
+                  ) : (
+                    <Upload size={28} className="text-slate-400" />
+                  )}
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    {uploading ? "Mengunggah..." : "Pilih & Unggah Gambar"}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    PNG, JPG, WEBP — maksimal 5MB
+                  </p>
+                </div>
+              )}
+            </button>
+            {form.imageUrl && (
+              <button
+                type="button"
+                onClick={() => set("imageUrl", "")}
+                className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:underline"
+              >
+                <Trash2 size={14} />
+                Hapus gambar
+              </button>
+            )}
+            <FieldError message={uploadError || errors.imageUrl} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass}>Deskripsi</label>
@@ -346,6 +583,11 @@ export default function ProductForm({
         <div className="space-y-2">
           {form.features.map((f, i) => (
             <div key={i} className="flex gap-2 items-start">
+              <RowDragHandle
+                index={i}
+                count={form.features.length}                onItemDrop={(source, target) => reorderAction("features", source, target)}
+                onMove={(source, target) => reorderAction("features", source, target)}
+              />
               <div
                 className="mt-2.5 w-1.5 h-1.5 rounded-full flex-shrink-0"
                 style={{ background: hexToRgba(form.brandColor, 1) }}
@@ -387,6 +629,11 @@ export default function ProductForm({
         <div className="space-y-2">
           {form.specs.map((s, i) => (
             <div key={i} className="flex gap-2 items-start">
+              <RowDragHandle
+                index={i}
+                count={form.specs.length}                onItemDrop={(source, target) => reorderAction("specs", source, target)}
+                onMove={(source, target) => reorderAction("specs", source, target)}
+              />
               <input
                 className={inputClass}
                 value={s.label}
@@ -431,6 +678,11 @@ export default function ProductForm({
           <div className="space-y-2">
             {form.variants.map((v, i) => (
               <div key={i} className="flex gap-2 items-start">
+                <RowDragHandle
+                  index={i}
+                  count={form.variants.length}                  onItemDrop={(source, target) => reorderAction("variants", source, target)}
+                  onMove={(source, target) => reorderAction("variants", source, target)}
+                />
                 <input
                   className={inputClass}
                   value={v.name}
@@ -462,11 +714,23 @@ export default function ProductForm({
         <div className="grid sm:grid-cols-2 gap-5">
           <div>
             <label className={labelClass}>Judul SEO</label>
-            <input className={inputClass} value={form.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} />
+            <input className={inputClass} value={form.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} maxLength={70} />
+            <p className={`mt-1 text-right text-[11px] ${form.seoTitle.length > 60 ? "text-red-500" : "text-slate-400"}`}>
+              {form.seoTitle.length}/60
+            </p>
           </div>
           <div>
             <label className={labelClass}>Deskripsi SEO</label>
-            <input className={inputClass} value={form.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} />
+            <textarea
+              className={`${inputClass} min-h-[72px] resize-y`}
+              value={form.seoDescription}
+              onChange={(e) => set("seoDescription", e.target.value)}
+              rows={2}
+              maxLength={170}
+            />
+            <p className={`mt-1 text-right text-[11px] ${form.seoDescription.length > 160 ? "text-red-500" : "text-slate-400"}`}>
+              {form.seoDescription.length}/160
+            </p>
           </div>
         </div>
         <div className="mt-5 space-y-3">

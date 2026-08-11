@@ -8,43 +8,55 @@ import {
   MessageCircle,
   Phone,
   ChevronRight,
-  Package,
   Wrench,
 } from "lucide-react";
-import { products } from "@/lib/data/products";
+import { getProductBySlug } from "@/lib/admin-data";
+import type { ProductRow } from "@/lib/admin-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
-
-
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 
 type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export async function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
+export const dynamic = "force-dynamic";
+
+function toPublicProduct(row: ProductRow) {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    brand: row.brand,
+    brandColor: row.brand_color ?? "#0EA5A0",
+    category: row.category,
+    categoryColor: row.category_color ?? "teal",
+    description: row.description,
+    features: Array.isArray(row.features)
+      ? row.features.map((f) => String(f ?? "")).filter(Boolean)
+      : [],
+    specs: Array.isArray(row.specs)
+      ? row.specs.map((s) => ({ label: String(s?.label ?? ""), value: String(s?.value ?? "") }))
+      : [],
+    imageUrl: row.image_url ?? undefined,
+  };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = products.find((p) => p.slug === slug);
-  if (!product) return {};
+  const row = await getProductBySlug(slug);
+  if (!row) return {};
   return {
-    title: `${product.name} — ${product.brand} | PT Autentik Karya Analitika`,
-    description: product.description,
+    title: `${row.name} — ${row.brand} | PT Autentik Karya Analitika`,
+    description: row.description,
   };
 }
 
 export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params;
-  const product = products.find((p) => p.slug === slug);
+  const row = await getProductBySlug(slug);
+  if (!row) notFound();
 
-  if (!product) notFound();
-
-  // Related products from same brand
-  const related = products
-    .filter((p) => p.brand === product.brand && p.id !== product.id)
-    .slice(0, 4);
+  const product = toPublicProduct(row);
 
   return (
     <>
@@ -217,7 +229,7 @@ export default async function ProductDetailPage({ params }: Props) {
               <div className="rounded-xl border shadow-sm overflow-hidden max-w-2xl" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
                 <table className="w-full text-sm">
                   <tbody>
-                    {product.specs.map((spec, idx) => (
+                    {product.specs.map((spec) => (
                       <tr
                         key={spec.label}
                         className="border-b last:border-0"
@@ -236,71 +248,6 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
         </section>
       )}
-
-      {/* Related Products */}
-      {related.length > 0 && (
-        <section className="py-16" style={{ backgroundColor: "var(--bg-primary)" }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <AnimatedElement type="fade-up">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  Produk Lain dari{" "}
-                  <span className="text-[#14B8A6]">{product.brand}</span>
-                </h2>
-                <Link
-                  href={`/katalog-produk?brand=${product.brand}`}
-                  className="text-sm font-semibold text-[#14B8A6] hover:underline inline-flex items-center gap-1"
-                >
-                  Lihat Semua <ChevronRight size={14} />
-                </Link>
-              </div>
-            </AnimatedElement>
-
-            <AnimatedElement type="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {related.map((rel) => (
-                <Link
-                  key={rel.id}
-                  href={`/katalog-produk/${rel.slug}`}
-                  className="group border rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 hover:border-[#14B8A6]/40"
-                  style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
-                >
-                  <div
-                    className="relative h-32 overflow-hidden"
-                    style={{
-                      backgroundColor: "var(--bg-secondary)",
-                    }}
-                  >
-                    {rel.imageUrl ? (
-                      <Image
-                        src={rel.imageUrl}
-                        alt={rel.name}
-                        fill
-                        className="object-contain p-3"
-                        sizes="25vw"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Package size={40} className="text-slate-400" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <span className={DESIGN_TOKENS.badges.categoryNeutral}>
-                      {rel.brand}
-                    </span>
-                    <p className="text-sm font-bold group-hover:text-[#14B8A6] transition-colors line-clamp-2 mt-2" style={{ color: "var(--text-primary)" }}>
-                      {rel.name}
-                    </p>
-                    <p className="text-xs mt-1 text-slate-400">{rel.category}</p>
-                  </div>
-                </Link>
-              ))}
-            </AnimatedElement>
-          </div>
-        </section>
-      )}
     </>
   );
 }
-
-
