@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/format";
+import AddToCartButton from "@/components/cart/AddToCartButton";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -102,14 +103,15 @@ function ProductCard({ product }: { product: ProductRow }) {
         </div>
       </div>
 
-      <div className="p-6 pt-0">
+      <div className="p-6 pt-0 flex gap-2">
         <Link
           href={`/store/${product.slug}`}
-          className="py-3 px-3 rounded-xl text-xs font-bold text-center text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md flex items-center justify-center gap-1.5"
+          className="flex-1 py-3 px-3 rounded-xl text-xs font-bold text-center text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md flex items-center justify-center gap-1.5"
         >
           <span>Lihat Detail</span>
           <ChevronRight size={14} />
         </Link>
+        <AddToCartButton product={product} variant="card" />
       </div>
     </div>
   );

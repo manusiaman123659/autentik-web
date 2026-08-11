@@ -5,13 +5,13 @@ import Image from "next/image";
 import {
   ArrowLeft,
   ChevronRight,
-  ShoppingCart,
   MessageCircle,
   Package,
   CheckCircle2,
 } from "lucide-react";
 import { getProductBySlug } from "@/lib/admin-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
+import AddToCartButton from "@/components/cart/AddToCartButton";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import { formatRupiah } from "@/lib/format";
 
@@ -196,16 +196,7 @@ export default async function StoreProductPage({ params }: Props) {
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-2">
-                <button
-                  type="button"
-                  disabled
-                  title={outOfStock ? "Stok habis" : "Keranjang akan tersedia di fitur yang akan datang (TODO cart/checkout)"}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-white bg-[#0EA5A0] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  <ShoppingCart size={18} />
-                  {outOfStock ? "Stok Habis" : "Tambah ke Keranjang"}
-                </button>
-                {/* TODO(cart): wire cart state + checkout di task terpisah */}
+                <AddToCartButton product={row} variant="detail" />
                 <a
                   href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo, saya ingin menanyakan ketersediaan sparepart ${row.name}`)}`}
                   target="_blank"

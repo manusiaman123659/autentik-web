@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, Globe, Search, Sun, Moon } from "lucide-react";
+import { Menu, X, Globe, Search, Sun, Moon, ShoppingCart } from "lucide-react";
 import MobileMenu from "./MobileMenu";
 import SearchModal from "./SearchModal";
 import AdminNavButton from "@/components/auth/AdminNavButton";
 import { useTheme } from "@/components/ThemeProvider";
+import { useCart } from "@/components/cart/CartProvider";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -25,6 +26,7 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
+  const { totalItems, hydrated } = useCart();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -145,6 +147,21 @@ export default function Navbar() {
 
               {/* Admin Login / Dashboard */}
               <AdminNavButton variant="desktop" />
+
+              {/* Cart */}
+              <Link
+                href="/store/cart"
+                aria-label="Keranjang belanja"
+                className="relative flex items-center justify-center w-9 h-9 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                <ShoppingCart size={18} />
+                {hydrated && totalItems > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-[#0EA5A0] text-white text-[10px] font-bold flex items-center justify-center">
+                    {totalItems > 99 ? "99+" : totalItems}
+                  </span>
+                )}
+              </Link>
 
               {/* Store Button */}
               <Link
