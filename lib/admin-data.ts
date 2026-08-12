@@ -381,7 +381,10 @@ async function getUnreadCountFor(supabase: Awaited<ReturnType<typeof getSupabase
   if (convo.last_read_at) {
     query = query.gt("created_at", convo.last_read_at);
   }
-  const { count } = await query;
+  const { count, error } = await query;
+  if (error) {
+    console.error("[admin-data] chat unread count:", { conversationId: convo.id, error });
+  }
   return count ?? 0;
 }
 
@@ -414,6 +417,11 @@ export async function listChatConversations(): Promise<ChatConversationWithMeta[
         .maybeSingle()
     )
   );
+  for (const res of lastMessages) {
+    if (res.error) {
+      console.error("[admin-data] chat last message:", res.error);
+    }
+  }
 
   return conversations.map((c, i) => ({
     ...c,
@@ -434,11 +442,14 @@ export async function getChatConversation(
     .maybeSingle();
   if (error || !conversation) return null;
 
-  const { data: messages } = await supabase
+  const { data: messages, error: messagesError } = await supabase
     .from("chat_messages")
     .select("*")
     .eq("conversation_id", id)
     .order("created_at", { ascending: true });
+  if (messagesError) {
+    console.error("[admin-data] chat messages:", { id, error: messagesError });
+  }
 
   return {
     conversation: conversation as ChatConversationRow,

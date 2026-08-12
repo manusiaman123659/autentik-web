@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("send_chat_message RPC error:", error);
-      return NextResponse.json(
-        { success: false, message: "Gagal mengirim pesan. Silakan coba lagi." },
-        { status: 500 }
-      );
+      const message =
+        typeof error.message === "string" && error.message.trim()
+          ? error.message
+          : "Gagal mengirim pesan. Silakan coba lagi.";
+      return NextResponse.json({ success: false, message }, { status: 429 });
     }
 
     return NextResponse.json({ success: true, message: data });

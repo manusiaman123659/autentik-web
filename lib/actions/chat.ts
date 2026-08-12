@@ -25,12 +25,16 @@ const revalidateChat = (conversationId: string) => {
 
 async function broadcastStaffReply(
   cookieStore: Awaited<ReturnType<typeof cookies>>,
-  conversationId: string,
+  channelToken: string | null,
   payload: { body: string; sender_name: string | null; created_at: string }
 ) {
+  if (!channelToken) {
+    console.warn("[chat] broadcast dilewati: broadcast_token tidak ditemukan");
+    return;
+  }
   try {
     const supabase = createClient(cookieStore);
-    const channel = supabase.channel(`conversation:${conversationId}`);
+    const channel = supabase.channel(`conversation:${channelToken}`);
     await new Promise<void>((resolve) => {
       let settled = false;
       const finish = () => {
@@ -108,7 +112,14 @@ export async function sendStaffReply(
     })
     .eq("id", conversationId);
 
-  await broadcastStaffReply(cookieStore, conversationId, {
+  const tokenRes = await supabase
+    .from("chat_conversations")
+    .select("broadcast_token")
+    .eq("id", conversationId)
+    .maybeSingle();
+  const broadcastToken = (tokenRes.data?.broadcast_token as string | undefined) ?? null;
+
+  await broadcastStaffReply(cookieStore, broadcastToken, {
     body: messageRow.body,
     sender_name: messageRow.sender_name ?? null,
     created_at: messageRow.created_at,

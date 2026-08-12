@@ -41,7 +41,7 @@ export default function FaqWidget() {
   const [csActive, setCsActive] = useState(false);
   const [csInput, setCsInput] = useState("");
   const [csMessages, setCsMessages] = useState<ChatMessage[]>([]);
-  const [csConversationId, setCsConversationId] = useState<string | null>(null);
+  const [csToken, setCsToken] = useState<string | null>(null);
   const [csConnecting, setCsConnecting] = useState(false);
   const [csSending, setCsSending] = useState(false);
 
@@ -62,11 +62,11 @@ export default function FaqWidget() {
   }, [chatMessages, chatLoading, csMessages, csSending]);
 
   useEffect(() => {
-    if (!csConversationId || !csActive) return;
+    if (!csToken || !csActive) return;
     const client = supabaseRef.current ?? createClient();
     supabaseRef.current = client;
     const channel = client
-      .channel(`conversation:${csConversationId}`)
+      .channel(`conversation:${csToken}`)
       .on("broadcast", { event: "reply" }, (payload) => {
         const p = payload as { payload?: { body?: string; sender_name?: string | null } };
         const text = p?.payload?.body;
@@ -79,7 +79,7 @@ export default function FaqWidget() {
     return () => {
       client.removeChannel(channel).catch(() => {});
     };
-  }, [csConversationId, csActive]);
+  }, [csToken, csActive]);
 
   const handleSendChat = async (message?: string) => {
     const text = (message ?? chatInput).trim();
@@ -134,7 +134,7 @@ export default function FaqWidget() {
   const startCsChat = async () => {
     if (csConnecting) return;
 
-    if (csConversationId) {
+    if (csToken) {
       setCsActive(true);
       return;
     }
@@ -143,7 +143,7 @@ export default function FaqWidget() {
     try {
       const startRes = await fetch("/api/chat-cs/start", { method: "POST" });
       const startData = await startRes.json();
-      if (!startRes.ok || !startData.success || !startData.conversationId) {
+      if (!startRes.ok || !startData.success || !startData.broadcastToken) {
         setCsMessages((prev) => [
           ...prev,
           { role: "assistant", text: "Gagal terhubung ke tim Autentik. Silakan coba beberapa saat lagi." },
@@ -151,18 +151,23 @@ export default function FaqWidget() {
         return;
       }
 
-      setCsConversationId(startData.conversationId);
+      setCsToken(startData.broadcastToken);
 
       const historyRes = await fetch("/api/chat-cs/history", { method: "POST" });
       const historyData = await historyRes.json();
-      if (historyRes.ok && historyData.success && Array.isArray(historyData.messages)) {
-        const rows = historyData.messages as HistoryMessage[];
-        setCsMessages(
-          rows.map((m) => ({
-            role: m.sender_role === "staff" ? "assistant" : "user",
-            text: m.body,
-          }))
-        );
+      if (historyRes.ok && historyData.success) {
+        if (historyData.broadcastToken) {
+          setCsToken(historyData.broadcastToken);
+        }
+        if (Array.isArray(historyData.messages)) {
+          const rows = historyData.messages as HistoryMessage[];
+          setCsMessages(
+            rows.map((m) => ({
+              role: m.sender_role === "staff" ? "assistant" : "user",
+              text: m.body,
+            }))
+          );
+        }
       }
     } catch {
       setCsMessages((prev) => [
@@ -177,7 +182,7 @@ export default function FaqWidget() {
 
   const handleSendCs = async (message?: string) => {
     const text = (message ?? csInput).trim();
-    if (!text || csSending || !csConversationId) return;
+    if (!text || csSending || !csToken) return;
 
     setCsInput("");
     setCsMessages((prev) => [...prev, { role: "user", text }]);
@@ -191,9 +196,13 @@ export default function FaqWidget() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
+        const serverMessage =
+          typeof data?.message === "string" && data.message.trim()
+            ? data.message
+            : "Gagal mengirim pesan. Silakan coba lagi.";
         setCsMessages((prev) => [
           ...prev.slice(0, -1),
-          { role: "assistant", text: "Gagal mengirim pesan. Silakan coba lagi." },
+          { role: "assistant", text: serverMessage },
         ]);
       }
     } catch {
@@ -413,7 +422,7 @@ export default function FaqWidget() {
                 onClick={() => (csActive ? handleSendCs() : handleSendChat())}
                 disabled={
                   csActive
-                    ? csSending || !csInput.trim() || !csConversationId
+                    ? csSending || !csInput.trim() || !csToken
                     : chatLoading || !chatInput.trim()
                 }
                 aria-label="Kirim pesan"

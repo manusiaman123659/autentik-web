@@ -30,12 +30,14 @@ export async function POST() {
     const parsed = (data ?? null) as {
       conversation_id: string;
       status: string;
+      broadcast_token: string;
       messages: ChatMessageRow[];
     } | null;
 
     return NextResponse.json({
       success: true,
       conversationId: parsed?.conversation_id ?? null,
+      broadcastToken: parsed?.broadcast_token ?? null,
       status: parsed?.status ?? null,
       messages: parsed?.messages ?? [],
     });

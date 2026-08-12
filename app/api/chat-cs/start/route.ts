@@ -14,11 +14,16 @@ export async function POST() {
     const sessionId = cookieStore.get(SESSION_COOKIE)?.value ?? randomUUID();
 
     const supabase = createClient(cookieStore);
-    const { data: conversationId, error } = await supabase.rpc("start_chat_conversation", {
+    const { data, error } = await supabase.rpc("start_chat_conversation", {
       p_session_id: sessionId,
     });
 
-    if (error || !conversationId) {
+    const parsed = (data ?? null) as {
+      conversation_id: string;
+      broadcast_token: string;
+    } | null;
+
+    if (error || !parsed?.conversation_id || !parsed.broadcast_token) {
       console.error("start_chat_conversation RPC error:", error);
       return NextResponse.json(
         { success: false, message: "Terjadi kesalahan server" },
@@ -26,7 +31,11 @@ export async function POST() {
       );
     }
 
-    const response = NextResponse.json({ success: true, conversationId });
+    const response = NextResponse.json({
+      success: true,
+      conversationId: parsed.conversation_id,
+      broadcastToken: parsed.broadcast_token,
+    });
 
     response.cookies.set(SESSION_COOKIE, sessionId, {
       httpOnly: true,

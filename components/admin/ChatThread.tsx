@@ -145,12 +145,16 @@ export default function ChatThread({ conversationId, initialMessages, initialSta
                   className={`px-3.5 py-2.5 text-sm leading-relaxed rounded-2xl whitespace-pre-line ${
                     m.sender_role === "staff"
                       ? "text-white rounded-br-md"
-                      : "border bg-white dark:bg-slate-800/50 rounded-bl-md"
+                      : "border rounded-bl-md"
                   }`}
                   style={
                     m.sender_role === "staff"
                       ? { backgroundColor: "#0EA5A0" }
-                      : { color: "var(--text-primary)" }
+                      : {
+                          backgroundColor: "var(--bg-card)",
+                          color: "var(--text-primary)",
+                          borderColor: "var(--border-color)",
+                        }
                   }
                 >
                   {m.body}
