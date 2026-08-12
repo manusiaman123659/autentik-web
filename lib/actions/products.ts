@@ -46,6 +46,8 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
 
   const isB2B = p.productType === "b2b_system";
 
+  const isNonReady = p.fulfillmentType !== "ready_stock";
+
   const record = isB2B
     ? {
         id,
@@ -60,6 +62,7 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
         features: p.features.filter((f) => f.trim()),
         specs: p.specs.filter((s) => s.label.trim() || s.value.trim()),
         product_type: "b2b_system" as const,
+        fulfillment_type: p.fulfillmentType,
         stock: 0,
         sku: null,
         price: null,
@@ -85,11 +88,12 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
         features: p.features.filter((f) => f.trim()),
         specs: p.specs.filter((s) => s.label.trim() || s.value.trim()),
         product_type: "sparepart" as const,
+        fulfillment_type: p.fulfillmentType,
         sku: p.sku,
-        price: p.price,
+        price: p.price ?? null,
         compare_at_price: p.compareAtPrice || null,
         weight_grams: p.weightGrams,
-        stock: p.stock,
+        stock: isNonReady ? 0 : (p.stock ?? 0),
         low_stock_threshold: p.lowStockThreshold,
         variants: p.variants,
         is_store_visible: p.isStoreVisible,

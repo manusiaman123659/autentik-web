@@ -22,7 +22,8 @@ export default function AddToCartButton({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stock = Math.max(0, product.stock ?? 0);
-  const canAdd = stock > 0 && product.price != null;
+  const isReadyStock = (product.fulfillmentType ?? "ready_stock") === "ready_stock";
+  const canAdd = isReadyStock && stock > 0 && product.price != null;
 
   useEffect(() => {
     return () => {

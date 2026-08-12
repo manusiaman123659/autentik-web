@@ -16,7 +16,11 @@ import {
 import { upsertProduct } from "@/lib/actions/products";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
 import { createClient } from "@/utils/supabase/client";
-import type { ProductType } from "@/lib/validations/productSchema";
+import {
+  FULFILLMENT_TYPE_LABELS,
+  type FulfillmentType,
+  type ProductType,
+} from "@/lib/validations/productSchema";
 import type { ProductRow } from "@/lib/admin-data";
 
 interface FeatureInput {
@@ -37,6 +41,7 @@ export interface ProductFormValues {
   imageUrl: string;
   features: string[];
   specs: FeatureInput[];
+  fulfillmentType: FulfillmentType;
   isActive: boolean;
   seoTitle: string;
   seoDescription: string;
@@ -68,6 +73,7 @@ function toFormValues(product: ProductRow | undefined, productType: ProductType)
     specs: Array.isArray(product?.specs)
       ? product.specs.map((s) => ({ label: s?.label ?? "", value: s?.value ?? "" }))
       : [],
+    fulfillmentType: (product?.fulfillment_type as FulfillmentType | null) ?? "ready_stock",
     isActive: product?.is_active ?? true,
     seoTitle: product?.seo_title ?? "",
     seoDescription: product?.seo_description ?? "",
@@ -230,6 +236,7 @@ export default function ProductForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isSparepart = productType === "sparepart";
+  const isNonReady = form.fulfillmentType !== "ready_stock";
 
   const set = <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -413,6 +420,21 @@ export default function ProductForm({
             <input className={inputClass} value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="IoT Monitoring" />
             <FieldError message={errors.category} />
           </div>
+          <div>
+            <label className={labelClass}>Metode Pemenuhan</label>
+            <select
+              className={inputClass}
+              value={form.fulfillmentType}
+              onChange={(e) => set("fulfillmentType", e.target.value as FulfillmentType)}
+            >
+              {(Object.keys(FULFILLMENT_TYPE_LABELS) as FulfillmentType[]).map((ft) => (
+                <option key={ft} value={ft} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                  {FULFILLMENT_TYPE_LABELS[ft]}
+                </option>
+              ))}
+            </select>
+            <FieldError message={errors.fulfillmentType} />
+          </div>
           <ColorField
             label="Warna Merek"
             value={form.brandColor}
@@ -509,14 +531,14 @@ onChange={(e) => set("description", e.target.value)}
               <FieldError message={errors.sku} />
             </div>
             <div>
-              <label className={labelClass}>Harga (Rp)</label>
+              <label className={labelClass}>{isNonReady ? "Harga Estimasi (opsional)" : "Harga (Rp)"}</label>
               <input
                 type="number"
                 min={0}
                 className={inputClass}
                 value={form.price ?? ""}
                 onChange={(e) => set("price", e.target.value)}
-                placeholder="150000"
+                placeholder={isNonReady ? "0" : "150000"}
               />
               <FieldError message={errors.price} />
             </div>
@@ -543,18 +565,20 @@ onChange={(e) => set("description", e.target.value)}
               />
               <FieldError message={errors.weightGrams} />
             </div>
-            <div>
-              <label className={labelClass}>Stok</label>
-              <input
-                type="number"
-                min={0}
-                className={inputClass}
-                value={form.stock ?? ""}
-                onChange={(e) => set("stock", e.target.value)}
-                placeholder="10"
-              />
-              <FieldError message={errors.stock} />
-            </div>
+{!isNonReady && (
+              <div>
+                <label className={labelClass}>Stok</label>
+                <input
+                  type="number"
+                  min={0}
+                  className={inputClass}
+                  value={form.stock ?? ""}
+                  onChange={(e) => set("stock", e.target.value)}
+                  placeholder="10"
+                />
+                <FieldError message={errors.stock} />
+              </div>
+            )}
             <div>
               <label className={labelClass}>Batas Stok Menipis</label>
               <input
@@ -567,6 +591,13 @@ onChange={(e) => set("description", e.target.value)}
               />
             </div>
           </div>
+
+          {isNonReady && (
+            <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
+              Produk custom / pihak ketiga tidak dicatat stok dan tidak dapat langsung dibeli di halaman Store —
+              pelanggan diarahkan ke formulir kebutuhan custom atau WhatsApp technical support.
+            </p>
+          )}
         </section>
       )}
 

@@ -28,6 +28,7 @@ export interface CartItemInput {
   image_url?: string | null;
   price?: number | null;
   stock?: number | null;
+  fulfillmentType?: "ready_stock" | "custom_request" | "third_party" | null;
 }
 
 interface CartContextValue {

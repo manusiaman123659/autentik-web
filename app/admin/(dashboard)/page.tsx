@@ -1,7 +1,7 @@
 import { getAdminUser } from "@/lib/admin";
 import { getDashboardStats, getRecentOrders, getRecentMessages, fmtRp } from "@/lib/admin-data";
 import Link from "next/link";
-import { ShoppingBag, Wallet, Inbox, Boxes, ChevronRight } from "lucide-react";
+import { ShoppingBag, Wallet, Inbox, Boxes, MessagesSquare, ChevronRight } from "lucide-react";
 import { Badge, Card, statusTone } from "@/components/admin/ui";
 import { ORDER_STATUS_LABELS } from "@/lib/validations/storeSchema";
 
@@ -45,6 +45,13 @@ export default async function AdminDashboardPage() {
       icon: Boxes,
       tone: "text-amber-600 bg-amber-500/10",
       href: "/admin/stok",
+    },
+    {
+      label: "Chat CS Belum Dibaca",
+      value: String(stats.unreadChatCount),
+      icon: MessagesSquare,
+      tone: "text-violet-600 bg-violet-500/10",
+      href: "/admin/chat",
     },
   ];
 

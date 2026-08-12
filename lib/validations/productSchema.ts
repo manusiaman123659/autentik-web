@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export const FULFILLMENT_TYPES = ["ready_stock", "custom_request", "third_party"] as const;
+export type FulfillmentType = (typeof FULFILLMENT_TYPES)[number];
+
+export const FULFILLMENT_TYPE_LABELS: Record<FulfillmentType, string> = {
+  ready_stock: "Stok Siap (beli langsung)",
+  custom_request: "Pesanan Kustom (konsultasi)",
+  third_party: "Pihak Ketiga (technical support)",
+};
+
 const baseProduct = z.object({
   id: z.string().optional(),
   slug: z
@@ -15,6 +24,7 @@ const baseProduct = z.object({
   imageUrl: z.string().default(""),
   features: z.array(z.string()).default([]),
   specs: z.array(z.object({ label: z.string(), value: z.string() })).default([]),
+  fulfillmentType: z.enum(FULFILLMENT_TYPES).default("ready_stock"),
   isActive: z.boolean().default(true),
   seoTitle: z.string().default(""),
   seoDescription: z.string().default(""),
@@ -24,17 +34,34 @@ export const productSchema = z.discriminatedUnion("productType", [
   baseProduct.extend({
     productType: z.literal("b2b_system"),
   }),
-  baseProduct.extend({
-    productType: z.literal("sparepart"),
-    sku: z.string().min(1, "SKU wajib diisi"),
-    price: z.coerce.number().min(1, "Harga wajib diisi dan lebih dari 0"),
-    compareAtPrice: z.coerce.number().min(0).default(0),
-    weightGrams: z.coerce.number().int().min(1, "Berat wajib diisi (gram)"),
-    stock: z.coerce.number().int().min(0, "Stok tidak boleh negatif").default(0),
-    lowStockThreshold: z.coerce.number().int().min(0).default(5),
-    variants: z.array(z.object({ name: z.string(), options: z.array(z.string()) })).default([]),
-    isStoreVisible: z.boolean().default(true),
-  }),
+  baseProduct
+    .extend({
+      productType: z.literal("sparepart"),
+      sku: z.string().min(1, "SKU wajib diisi"),
+      price: z.coerce.number().min(1, "Harga wajib diisi dan lebih dari 0").optional(),
+      compareAtPrice: z.coerce.number().min(0).default(0),
+      weightGrams: z.coerce.number().int().min(1, "Berat wajib diisi (gram)"),
+      stock: z.coerce.number().int().min(0, "Stok tidak boleh negatif").optional(),
+      lowStockThreshold: z.coerce.number().int().min(0).default(5),
+      variants: z.array(z.object({ name: z.string(), options: z.array(z.string()) })).default([]),
+      isStoreVisible: z.boolean().default(true),
+    })
+    .superRefine((val, ctx) => {
+      if (val.fulfillmentType === "ready_stock" && (val.price == null || val.price < 1)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["price"],
+          message: "Harga wajib diisi dan lebih dari 0 untuk produk stok siap",
+        });
+      }
+      if (val.fulfillmentType === "ready_stock" && val.stock == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["stock"],
+          message: "Stok wajib diisi untuk produk stok siap",
+        });
+      }
+    }),
 ]);
 
 export type ProductFormData = z.infer<typeof productSchema>;

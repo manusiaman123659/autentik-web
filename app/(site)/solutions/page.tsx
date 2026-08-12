@@ -22,6 +22,7 @@ import {
   Microscope,
   Activity,
   FileCheck,
+  PackageCheck,
 } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
@@ -123,6 +124,40 @@ const serviceDetailsData = [
       "Pelatihan Operasional & Troubleshooting untuk Operator",
     ],
     target: "Perusahaan Baru (Greenfield Project), Lab Upgrade & Akreditasi",
+  },
+];
+
+const fulfillmentPaths = [
+  {
+    icon: PackageCheck,
+    title: "Stok Siap — Beli Langsung",
+    description:
+      "Produk yang tersedia di gudang dapat langsung dibeli dan di-checkout di halaman Store kami, lengkap dengan harga, stok, dan proses pengiriman.",
+    points: ["Harga & stok transparan", "Checkout online cepat", "Pengiriman reguler"],
+    cta: { label: "Kunjungi Store", href: "/store" },
+    tone: "#0EA5A0",
+  },
+  {
+    icon: Wrench,
+    title: "Pesanan Kustom — Konsultasi Dulu",
+    description:
+      "Barang dibuat sesuai kebutuhan spesifik Anda — dimensi, material, kapasitas, hingga integrasi khusus. Tim engineer membahas kelayakan & penawaran sebelum produksi.",
+    points: ["Spesifikasi sesuai kebutuhan", "Estimasi biaya & waktu pengerjaan", "Gambaran teknis dari engineer"],
+    cta: { label: "Ajukan Kebutuhan Custom", href: "/custom-request" },
+    tone: "#0B1F3A",
+  },
+  {
+    icon: Headset,
+    title: "Pihak Ketiga — Kami Bantu Procurement",
+    description:
+      "Produk dari vendor/prinsipal pihak ketiga yang kami kelola pengadaannya, lengkap dengan konsultasi technical support agar sesuai aplikasi Anda.",
+    points: ["Pengadaan dikelola tim kami", "Technical support khusus", "Spesifikasi teknis terverifikasi"],
+    cta: {
+      label: "Hubungi Technical Support",
+      href: "https://wa.me/6281234567890?text=Halo, saya butuh bantuan technical support dan pengadaan produk pihak ketiga.",
+      external: true,
+    },
+    tone: "#25D366",
   },
 ];
 
@@ -372,6 +407,65 @@ export default function ServicesPage() {
               );
             })}
           </AnimatedElement>
+        </div>
+      </section>
+
+      {/* Fulfillment Paths */}
+      <section className="py-20" style={{ backgroundColor: "var(--bg-primary)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <AnimatedElement type="fade-up">
+            <SectionHeading
+              title="3 Jalur Pemenuhan Produk"
+              subtitle="Setiap produk kami tersedia melalui jalur yang paling sesuai — beli langsung, pesan kustom, atau pengadaan pihak ketiga dengan dukungan teknis."
+              align="center"
+            />
+          </AnimatedElement>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+            {fulfillmentPaths.map((path) => {
+              const Icon = path.icon;
+              return (
+                <AnimatedElement
+                  key={path.title}
+                  type="fade-up"
+                  className="rounded-2xl p-7 border flex flex-col justify-between shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                >
+                  <div>
+                    <div
+                      className="w-14 h-14 rounded-xl flex items-center justify-center mb-6"
+                      style={{ backgroundColor: `${path.tone}1A`, border: `1px solid ${path.tone}33` }}
+                    >
+                      <Icon size={26} style={{ color: path.tone }} />
+                    </div>
+                    <h3 className="text-lg font-bold mb-3" style={{ color: "var(--text-primary)" }}>
+                      {path.title}
+                    </h3>
+                    <p className="text-sm leading-relaxed mb-5" style={{ color: "var(--text-secondary)" }}>
+                      {path.description}
+                    </p>
+                    <ul className="space-y-2.5 mb-6">
+                      {path.points.map((point) => (
+                        <li key={point} className="flex items-start gap-2.5 text-xs">
+                          <CheckCircle2 size={15} className="flex-shrink-0 mt-0.5" style={{ color: path.tone }} />
+                          <span style={{ color: "var(--text-primary)" }}>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <a
+                    href={path.cta.href}
+                    target={path.cta.external ? "_blank" : undefined}
+                    rel={path.cta.external ? "noopener noreferrer" : undefined}
+                    className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white hover:opacity-90 transition-opacity"
+                    style={{ backgroundColor: path.tone }}
+                  >
+                    {path.cta.label}
+                    <ArrowRight size={15} />
+                  </a>
+                </AnimatedElement>
+              );
+            })}
+          </div>
         </div>
       </section>
 

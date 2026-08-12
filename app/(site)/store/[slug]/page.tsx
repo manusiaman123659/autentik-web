@@ -12,6 +12,7 @@ import {
 import { getProductBySlug } from "@/lib/admin-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import AddToCartButton from "@/components/cart/AddToCartButton";
+import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import { formatRupiah } from "@/lib/format";
 
@@ -41,6 +42,10 @@ export default async function StoreProductPage({ params }: Props) {
   const low = row.low_stock_threshold ?? 5;
   const outOfStock = stock === 0;
   const lowStock = !outOfStock && stock <= low;
+
+  const fulfillmentType = row.fulfillment_type ?? "ready_stock";
+  const isReady = fulfillmentType === "ready_stock";
+  const isThirdParty = fulfillmentType === "third_party";
 
   const details = [
     { label: "Merek", value: row.brand },
@@ -94,7 +99,11 @@ export default async function StoreProductPage({ params }: Props) {
                   <span className={DESIGN_TOKENS.badges.categoryNeutral}>{row.brand}</span>
                 </div>
                 <div className="absolute top-4 right-4 z-10">
-                  {outOfStock ? (
+                  {!isReady ? (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-[#0EA5A0]/15 text-[#0EA5A0]">
+                      {fulfillmentType === "custom_request" ? "Pesanan Custom" : "Via Pihak Ketiga"}
+                    </span>
+                  ) : outOfStock ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-red-500/15 text-red-500">Habis</span>
                   ) : lowStock ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">Stok Terbatas</span>
@@ -196,17 +205,28 @@ export default async function StoreProductPage({ params }: Props) {
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-2">
-                <AddToCartButton product={row} variant="detail" />
-                <a
-                  href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo, saya ingin menanyakan ketersediaan sparepart ${row.name}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-white transition-all hover:opacity-90 hover:shadow-md"
-                  style={{ backgroundColor: "#25D366" }}
-                >
-                  <MessageCircle size={18} />
-                  Tanya via WhatsApp
-                </a>
+                {isReady ? (
+                  <AddToCartButton product={row} variant="detail" />
+                ) : (
+                  <ProductFulfillmentCta
+                    fulfillmentType={fulfillmentType}
+                    name={row.name}
+                    slug={row.slug}
+                    variant="detail"
+                  />
+                )}
+                {!isThirdParty && (
+                  <a
+                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo, saya ingin menanyakan ketersediaan sparepart ${row.name}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-white transition-all hover:opacity-90 hover:shadow-md"
+                    style={{ backgroundColor: "#25D366" }}
+                  >
+                    <MessageCircle size={18} />
+                    Tanya via WhatsApp
+                  </a>
+                )}
               </div>
             </div>
           </AnimatedElement>

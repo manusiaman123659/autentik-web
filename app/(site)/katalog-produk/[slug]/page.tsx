@@ -14,6 +14,7 @@ import { getProductBySlug } from "@/lib/admin-data";
 import type { ProductRow } from "@/lib/admin-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
+import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -38,6 +39,7 @@ function toPublicProduct(row: ProductRow) {
       ? row.specs.map((s) => ({ label: String(s?.label ?? ""), value: String(s?.value ?? "") }))
       : [],
     imageUrl: row.image_url ?? undefined,
+    fulfillmentType: row.fulfillment_type ?? "ready_stock",
   };
 }
 
@@ -183,17 +185,25 @@ export default async function ProductDetailPage({ params }: Props) {
 
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-                <a
-                  href="https://wa.me/6281234567890?text=Halo, saya ingin menanyakan ketersediaan produk"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  id="whatsapp-cta"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-white transition-all hover:opacity-90 hover:shadow-md"
-                  style={{ backgroundColor: "#25D366" }}
-                >
-                  <MessageCircle size={18} />
-                  Tanya via WhatsApp
-                </a>
+                <ProductFulfillmentCta
+                  fulfillmentType={product.fulfillmentType}
+                  name={product.name}
+                  slug={product.slug}
+                  variant="detail"
+                />
+                {product.fulfillmentType !== "third_party" && (
+                  <a
+                    href="https://wa.me/6281234567890?text=Halo, saya ingin menanyakan ketersediaan produk"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    id="whatsapp-cta"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-white transition-all hover:opacity-90 hover:shadow-md"
+                    style={{ backgroundColor: "#25D366" }}
+                  >
+                    <MessageCircle size={18} />
+                    Tanya via WhatsApp
+                  </a>
+                )}
                 <Link
                   href="/contact"
                   id="contact-sales-cta"

@@ -1,6 +1,7 @@
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import CartProvider from "@/components/cart/CartProvider";
+import FaqWidget from "@/components/chatbot/FaqWidget";
 
 export default function PublicSiteLayout({
   children,
@@ -12,6 +13,7 @@ export default function PublicSiteLayout({
       <Navbar />
       <main>{children}</main>
       <Footer />
+      <FaqWidget />
     </CartProvider>
   );
 }

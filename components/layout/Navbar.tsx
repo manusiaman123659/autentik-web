@@ -99,13 +99,13 @@ export default function Navbar() {
             {/* Right Actions */}
             <div className="flex items-center gap-2">
               {/* Globe */}
-              <button
+              {/* <button
                 aria-label="Ganti Bahasa"
                 className="hidden sm:flex items-center justify-center w-9 h-9 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
                 style={{ color: "var(--text-secondary)" }}
               >
                 <Globe size={18} />
-              </button>
+              </button> */}
 
               {/* Search */}
               <button
@@ -198,7 +198,7 @@ export default function Navbar() {
         pathname={pathname}
       />
 
-      {/* Global Search Modal */}
+      {/*Global Search Modal*/}
       <SearchModal
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}

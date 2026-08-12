@@ -16,6 +16,7 @@ import {
 import type { ProductRow } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/format";
 import AddToCartButton from "@/components/cart/AddToCartButton";
+import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -44,6 +45,8 @@ function StockBadge({ stock, low }: { stock: number; low: number }) {
 function ProductCard({ product }: { product: ProductRow }) {
   const stock = product.stock ?? 0;
   const low = product.low_stock_threshold ?? 5;
+  const fulfillment = product.fulfillment_type ?? "ready_stock";
+  const isReady = fulfillment === "ready_stock";
   return (
     <div
       className="rounded-[22px] border shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:border-[#0EA5A0]/40"
@@ -77,7 +80,16 @@ function ProductCard({ product }: { product: ProductRow }) {
             </span>
           </div>
           <div className="absolute top-4 right-4 z-10">
-            <StockBadge stock={stock} low={low} />
+            {!isReady ? (
+              <span
+                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                style={{ backgroundColor: isReady ? undefined : "rgba(14,165,160,0.15)", color: "#0EA5A0" }}
+              >
+                {fulfillment === "custom_request" ? "Pesanan Custom" : "Via Pihak Ketiga"}
+              </span>
+            ) : (
+              <StockBadge stock={stock} low={low} />
+            )}
           </div>
         </div>
 
@@ -111,7 +123,16 @@ function ProductCard({ product }: { product: ProductRow }) {
           <span>Lihat Detail</span>
           <ChevronRight size={14} />
         </Link>
-        <AddToCartButton product={product} variant="card" />
+        {isReady ? (
+          <AddToCartButton product={product} variant="card" />
+        ) : (
+          <ProductFulfillmentCta
+            fulfillmentType={fulfillment}
+            name={product.name}
+            slug={product.slug}
+            variant="card"
+          />
+        )}
       </div>
     </div>
   );

@@ -44,6 +44,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { key: "inquiry", href: "/admin/inquiry", label: "Pesan Masuk (Contact)", description: "Form inquiry dari landing page /contact" },
       { key: "lead", href: "/admin/lead", label: "Lead WhatsApp", description: "Tracking klik tombol WhatsApp dari halaman produk" },
+      { key: "chat", href: "/admin/chat", label: "Chat CS", description: "Percakapan live chat visitor dengan staf" },
     ],
   },
   {
@@ -68,6 +69,7 @@ export const BUILT_SECTION_KEYS: string[] = [
   "produk",
   "inquiry",
   "lead",
+  "chat",
   "akses-staff",
   "integrasi",
   "riwayat",

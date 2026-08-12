@@ -48,6 +48,7 @@ export interface Product {
   specs?: { label: string; value: string }[];
   imageUrl?: string;
   images?: string[];
+  fulfillmentType?: "ready_stock" | "custom_request" | "third_party" | null;
 }
 
 export interface Brand {

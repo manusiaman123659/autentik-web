@@ -29,6 +29,7 @@ function toPublicProduct(row: ProductRow): Product {
       ? row.specs.map((s) => ({ label: String(s?.label ?? ""), value: String(s?.value ?? "") }))
       : [],
     imageUrl: row.image_url ?? undefined,
+    fulfillmentType: row.fulfillment_type ?? "ready_stock",
   };
 }
 
