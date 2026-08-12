@@ -7,8 +7,11 @@ import {
   Target,
   Sparkles,
   ArrowRight,
+  Download,
+  FileText,
 } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
+import CompanyProfileViewer from "@/components/ui/CompanyProfileViewer";
 import { groups } from "@/lib/data/groups";
 import { partners } from "@/lib/data/partners";
 
@@ -309,6 +312,63 @@ export default function AboutPage() {
               </div>
               <p className="font-medium italic text-lg sm:text-2xl leading-relaxed relative z-10 text-center max-w-2xl mx-auto">
                 &quot;Direktur beserta seluruh staf bertekad untuk terus bekerjasama dalam mewujudkan kebijakan mutu ini.&quot;
+              </p>
+            </div>
+          </AnimatedElement>
+        </div>
+      </section>
+
+      {/* Company Profile Presentation Section */}
+      <section className="py-24 px-6 lg:px-16" style={{ backgroundColor: "var(--bg-primary)" }}>
+        <div className="max-w-6xl mx-auto">
+          <AnimatedElement type="fade-up" className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase mb-6 border"
+              style={{
+                color: "#0EA5A0",
+                backgroundColor: "rgba(14, 165, 160, 0.08)",
+                borderColor: "rgba(14, 165, 160, 0.2)",
+              }}
+            >
+              <FileText size={14} />
+              Company Profile
+            </div>
+            <h2
+              className="text-3xl md:text-4xl font-bold tracking-tight mb-4"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Profil Perusahaan
+            </h2>
+            <p className="text-base sm:text-lg font-light max-w-2xl mx-auto leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+              Jelajahi company profile kami untuk mengetahui lebih dalam tentang visi, misi, produk, dan layanan yang kami tawarkan.
+            </p>
+          </AnimatedElement>
+
+          <AnimatedElement type="fade-up">
+            <div
+              className="rounded-2xl overflow-hidden shadow-2xl border"
+              style={{
+                borderColor: "var(--border-subtle)",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+              }}
+            >
+              <CompanyProfileViewer />
+            </div>
+          </AnimatedElement>
+
+          {/* Download CTA */}
+          <AnimatedElement type="fade-up">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <a
+                href="/images/compro/COMPRO-AKA-2026.pdf"
+                download="COMPRO-AKA-2026.pdf"
+                className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-bold text-white transition-all shadow-lg hover:opacity-90 hover:scale-[1.02] active:scale-[0.98]"
+                style={{ backgroundColor: "#0EA5A0" }}
+              >
+                <Download size={18} />
+                Download Company Profile (PDF)
+              </a>
+              <p className="text-xs font-light" style={{ color: "var(--text-secondary)" }}>
+                Format PDF • 40 Halaman
               </p>
             </div>
           </AnimatedElement>
