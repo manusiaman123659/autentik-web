@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import {
   ShieldCheck,
   Eye,
@@ -11,7 +12,10 @@ import {
   FileText,
 } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
-import CompanyProfileViewer from "@/components/ui/CompanyProfileViewer";
+import CompanyProfileViewer, {
+  type ComproManifestProp,
+} from "@/components/ui/CompanyProfileViewer";
+import { createClient } from "@/utils/supabase/server";
 import { groups } from "@/lib/data/groups";
 import { partners } from "@/lib/data/partners";
 
@@ -82,7 +86,36 @@ const firstValues = [
   },
 ];
 
-export default function AboutPage() {
+const DEFAULT_PDF_URL = "/images/compro/COMPRO-AKA-2026.pdf";
+const DEFAULT_PDF_FILENAME = "COMPRO-AKA-2026.pdf";
+
+async function getComproManifest(): Promise<ComproManifestProp | null> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    const { data } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "compro")
+      .maybeSingle();
+    const value = (data as { value?: Record<string, unknown> } | null)?.value;
+    if (!value || typeof value !== "object") return null;
+    return {
+      title: typeof value.title === "string" && value.title ? value.title : undefined,
+      pdfUrl:
+        typeof value.pdfUrl === "string" && value.pdfUrl ? value.pdfUrl : undefined,
+      pdfFilename:
+        typeof value.pdfFilename === "string" && value.pdfFilename
+          ? value.pdfFilename
+          : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export default async function AboutPage() {
+  const comproManifest = await getComproManifest();
   return (
     <>
       {/* Hero Section */}
@@ -351,7 +384,7 @@ export default function AboutPage() {
                 boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
               }}
             >
-              <CompanyProfileViewer />
+              <CompanyProfileViewer manifest={comproManifest} />
             </div>
           </AnimatedElement>
 
@@ -359,8 +392,8 @@ export default function AboutPage() {
           <AnimatedElement type="fade-up">
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
-                href="/images/compro/COMPRO-AKA-2026.pdf"
-                download="COMPRO-AKA-2026.pdf"
+                href={comproManifest?.pdfUrl ?? DEFAULT_PDF_URL}
+                download={comproManifest?.pdfFilename ?? DEFAULT_PDF_FILENAME}
                 className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-bold text-white transition-all shadow-lg hover:opacity-90 hover:scale-[1.02] active:scale-[0.98]"
                 style={{ backgroundColor: "#0EA5A0" }}
               >
@@ -368,7 +401,7 @@ export default function AboutPage() {
                 Download Company Profile (PDF)
               </a>
               <p className="text-xs font-light" style={{ color: "var(--text-secondary)" }}>
-                Format PDF • 40 Halaman
+                Format PDF &bull; Geser slide untuk melihat semua halaman
               </p>
             </div>
           </AnimatedElement>

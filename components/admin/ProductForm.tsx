@@ -12,6 +12,7 @@ import {
   GripVertical,
   ArrowUp,
   ArrowDown,
+  FileText,
 } from "lucide-react";
 import { upsertProduct } from "@/lib/actions/products";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
@@ -39,6 +40,7 @@ export interface ProductFormValues {
   brandColor: string;
   categoryColor: string;
   imageUrl: string;
+  brochureUrl: string;
   features: string[];
   specs: FeatureInput[];
   fulfillmentType: FulfillmentType;
@@ -67,6 +69,7 @@ function toFormValues(product: ProductRow | undefined, productType: ProductType)
     brandColor: product?.brand_color ?? "#0EA5A0",
     categoryColor: product?.category_color ?? "#0B1F3A",
     imageUrl: product?.image_url ?? "",
+    brochureUrl: product?.brochure_url ?? "",
     features: Array.isArray(product?.features)
       ? product.features.map((f) => String(f ?? "")).filter(Boolean)
       : [],
@@ -230,10 +233,15 @@ export default function ProductForm({
   const router = useRouter();
   const [form, setForm] = useState<ProductFormValues>(() => toFormValues(initial, productType));
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
+const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [brochureUploading, setBrochureUploading] = useState(false);
+  const [brochureUploadError, setBrochureUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const brochureInputRef = useRef<HTMLInputElement>(null);
+
+  const brochureFilename = decodeURIComponent(form.brochureUrl.split("/").pop() ?? "") || "brosur.pdf";
 
   const isSparepart = productType === "sparepart";
   const isNonReady = form.fulfillmentType !== "ready_stock";
@@ -328,8 +336,55 @@ export default function ProductForm({
       set("imageUrl", data.publicUrl);
     } catch {
       setUploadError("Terjadi kesalahan saat mengunggah gambar.");
-    } finally {
+} finally {
       setUploading(false);
+    }
+  };
+
+  const handleBrochureChange = async (file: File | undefined) => {
+    if (!file) return;
+    setBrochureUploadError("");
+    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
+      setBrochureUploadError("File harus berupa PDF.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setBrochureUploadError("Ukuran file PDF maksimal 10MB.");
+      return;
+    }
+    setBrochureUploading(true);
+    try {
+      const supabase = createClient();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        setBrochureUploadError("Sesi Anda telah berakhir. Silakan masuk kembali.");
+        return;
+      }
+
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
+      const path = `brochures/${productType}/${Date.now()}-${safeName}`;
+      const { error } = await supabase.storage.from("media").upload(path, file, {
+        contentType: "application/pdf",
+        upsert: false,
+      });
+      if (error) {
+        if (error.message.toLowerCase().includes("row-level security")) {
+          setBrochureUploadError("Gagal mengunggah: kebijakan akses storage belum diterapkan di Supabase (jalankan migrasi 0004).");
+        } else {
+          setBrochureUploadError("Gagal mengunggah PDF. " + error.message);
+        }
+        return;
+      }
+      const { data } = supabase.storage.from("media").getPublicUrl(path);
+      set("brochureUrl", data.publicUrl);
+    } catch {
+      setBrochureUploadError("Terjadi kesalahan saat mengunggah PDF.");
+    } finally {
+      setBrochureUploading(false);
     }
   };
 
@@ -520,6 +575,73 @@ onChange={(e) => set("description", e.target.value)}
           </div>
         </div>
       </section>
+
+      {!isSparepart && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">Brosur / Katalog (opsional)</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+            Unggah PDF brosur produk yang bisa diunduh pelanggan dari halaman detail produk. Maksimal 10MB.
+          </p>
+          <input
+            ref={brochureInputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(e) => {
+              void handleBrochureChange(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          {form.brochureUrl ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <FileText size={20} className="text-[#0EA5A0] flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                    {brochureFilename}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => brochureInputRef.current?.click()}
+                    disabled={brochureUploading}
+                    className="text-xs font-semibold text-[#0EA5A0] hover:underline disabled:opacity-60"
+                  >
+                    {brochureUploading ? "Mengunggah..." : "Ganti file"}
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => set("brochureUrl", "")}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:underline flex-shrink-0"
+              >
+                <Trash2 size={14} />
+                Hapus
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => brochureInputRef.current?.click()}
+              disabled={brochureUploading}
+              className="w-full rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-[#0EA5A0] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <div className="flex flex-col items-center justify-center gap-2 py-8 px-4">
+                {brochureUploading ? (
+                  <Loader2 size={24} className="animate-spin text-[#0EA5A0]" />
+                ) : (
+                  <FileText size={24} className="text-slate-400" />
+                )}
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  {brochureUploading ? "Mengunggah..." : "Pilih & Unggah PDF Brosur"}
+                </p>
+                <p className="text-xs text-slate-400">PDF — maksimal 10MB</p>
+              </div>
+            </button>
+          )}
+          <FieldError message={brochureUploadError || errors.brochureUrl} />
+        </section>
+      )}
 
       {isSparepart && (
         <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">

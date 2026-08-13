@@ -15,18 +15,13 @@ import {
   Clock,
   Wrench,
   Sparkles,
-  HelpCircle,
   ChevronDown,
   ChevronUp,
   Building2,
-  Microscope,
-  Activity,
-  FileCheck,
   PackageCheck,
 } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
-import { solutions } from "@/lib/data/solutions";
 
 const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   Cpu,

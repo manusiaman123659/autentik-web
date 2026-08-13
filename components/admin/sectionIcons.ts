@@ -12,6 +12,7 @@ import {
   UserCog,
   CreditCard,
   History,
+  Presentation,
 } from "lucide-react";
 
 export const SECTION_ICONS: Record<string, LucideIcon> = {
@@ -19,6 +20,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   sparepart: Package,
   stok: Boxes,
   produk: Package,
+  compro: Presentation,
   merek: Tags,
   karir: Briefcase,
   relasi: Users,

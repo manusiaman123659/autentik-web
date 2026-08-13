@@ -33,6 +33,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Company Profile",
     items: [
       { key: "produk", href: "/admin/produk", label: "Produk Utama (B2B)", description: "Produk bertipe b2b_system yang tampil di /katalog-produk" },
+      { key: "compro", href: "/admin/compro", label: "Company Profile", description: "Kelola presentasi company profile (file PDF & judul)" },
       { key: "merek", href: "/admin/merek", label: "Merek & Kategori", description: "Kelola merek dan kategori produk" },
       { key: "karir", href: "/admin/karir", label: "Karir", description: "Kelola lowongan pekerjaan dan posisi terbuka" },
       { key: "relasi", href: "/admin/relasi", label: "Tim, Mitra & Grup", description: "Kelola tim internal, mitra, dan grup perusahaan" },
@@ -67,6 +68,7 @@ export const BUILT_SECTION_KEYS: string[] = [
   "sparepart",
   "stok",
   "produk",
+  "compro",
   "inquiry",
   "lead",
   "chat",

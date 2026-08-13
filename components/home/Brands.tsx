@@ -1,19 +1,22 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 
 interface BrandItem {
   name: string;
   logoSrc: string;
+  /** Value used for ?brand= query param on /katalog-produk */
+  brandFilter: string;
 }
 
 const brands: BrandItem[] = [
-  { name: "AUTENTIK", logoSrc: "/images/brand/autentikk black.png" },
-  { name: "CYLAB", logoSrc: "/images/brand/CYLAB logoo.png" },
-  { name: "EPAL", logoSrc: "/images/brand/logo tekna web.png" },
-  { name: "TALPHA", logoSrc: "/images/brand/TALPHA_R.png" },
-  { name: "ULLUN", logoSrc: "/images/brand/ULLUN_R black.png" },
+  { name: "AUTENTIK", logoSrc: "/images/brand/autentikk black.png", brandFilter: "Autentik" },
+  { name: "CYLAB", logoSrc: "/images/brand/CYLAB logoo.png", brandFilter: "Cylab" },
+  { name: "EPAL", logoSrc: "/images/brand/logo tekna web.png", brandFilter: "Epal" },
+  { name: "TALPHA", logoSrc: "/images/brand/TALPHA_R.png", brandFilter: "Talpha" },
+  { name: "ULLUN", logoSrc: "/images/brand/ULLUN_R black.png", brandFilter: "Ullun" },
 ];
 
 export default function Brands() {
@@ -48,9 +51,10 @@ export default function Brands() {
 
         <AnimatedElement type="stagger" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
           {brands.map((brand) => (
-            <div
+            <Link
               key={brand.name}
-              className="h-32 lg:h-40 rounded-2xl flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 p-5 relative group overflow-hidden border"
+              href={`/katalog-produk?brand=${brand.brandFilter}`}
+              className="h-32 lg:h-40 rounded-2xl flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 p-5 relative group overflow-hidden border cursor-pointer"
               style={{
                 backgroundColor: "var(--bg-card)",
                 borderColor: "var(--border-subtle)",
@@ -65,7 +69,7 @@ export default function Brands() {
                   className="max-h-16 max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105"
                 />
               </div>
-            </div>
+            </Link>
           ))}
         </AnimatedElement>
       </div>

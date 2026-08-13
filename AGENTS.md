@@ -10,69 +10,75 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Project: autentik-web
 
-Company profile site for **PT Autentik Karya Analitika** (Indonesian IoT/industrial products). Next.js 16.3.0, App Router, React 19, TypeScript strict, Tailwind CSS v4, Turbopack by default.
+Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT Indonesia). Next.js 16.3.0, App Router, React 19, TypeScript strict, Tailwind CSS v4, default Turbopack.
 
-## Commands
-- `npm run dev` / `npm run build` / `npm run start` — standard Next.js.
-- `npm run lint` — runs ESLint directly (`eslint`). `next lint` was **removed** in v16 and `next build` no longer runs linting.
-- `npm run seed:build` — regenerates `supabase/seed.sql` from `lib/data/*` via `scripts/build-seed.ts` (needs `tsx`, a devDependency). Apply schema + seed in the Supabase SQL editor.
-- No test runner is configured; verify with `npm run lint` + `npm run build` (build does typechecking). Run both before finishing a change.
+## Perintah
+- `npm run dev` / `npm run build` / `npm run start` — standar Next.js.
+- `npm run lint` — menjalankan ESLint langsung (`eslint`). `next lint` **dihapus** di v16 dan `next build` tidak lagi menjalankan lint.
+- `npm run seed:build` — meregenerasi `supabase/seed.sql` dari `lib/data/*` lewat `scripts/build-seed.ts` (butuh `tsx`, devDependency). Terapkan skema + seed di SQL editor Supabase.
+- Tidak ada test runner; verifikasi dengan `npm run lint` + `npm run build` (build melakukan typecheck). Jalankan keduanya sebelum menyelesaikan sebuah perubahan.
 
-## Next.js 16 gotchas in this repo
-- **Async request APIs are mandatory**: `params`/`searchParams`/`cookies()`/`headers()` are Promises and must be awaited. Dynamic pages here already follow `type Props = { params: Promise<{ slug: string }> }` then `const { slug } = await params` (e.g. `app/katalog-produk/[slug]/page.tsx:20`). Keep that pattern.
-- Turbopack is the default for dev and build; no `--turbopack` flag needed. `next build` fails if a webpack config appears — don't add one.
-- `revalidateTag` needs a second `cacheLife` profile arg; `unstable_*` caching APIs are stable now.
-- `middleware` is renamed to `proxy` — **and it IS used in this repo** (see "Admin & CMS auth" below for what it does). Don't assume it's dead code.
-- `next/image` defaults changed (e.g. `qualities` defaults to `[75]`, `minimumCacheTTL` to 4h).
+## Gotcha Next.js 16 di repo ini
+- **API request async wajib**: `params`/`searchParams`/`cookies()`/`headers()` berupa Promise dan harus di-await. Halaman dinamis di sini sudah mengikuti `type Props = { params: Promise<{ slug: string }> }` lalu `const { slug } = await params` (mis. `app/katalog-produk/[slug]/page.tsx:20`). Pertahankan pola itu.
+- Turbopack adalah default untuk dev dan build; tidak perlu flag `--turbopack`. `next build` gagal jika ada webpack config — jangan menambahkannya.
+- `revalidateTag` butuh argumen profil `cacheLife` kedua; API caching `unstable_*` kini stabil.
+- `middleware` diganti nama jadi `proxy` — **dan memang dipakai di repo ini** (lihat "Autentikasi Admin & CMS" di bawah untuk fungsinya). Jangan anggap kodnya mati.
+- Default `next/image` berubah (mis. `qualities` default `[75]`, `minimumCacheTTL` 4 jam).
 
-## Content & architecture
-- **Public site content is static data** in `lib/data/*.ts` (products, brands, news, careers, team, partners, projects, solutions, industries, groups), typed by interfaces in `types/index.ts`. List/detail pages generate routes from these arrays via `generateStaticParams` + `generateMetadata`. Add new products/articles to the data file (not a DB) **unless you are specifically working on wiring a public page to Supabase** — check the gotcha below before assuming static data is still the source of truth for a given page.
-- **UI copy, error messages, and API responses are in Indonesian** (`lang="id"`). Keep new copy in Indonesian.
-- Pages are Server Components by default; add `"use client"` only for interactivity (home sections, contact/news views, forms, GSAP).
-- Image assets live in `public/images/` (brand/product/partner subfolders); product image URLs are referenced from `lib/data/products.ts`.
+## Konten & arsitektur
+- **Konten situs publik adalah data statis** di `lib/data/*.ts` (products, brands, news, careers, team, partners, projects, solutions, industries, groups), bertipe interface di `types/index.ts`. Halaman list/detail membuat route dari array ini lewat `generateStaticParams` + `generateMetadata`. Tambahkan produk/artikel baru ke file data (bukan DB) **kecuali** kamu sedang mengerjakan wiring halaman publik ke Supabase — cek gotcha di bawah sebelum menganggap data statis masih menjadi sumber kebenaran untuk halaman tertentu.
+- **Company profile `/about` kini dua mode**: `components/ui/CompanyProfileViewer.tsx` (komponen client, framer-motion) menampilkan **render PDF per-halaman via `pdfjs-dist`** (slide kiri/kanan ala PPT: panah, keyboard, thumbnail strip, fullscreen — di-lazy-load hanya saat manifest ada), atau **fallback slideshow hardcoded lama** (`TOTAL_SLIDES` = 40, `/images/compro/slide-{n}.jpg`, `COMPRO-AKA-2026.pdf`) bila manifest kosong. CTA download di seksi "Profil Perusahaan" `app/(site)/about/page.tsx`.
+- **Manifest company profile disimpan di `site_settings` (key `compro`)** — tanpa migrasi baru (tabel + RLS `settings_public_select` anon baca sudah ada). Skema di `lib/validations/comproSchema.ts`, diatur lewat section admin `/admin/compro` (`components/admin/ComproForm.tsx` + `lib/actions/compro.ts`), dibaca server-side di halaman `/about` (pakai `cookies()` → halaman jadi dynamic) dengan fallback ke nilai hardcoded bila kosong/error. Upload PDF (maks **50MB**) memakai bucket `media` (pola `ProductForm` / `0004_media_storage_policies.sql`) ke path `compro/<timestamp>-<name>.pdf`.
+- **UI copy, pesan error, dan respons API dalam Bahasa Indonesia** (`lang="id"`). Jaga copy baru dalam bahasa Indonesia.
+- Halaman adalah Server Components secara default; tambahkan `"use client"` hanya untuk interaktivitas (seksi home, tampilan contact/news, form, GSAP).
+- Aset gambar ada di `public/images/` (subfolder brand/product/partner); URL gambar produk direferensikan dari `lib/data/products.ts`.
 
-### ⚠️ Known gap: public site does not read from Supabase yet
-The admin CMS (`app/admin/`) writes to Supabase (products, orders, etc.), but the public pages (`/katalog-produk`, `/store`, home sections) still read from `lib/data/*.ts`. **Editing a product in the admin will not appear on the public site** until that specific page is wired to a Supabase query. Do not assume a public page reflects admin data unless you've confirmed it queries Supabase — check the page/route for a Supabase client call before relying on this.
+### ⚠️ Gap yang diketahui: situs publik belum membaca dari Supabase
+Admin CMS (`app/admin/`) menulis ke Supabase (products, orders, dsb.), tapi halaman publik (`/katalog-produk`, `/store`, seksi home) masih membaca dari `lib/data/*.ts`. **Mengedit produk di admin tidak akan muncul di situs publik** sampai halaman tersebut di-wire ke query Supabase. Jangan menganggap halaman publik mencerminkan data admin kecuali sudah dikonfirmasi ia query Supabase — cek halaman/route-nya untuk panggilan client Supabase sebelum bergantung pada ini.
+
+Hal yang sama berlaku untuk **company profile `/about`**: `CompanyProfileViewer` kini **dua mode** — render PDF per-halaman via `pdfjs-dist` (slideshow kiri/kanan) bila manifest terisi, atau fallback slideshow hardcoded lama (`/images/compro/slide-{n}.jpg` + PDF `COMPRO-AKA-2026.pdf`) bila manifest kosong/error. Manifest kompro **sudah dibangun**: disimpan di `site_settings` key `compro` (tanpa migrasi baru; RLS `settings_public_select` sudah ada), diatur lewat section admin `/admin/compro` (`ComproForm` upload 1 file PDF ke bucket `media` + `lib/actions/compro.ts`), dibaca server-side di `/about` lewat `cookies()` (halaman jadi dynamic) dengan fallback ke hardcoded. Ini contoh wiring halaman publik → Supabase yang sudah ada — jadikan acuan bila nanti meng-wire section lain.
 
 ## Styling & design system
-- Tailwind v4 CSS-first config: `@import "tailwindcss"` + `@theme` tokens in `app/globals.css` (navy/teal palette). **There is no `tailwind.config.*` file.**
-- Dark mode is a custom `.dark` class on `<html>` via `components/ThemeProvider.tsx` (localStorage key `autentik-theme`), not Tailwind's `dark:` variant. Components use semantic CSS variables (e.g. `style={{ color: "var(--text-primary)" }}`) from `:root`/`.dark` blocks in `globals.css`; brand colors come from `lib/design-tokens.ts` (badge/pill classes).
-- `cn()` in `lib/utils.ts` is a simple class joiner — no clsx/tailwind-merge.
-- Icons: `lucide-react`. Scroll animations: GSAP `ScrollTrigger` via `components/ui/ScrollAnimations.tsx` (`AnimatedElement`, `type="fade-up" | "stagger"`); also `framer-motion` is available.
+- Tailwind v4 CSS-first config: `@import "tailwindcss"` + token `@theme` di `app/globals.css` (palet navy/teal). **Tidak ada file `tailwind.config.*`.**
+- Dark mode adalah kelas `.dark` khusus di `<html>` lewat `components/ThemeProvider.tsx` (key localStorage `autentik-theme`), bukan varian `dark:` Tailwind. Komponen memakai variabel CSS semantik (mis. `style={{ color: "var(--text-primary)" }}`) dari blok `:root`/`.dark` di `globals.css`; warna brand dari `lib/design-tokens.ts` (kelas badge/pill).
+- `cn()` di `lib/utils.ts` hanya penggabung kelas sederhana — tanpa clsx/tailwind-merge.
+- Ikon: `lucide-react`. Animasi scroll: GSAP `ScrollTrigger` via `components/ui/ScrollAnimations.tsx` (`AnimatedElement`, `type="fade-up" | "stagger"`); `framer-motion` juga tersedia.
 
-## Forms & API routes
-- **Public-facing forms** (contact form, login) use react-hook-form + `@hookform/resolvers` + **zod v4**; schemas live in `lib/validations/*.ts` and are shared between client forms and server handlers.
-- **Admin forms** (e.g. `ProductForm` under `/admin/produk`, `/admin/sparepart`) do **not** use react-hook-form. They use local `useState` for field state and call a server action directly on submit. Follow this pattern for new admin forms — don't introduce react-hook-form into `app/admin/`.
-- **Admin image upload**: `ProductForm` uploads images client-side via the browser Supabase client (`utils/supabase/client.ts`) to the public `media` bucket (staff-only `storage.objects` RLS policies in `0004_media_storage_policies.sql`) and stores the resulting public URL in `products.image_url`. No URL input field.
-- `app/api/contact` validates with zod `safeParse` then inserts the submission into the `contact_messages` table (anon insert via RLS) — it surfaces in `/admin/inquiry`. Keep response shape `{ success, message, errors? }`.
+## Form & route API
+- **Form publik** (contact form, login) memakai react-hook-form + `@hookform/resolvers` + **zod v4**; skema ada di `lib/validations/*.ts` dan dibagi antara form client dengan server handler.
+- **Form admin** (mis. `ProductForm` di `/admin/produk`, `/admin/sparepart`) **tidak** memakai react-hook-form. Mereka memakai `useState` lokal untuk state field dan memanggil server action langsung saat submit. Ikuti pola ini untuk form admin baru — jangan perkenalkan react-hook-form ke `app/admin/`.
+- **Upload gambar admin**: `ProductForm` meng-upload gambar client-side lewat browser Supabase client (`utils/supabase/client.ts`) ke bucket publik `media` (policy RLS `storage.objects` khusus staf di `0004_media_storage_policies.sql`) lalu menyimpan URL publik hasilnya di `products.image_url`. Tidak ada field input URL.
+- `app/api/contact` memvalidasi dengan zod `safeParse` lalu memasukkan submission ke tabel `contact_messages` (anon insert via RLS) — muncul di `/admin/inquiry`. Jaga bentuk respons `{ success, message, errors? }`.
 
-## Admin data & server action patterns
-- **`lib/admin-data.ts`** is a server-only data layer (uses `cookies()`) for reading admin data (dashboard stats, orders, inquiries, etc). **Never import it into a client component** — same constraint as `lib/admin.ts` below, but this one is for data fetching rather than auth.
-- **Server actions** (`lib/actions/*`) follow a consistent shape:
-  - Return `ActionResult`: `{ success: boolean; message: string; errors?: ... }`.
-  - Start with a `getAdminUser()` guard — reject if there's no valid admin/editor session before doing anything else.
-  - Call `recordAudit()` for actions that should be traceable (creating/editing/deleting products, changing order status, etc.) — this writes to the audit log read by `/admin/riwayat`.
-  - Call `revalidatePath()` after a successful mutation so the relevant admin list re-renders with fresh data.
-  - New admin actions should follow this same shape rather than inventing a new return type.
+## Data admin & pola server action
+- **`lib/admin-data.ts`** adalah lapisan data server-only (memakai `cookies()`) untuk membaca data admin (statistik dashboard, orders, inquiries, dsb). **Jangan pernah import ke komponen client** — batasan sama seperti `lib/admin.ts` di bawah, tapi yang ini untuk fetch data, bukan auth.
+- **Server actions** (`lib/actions/*`) mengikuti bentuk konsisten:
+  - Kembalikan `ActionResult`: `{ success: boolean; message: string; errors?: ... }`.
+  - Mulai dengan guard `getAdminUser()` — tolak jika tidak ada sesi admin/editor valid sebelum melakukan apa pun.
+  - Panggil `recordAudit()` untuk aksi yang sebaiknya terlacak (membuat/mengedit/menghapus produk, mengganti status order, dsb.) — ini menulis ke audit log yang dibaca `/admin/riwayat`.
+  - Panggil `revalidatePath()` setelah mutasi sukses agar list admin yang relevan render ulang dengan data segar.
+  - Server action baru harus mengikuti bentuk ini, bukan menciptakan tipe return baru.
 
-## Admin UI
-- Shared admin UI primitives (buttons, inputs, badges, table shells, etc.) live in `components/admin/ui.tsx` — reuse these instead of writing raw markup for new admin screens.
-- Client-side admin actions that show success/error feedback depend on `ToastProvider`, which is mounted once in the dashboard layout (`app/admin/(dashboard)/layout.tsx`). Don't mount a second `ToastProvider` inside an individual admin page/component.
+## UI admin
+- Primitif UI admin bersama (button, input, badge, table shell, dsb.) ada di `components/admin/ui.tsx` — gunakan kembali ini, bukan menulis markup mentah untuk layar admin baru.
+- Aksi admin client yang menampilkan feedback sukses/error bergantung pada `ToastProvider`, yang di-mount sekali di layout dashboard (`app/admin/(dashboard)/layout.tsx`). Jangan mount `ToastProvider` kedua di dalam halaman/komponen admin.
 
-## Admin & CMS auth (Supabase)
-- **Login button** in navbar/mobile menu is `components/auth/AdminNavButton.tsx` (client): "Masuk" → `/admin/login`, swaps to "Admin" + logout when signed in.
-- **Routes**: `app/admin/login` (public login) and `app/admin/(dashboard)/*` (guarded). `app/admin/(dashboard)/layout.tsx` calls `getAdminUser()`; on failure it `redirect("/admin/login")`.
-- **Section status**: `BUILT_SECTION_KEYS` in `lib/admin-sections.ts` = exactly 9 built sections: produk, sparepart, stok, orders, inquiry, lead, integrasi, akses-staff, riwayat (dashboard is `/admin`, not a section key). The 3 not-yet-built sections (merek, karir, relasi) render the "under construction" placeholder via `app/admin/(dashboard)/[section]/`; that route `notFound()`s any key present in `BUILT_SECTION_KEYS` (built keys live in their own route folders, not the catch-all). Check `BUILT_SECTION_KEYS` before assuming a section page exists.
-- **`lib/admin.ts`** = server-only; `getAdminUser()` (react `cache`) validates session via `auth.getUser()` then loads the `profiles` row (self-select RLS) and requires `role in ('admin','editor')` + `is_active`. **Do not import it into client components** — it pulls `next/headers`. Shared pure data/types live in `lib/admin-sections.ts` (re-exported from `lib/admin.ts`; import from `admin-sections` in client code, e.g. `components/admin/AdminShell.tsx`).
-- `lib/admin-sections.ts` exports `ADMIN_SECTIONS` (section links/meta) and `AdminUser`. Section icons: `components/admin/sectionIcons.ts`.
-- Schema is split across two migrations, applied in order in the Supabase SQL editor:
-  - `supabase/migrations/0001_schema.sql` — base schema; `profiles` trigger auto-creates `role='editor'` on signup.
-  - `supabase/migrations/0002_store_orders.sql` — adds `orders`, `order_items`, `whatsapp_leads` tables, plus e-commerce columns (price, stock, weight, etc.) on `products`.
-- Promote the first admin in the Supabase SQL editor:
+## Autentikasi Admin & CMS (Supabase)
+- **Tombol login** di navbar/menu mobile adalah `components/auth/AdminNavButton.tsx` (client): "Masuk" → `/admin/login`, berubah jadi "Admin" + logout saat signed in.
+- **Routes**: `app/admin/login` (login publik) dan `app/admin/(dashboard)/*` (ter-guard). `app/admin/(dashboard)/layout.tsx` memanggil `getAdminUser()`; jika gagal `redirect("/admin/login")`.
+- **Status section**: `BUILT_SECTION_KEYS` di `lib/admin-sections.ts` = tepat **11 section** yang sudah dibangun: produk, **compro**, sparepart, stok, orders, inquiry, lead, **chat**, integrasi, akses-staff, riwayat (dashboard adalah `/admin`, bukan key section). Halaman chat punya folder route sendiri (`/admin/chat` + `/admin/chat/[id]`), tidak lewat catch-all; section compro juga punya route sendiri (`/admin/compro`). Tiga section yang belum dibangun (merek, karir, relasi) merender placeholder "under construction" via `app/admin/(dashboard)/[section]/`; route itu `notFound()` untuk key apa pun yang ada di `BUILT_SECTION_KEYS` (key yang sudah dibangun ada di folder route sendiri, bukan di catch-all). Cek `BUILT_SECTION_KEYS` sebelum berasumsi sebuah halaman section ada.
+- **`lib/admin.ts`** = server-only; `getAdminUser()` (react `cache`) memvalidasi sesi via `auth.getUser()` lalu memuat baris `profiles` (self-select RLS) dan membutuhkan `role in ('admin','editor')` + `is_active`. **Jangan import ke komponen client** — ia menarik `next/headers`. Data/tipe murni bersama ada di `lib/admin-sections.ts` (re-export dari `lib/admin.ts`; import dari `admin-sections` di kode client, mis. `components/admin/AdminShell.tsx`).
+- `lib/admin-sections.ts` mengekspor `ADMIN_SECTIONS` (link/meta section) dan `AdminUser`. Ikon section: `components/admin/sectionIcons.ts`.
+- Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0010_chat_realtime_fix.sql`** (file baru lanjut `0011_`):
+  - `0001_schema.sql` — skema dasar; trigger `profiles` otomatis membuat `role='editor'` saat signup.
+  - `0002_store_orders.sql` — menambah tabel `orders`, `order_items`, `whatsapp_leads`, plus kolom e-commerce (price, stock, weight, dsb.) di `products`.
+  - `0008`–`0010` — rangkaian live chat CS (tabel chat, RPC visitor security definer, rate-limit, `broadcast_token`, realtime).
+- Promosikan admin pertama di SQL editor Supabase:
   ```sql
   update public.profiles set role = 'admin' where email = 'your@email.com';
   ```
-- Supabase env: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local`. Clients: `utils/supabase/client.ts` (browser) / `server.ts` (RSC) / `middleware.ts`; session refresh wired through `proxy.ts`. No keys are committed.
+- **Gotcha PostgREST**: jika sebuah halaman tampil kosong tepat setelah migrasi membuat/mengubah tabel, cache skema PostgREST mungkin usang — jalankan `NOTIFY pgrst, 'reload schema';` di SQL editor.
+- Env Supabase: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` di `.env.local`. Client: `utils/supabase/client.ts` (browser) / `server.ts` (RSC) / `middleware.ts`; refresh sesi di-wire lewat `proxy.ts`. Tidak ada key yang di-commit.
 
-## Repo status
-All work described above is uncommitted — `git log` currently shows only the initial `Create Next App` commit. This is informational context (helps explain why there's no PR history to check), not an instruction: **do not run `git commit` or `git push`** unless explicitly asked to in a given task.
+## Status repo
+Seluruh pekerjaan di atas belum di-commit — `git log` kini hanya menampilkan commit awal `Create Next App`. Ini konteks informasional (menjelaskan mengapa tidak ada history PR untuk dicek), bukan instruksi: **jangan `git commit` atau `git push`** kecuali diminta eksplisit di sebuah tugas.

@@ -47,6 +47,7 @@ export interface Product {
   features?: string[];
   specs?: { label: string; value: string }[];
   imageUrl?: string;
+  brochureUrl?: string;
   images?: string[];
   fulfillmentType?: "ready_stock" | "custom_request" | "third_party" | null;
 }

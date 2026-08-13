@@ -9,6 +9,8 @@ import {
   Phone,
   ChevronRight,
   Wrench,
+  Download,
+  FileText,
 } from "lucide-react";
 import { getProductBySlug } from "@/lib/admin-data";
 import type { ProductRow } from "@/lib/admin-data";
@@ -39,6 +41,7 @@ function toPublicProduct(row: ProductRow) {
       ? row.specs.map((s) => ({ label: String(s?.label ?? ""), value: String(s?.value ?? "") }))
       : [],
     imageUrl: row.image_url ?? undefined,
+    brochureUrl: row.brochure_url ?? undefined,
     fulfillmentType: row.fulfillment_type ?? "ready_stock",
   };
 }
@@ -191,6 +194,18 @@ export default async function ProductDetailPage({ params }: Props) {
                   slug={product.slug}
                   variant="detail"
                 />
+                {product.brochureUrl && (
+                  <a
+                    href={`${product.brochureUrl}?download=`}
+                    id="brochure-download-cta"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold border transition-all hover:border-[#0EA5A0] hover:text-[#0EA5A0]"
+                    style={{ color: "var(--text-primary)", borderColor: "var(--border-color)" }}
+                  >
+                    <FileText size={18} />
+                    Unduh Brosur/Katalog (PDF)
+                    <Download size={16} className="opacity-70" />
+                  </a>
+                )}
                 {product.fulfillmentType !== "third_party" && (
                   <a
                     href="https://wa.me/6281234567890?text=Halo, saya ingin menanyakan ketersediaan produk"

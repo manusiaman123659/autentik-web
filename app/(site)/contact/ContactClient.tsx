@@ -10,7 +10,6 @@ import {
   MessageCircle,
   Calendar,
   BookOpen,
-  Users,
 } from "lucide-react";
 import { contactSchema, type ContactFormData } from "@/lib/validations/contactSchema";
 import AnimatedElement from "@/components/ui/ScrollAnimations";

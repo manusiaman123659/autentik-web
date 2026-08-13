@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import type { OrderStatus } from "@/lib/validations/storeSchema";
+import type { ComproSettings } from "@/lib/validations/comproSchema";
 
 export interface ProductRow {
   id: string;
@@ -17,6 +18,7 @@ export interface ProductRow {
   features?: unknown[];
   specs?: { label: string; value: string }[];
   image_url?: string | null;
+  brochure_url?: string | null;
   price?: number | null;
   compare_at_price?: number | null;
   weight_grams?: number | null;
@@ -105,6 +107,37 @@ export interface StaffRow {
   role: "admin" | "editor";
   is_active: boolean;
   created_at: string;
+}
+
+const DEFAULT_COMPRO: ComproSettings = {
+  title: "Company Profile AKA 2026",
+  year: "2026",
+  pdfUrl: null,
+  pdfFilename: null,
+};
+
+export async function getComproSettings(): Promise<ComproSettings> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "compro")
+    .maybeSingle();
+  if (error || !data) return DEFAULT_COMPRO;
+  const value = (data as { value: Record<string, unknown> }).value;
+  if (!value || typeof value !== "object") return DEFAULT_COMPRO;
+  return {
+    title:
+      typeof value.title === "string" && value.title.trim()
+        ? value.title
+        : DEFAULT_COMPRO.title,
+    year: typeof value.year === "string" && value.year ? value.year : null,
+    pdfUrl: typeof value.pdfUrl === "string" && value.pdfUrl ? value.pdfUrl : null,
+    pdfFilename:
+      typeof value.pdfFilename === "string" && value.pdfFilename
+        ? value.pdfFilename
+        : null,
+  };
 }
 
 async function getSupabase() {

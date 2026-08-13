@@ -23,6 +23,36 @@ function toErrors(error: ZodError): Record<string, string> {
   return out;
 }
 
+// Public URLs have the form
+// <SUPABASE_URL>/storage/v1/object/public/media/<path>.
+const STORAGE_PUBLIC_MARKER = "/storage/v1/object/public/media/";
+
+function stripQuery(url: string): string {
+  return url.split(/[?#]/)[0];
+}
+
+function storagePathFromPublicUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const clean = stripQuery(url);
+  const idx = clean.indexOf(STORAGE_PUBLIC_MARKER);
+  if (idx === -1) return null;
+  const path = decodeURIComponent(clean.slice(idx + STORAGE_PUBLIC_MARKER.length));
+  // Only delete objects living under the paths this app manages.
+  if (!(path.startsWith("products/") || path.startsWith("brochures/"))) return null;
+  return path || null;
+}
+
+async function removeStorageObjectIfAny(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  url: string | null | undefined,
+  context: string
+): Promise<void> {
+  const path = storagePathFromPublicUrl(url);
+  if (!path) return;
+  const { error } = await supabase.storage.from("media").remove([path]);
+  if (error) console.error(`[action] remove ${context}`, path, error);
+}
+
 const revalidateProductRoutes = () => {
   revalidatePath("/admin/produk");
   revalidatePath("/admin/sparepart");
@@ -48,6 +78,18 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
 
   const isNonReady = p.fulfillmentType !== "ready_stock";
 
+  // For updates of B2B products, remember the previous brochure so we can
+  // delete the replaced/removed PDF from Storage after a successful save.
+  let oldBrochureUrl: string | null = null;
+  if (isB2B && p.id?.trim()) {
+    const { data: existing } = await supabase
+      .from("products")
+      .select("brochure_url")
+      .eq("id", p.id.trim())
+      .maybeSingle();
+    oldBrochureUrl = existing?.brochure_url ?? null;
+  }
+
   const record = isB2B
     ? {
         id,
@@ -59,6 +101,7 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
         category_color: p.categoryColor,
         description: p.description,
         image_url: p.imageUrl || null,
+        brochure_url: p.brochureUrl?.trim() ? stripQuery(p.brochureUrl.trim()) : null,
         features: p.features.filter((f) => f.trim()),
         specs: p.specs.filter((s) => s.label.trim() || s.value.trim()),
         product_type: "b2b_system" as const,
@@ -109,6 +152,14 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
     return { success: false, message: "Gagal menyimpan produk. " + error.message };
   }
 
+  // Remove the previous brochure PDF when it was replaced or removed.
+  const newBrochureUrl = isB2B
+    ? (record as { brochure_url: string | null }).brochure_url
+    : null;
+  if (oldBrochureUrl && oldBrochureUrl !== newBrochureUrl) {
+    await removeStorageObjectIfAny(supabase, oldBrochureUrl, "old brochure");
+  }
+
   await recordAudit(
     p.id ? "product.updated" : "product.created",
     "product",
@@ -127,11 +178,20 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
+  const { data: existing } = await supabase
+    .from("products")
+    .select("brochure_url")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await supabase.from("products").delete().eq("id", id);
   if (error) {
     console.error("[action] delete product", error);
     return { success: false, message: "Gagal menghapus produk. " + error.message };
   }
+
+  // Remove the brochure PDF so it does not orphan in the bucket.
+  await removeStorageObjectIfAny(supabase, existing?.brochure_url, "brochure on product delete");
 
   await recordAudit("product.deleted", "product", id, { id });
   revalidateProductRoutes();
