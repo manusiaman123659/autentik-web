@@ -11,15 +11,9 @@ interface BrandItem {
   brandFilter: string;
 }
 
-const brands: BrandItem[] = [
-  { name: "AUTENTIK", logoSrc: "/images/brand/autentikk black.png", brandFilter: "Autentik" },
-  { name: "CYLAB", logoSrc: "/images/brand/CYLAB logoo.png", brandFilter: "Cylab" },
-  { name: "EPAL", logoSrc: "/images/brand/logo tekna web.png", brandFilter: "Epal" },
-  { name: "TALPHA", logoSrc: "/images/brand/TALPHA_R.png", brandFilter: "Talpha" },
-  { name: "ULLUN", logoSrc: "/images/brand/ULLUN_R black.png", brandFilter: "Ullun" },
-];
+export default function Brands({ items }: { items: BrandItem[] }) {
+  if (items.length === 0) return null;
 
-export default function Brands() {
   return (
     <section className="py-24 px-8 lg:px-16" id="brands" style={{ backgroundColor: "var(--bg-secondary)" }}>
       <div className="max-w-7xl mx-auto">
@@ -50,7 +44,7 @@ export default function Brands() {
         </AnimatedElement>
 
         <AnimatedElement type="stagger" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-          {brands.map((brand) => (
+          {items.map((brand) => (
             <Link
               key={brand.name}
               href={`/katalog-produk?brand=${brand.brandFilter}`}

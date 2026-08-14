@@ -141,6 +141,19 @@ export async function getComproSettings(): Promise<ComproSettings> {
   };
 }
 
+export async function getRecruitmentUrlSetting(): Promise<string> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "recruitment")
+    .maybeSingle();
+  if (error || !data) return "";
+  const value = (data as { value: Record<string, unknown> }).value;
+  if (!value || typeof value !== "object") return "";
+  return typeof value.url === "string" && value.url ? value.url : "";
+}
+
 async function getSupabase() {
   const cookieStore = await cookies();
   return createClient(cookieStore);
@@ -359,6 +372,48 @@ export async function listSparepartCategories(): Promise<string[]> {
   const { data, error } = await supabase.from("product_categories").select("name").order("name");
   if (error || !data) return [];
   return (data as { name: string }[]).map((r) => r.name);
+}
+
+export interface CareerRow {
+  id: string;
+  slug: string;
+  title: string;
+  department: string;
+  location: string;
+  type: string;
+  type_badge_color: string;
+  summary: string | null;
+  description: string;
+  responsibilities: string[];
+  requirements: string[];
+  benefits: string[];
+  status: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export async function listCareers(): Promise<CareerRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("careers")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[admin-data] careers", error);
+    return [];
+  }
+  return (data ?? []) as CareerRow[];
+}
+
+export async function getCareer(id: string): Promise<CareerRow | null> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("careers")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as CareerRow;
 }
 
 export async function getStoreSettings(): Promise<Record<string, unknown>> {

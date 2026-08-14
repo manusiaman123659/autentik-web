@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Lightbulb,
   Globe,
@@ -11,30 +11,36 @@ import {
   Search,
   CheckCircle2,
   X,
-  Send,
   Building2,
   Sparkles,
 } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
-import { careerPositions, CareerPosition } from "@/lib/data/careers";
+import ApplyRecruitmentButton from "@/components/careers/ApplyRecruitmentButton";
+import type { CareerPosition } from "@/lib/data/careers";
 
-export default function CareersClient() {
+function typeBadgeClass(color: CareerPosition["typeBadgeColor"]): string {
+  return color === "green"
+    ? "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300"
+    : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300";
+}
+
+export default function CareersClient({
+  jobs,
+  recruitmentUrl,
+}: {
+  jobs: CareerPosition[];
+  recruitmentUrl: string | null;
+}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState("Semua");
   const [selectedJob, setSelectedJob] = useState<CareerPosition | null>(null);
-  const [isApplyOpen, setIsApplyOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [applyForm, setApplyForm] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    portfolioUrl: "",
-    coverLetter: "",
-  });
 
-  const departments = ["Semua", "Engineering", "Procurement", "Production"];
+  const departments = useMemo(
+    () => ["Semua", ...Array.from(new Set(jobs.map((j) => j.department)))],
+    [jobs]
+  );
 
-  const filteredJobs = careerPositions.filter((job) => {
+  const filteredJobs = jobs.filter((job) => {
     const matchesDept =
       selectedDept === "Semua" || job.department.toLowerCase() === selectedDept.toLowerCase();
     const matchesSearch =
@@ -43,23 +49,6 @@ export default function CareersClient() {
       job.department.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesDept && matchesSearch;
   });
-
-  const handleApplySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setIsApplyOpen(false);
-      setSelectedJob(null);
-      setApplyForm({
-        fullName: "",
-        email: "",
-        phone: "",
-        portfolioUrl: "",
-        coverLetter: "",
-      });
-    }, 2500);
-  };
 
   return (
     <>
@@ -260,7 +249,15 @@ export default function CareersClient() {
 
           {/* Job Openings List */}
           <AnimatedElement type="fade-up" className="space-y-4">
-            {filteredJobs.length > 0 ? (
+            {jobs.length === 0 ? (
+              <div
+                className="text-center py-16 rounded-2xl border text-slate-400"
+                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
+              >
+                <p className="text-base font-semibold">Belum ada posisi terbuka saat ini.</p>
+                <p className="text-xs mt-1">Pantau terus halaman ini atau hubungi kami melalui WhatsApp.</p>
+              </div>
+            ) : filteredJobs.length > 0 ? (
               filteredJobs.map((job) => (
                 <div
                   key={job.slug}
@@ -296,11 +293,7 @@ export default function CareersClient() {
 
                   <div className="flex items-center justify-between w-full md:w-auto gap-6 md:gap-8 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
                     <span
-                      className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${
-                        job.typeBadgeColor === "green"
-                          ? "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300"
-                          : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
-                      }`}
+                      className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${typeBadgeClass(job.typeBadgeColor)}`}
                     >
                       {job.type}
                     </span>
@@ -336,11 +329,7 @@ export default function CareersClient() {
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <span
-                    className={`px-3 py-0.5 text-xs font-bold uppercase tracking-wider rounded-full ${
-                      selectedJob.typeBadgeColor === "green"
-                        ? "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300"
-                        : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300"
-                    }`}
+                    className={`px-3 py-0.5 text-xs font-bold uppercase tracking-wider rounded-full ${typeBadgeClass(selectedJob.typeBadgeColor)}`}
                   >
                     {selectedJob.type}
                   </span>
@@ -408,169 +397,8 @@ export default function CareersClient() {
                 <Building2 size={14} />
                 <span>PT Autentik Karya Analitika (Semarang)</span>
               </div>
-              <button
-                onClick={() => setIsApplyOpen(true)}
-                className="px-6 py-3 rounded-xl font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] shadow-md transition-all flex items-center gap-2"
-              >
-                Lamar Posisi Ini
-                <ArrowRight size={16} />
-              </button>
+              <ApplyRecruitmentButton url={recruitmentUrl} className="px-6 py-3" />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Apply Form Modal */}
-      {isApplyOpen && selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div
-            className="w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden p-6 md:p-8 animate-in zoom-in-95 duration-150"
-            style={{
-              backgroundColor: "var(--bg-card)",
-              borderColor: "var(--border-subtle)",
-            }}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <span className="text-xs font-bold uppercase text-[#0EA5A0]">Formulir Lamaran Pekerjaan</span>
-                <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  Lamar: {selectedJob.title}
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsApplyOpen(false)}
-                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {submitted ? (
-              <div className="py-12 text-center space-y-4">
-                <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle2 size={36} />
-                </div>
-                <h4 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Lamaran Berhasil Dikirim!</h4>
-                <p className="text-sm text-slate-400 max-w-sm mx-auto">
-                  Terima kasih telah melamar. Tim HRD PT Autentik Karya Analitika akan meninjau kualifikasi Anda dan menghubungi via email/telepon.
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleApplySubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
-                    Nama Lengkap *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={applyForm.fullName}
-                    onChange={(e) => setApplyForm({ ...applyForm, fullName: e.target.value })}
-                    placeholder="Masukkan nama lengkap Anda"
-                    className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                    style={{
-                      backgroundColor: "var(--bg-primary)",
-                      borderColor: "var(--border-subtle)",
-                      color: "var(--text-primary)",
-                    }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
-                      Alamat Email *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={applyForm.email}
-                      onChange={(e) => setApplyForm({ ...applyForm, email: e.target.value })}
-                      placeholder="nama@email.com"
-                      className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                      style={{
-                        backgroundColor: "var(--bg-primary)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
-                      Nomor Telepon / WhatsApp *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      value={applyForm.phone}
-                      onChange={(e) => setApplyForm({ ...applyForm, phone: e.target.value })}
-                      placeholder="0812xxxxxxxx"
-                      className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                      style={{
-                        backgroundColor: "var(--bg-primary)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
-                    Link CV / Portofolio (Google Drive / LinkedIn) *
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={applyForm.portfolioUrl}
-                    onChange={(e) => setApplyForm({ ...applyForm, portfolioUrl: e.target.value })}
-                    placeholder="https://linkedin.com/in/username atau link Drive CV"
-                    className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                    style={{
-                      backgroundColor: "var(--bg-primary)",
-                      borderColor: "var(--border-subtle)",
-                      color: "var(--text-primary)",
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
-                    Pesan Ringkas / Surat Lamaran Singkat
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={applyForm.coverLetter}
-                    onChange={(e) => setApplyForm({ ...applyForm, coverLetter: e.target.value })}
-                    placeholder="Ceritakan secara singkat keahlian dan motivasi Anda..."
-                    className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                    style={{
-                      backgroundColor: "var(--bg-primary)",
-                      borderColor: "var(--border-subtle)",
-                      color: "var(--text-primary)",
-                    }}
-                  />
-                </div>
-
-                <div className="pt-2 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsApplyOpen(false)}
-                    className="px-5 py-2.5 rounded-xl text-xs font-semibold border text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    style={{ borderColor: "var(--border-subtle)" }}
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] flex items-center gap-2 shadow-md"
-                  >
-                    <Send size={14} />
-                    Kirim Lamaran
-                  </button>
-                </div>
-              </form>
-            )}
           </div>
         </div>
       )}

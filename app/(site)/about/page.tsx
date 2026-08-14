@@ -16,8 +16,7 @@ import CompanyProfileViewer, {
   type ComproManifestProp,
 } from "@/components/ui/CompanyProfileViewer";
 import { createClient } from "@/utils/supabase/server";
-import { groups } from "@/lib/data/groups";
-import { partners } from "@/lib/data/partners";
+import { listPublicGroups, listPublicPartners } from "@/lib/public-data";
 
 export const metadata: Metadata = {
   title: "About Us | PT Autentik Karya Analitika",
@@ -115,7 +114,11 @@ async function getComproManifest(): Promise<ComproManifestProp | null> {
 }
 
 export default async function AboutPage() {
-  const comproManifest = await getComproManifest();
+  const [comproManifest, groups, partners] = await Promise.all([
+    getComproManifest(),
+    listPublicGroups(),
+    listPublicPartners(),
+  ]);
   return (
     <>
       {/* Hero Section */}

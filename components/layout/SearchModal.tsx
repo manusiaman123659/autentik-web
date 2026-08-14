@@ -3,12 +3,27 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Package, Briefcase, FileText, ArrowRight } from "lucide-react";
-import { products } from "@/lib/data/products";
-import { careerPositions } from "@/lib/data/careers";
+import { createClient } from "@/utils/supabase/client";
 
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface SearchProduct {
+  slug: string;
+  name: string;
+  brand: string;
+  category: string;
+  description: string;
+}
+
+interface SearchJob {
+  slug: string;
+  title: string;
+  department: string;
+  type: string;
+  summary: string;
 }
 
 const sitePages = [
@@ -16,14 +31,48 @@ const sitePages = [
   { title: "About Us", href: "/about", category: "Page" },
   { title: "Products", href: "/katalog-produk", category: "Page" },
   { title: "Services", href: "/solutions", category: "Page" },
-  { title: "Careers", href: "/news", category: "Page" },
+  { title: "Careers", href: "/careers", category: "Page" },
   { title: "Contact", href: "/contact", category: "Page" },
   { title: "Store", href: "/store", category: "Page" },
 ];
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [query, setQuery] = useState("");
+  const [products, setProducts] = useState<SearchProduct[]>([]);
+  const [jobs, setJobs] = useState<SearchJob[]>([]);
   const router = useRouter();
+
+  // Load published products & open careers once per modal open (client-side, RLS-filtered).
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const supabase = createClient();
+    Promise.all([
+      supabase
+        .from("products")
+        .select("slug, name, brand, category, description")
+        .eq("product_type", "b2b_system")
+        .eq("status", "published")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("careers")
+        .select("slug, title, department, type, summary")
+        .eq("status", "open")
+        .order("sort_order", { ascending: true }),
+    ]).then(([prodRes, careerRes]) => {
+      if (cancelled) return;
+      if (!prodRes.error && prodRes.data) {
+        setProducts(prodRes.data as SearchProduct[]);
+      }
+      if (!careerRes.error && careerRes.data) {
+        setJobs(careerRes.data as SearchJob[]);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   // Keyboard shortcut listener (Cmd+K / Ctrl+K & Escape)
   useEffect(() => {
@@ -61,7 +110,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     : [];
 
   const filteredJobs = trimmed
-    ? careerPositions.filter(
+    ? jobs.filter(
         (job) =>
           job.title.toLowerCase().includes(trimmed) ||
           job.department.toLowerCase().includes(trimmed) ||
@@ -125,7 +174,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
               <div className="space-y-1">
                 {filteredProducts.map((prod) => (
                   <button
-                    key={prod.id}
+                    key={prod.slug}
                     onClick={() => handleSelect(`/katalog-produk/${prod.slug}`)}
                     className="w-full text-left p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors flex items-center justify-between group"
                   >
@@ -160,7 +209,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 {filteredJobs.map((job) => (
                   <button
                     key={job.slug}
-                    onClick={() => handleSelect(`/news/${job.slug}`)}
+                    onClick={() => handleSelect(`/careers/${job.slug}`)}
                     className="w-full text-left p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors flex items-center justify-between group"
                   >
                     <div>

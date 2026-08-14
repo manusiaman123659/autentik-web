@@ -68,6 +68,7 @@ export const BUILT_SECTION_KEYS: string[] = [
   "stok",
   "produk",
   "compro",
+  "karir",
   "inquiry",
   "lead",
   "akses-staff",

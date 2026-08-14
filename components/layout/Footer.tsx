@@ -46,7 +46,7 @@ const footerLinks = {
     { label: "Privacy Policy", href: "#" },
     { label: "Terms of Service", href: "#" },
     { label: "ISO Certification", href: "/about" },
-    { label: "Careers", href: "/news" },
+    { label: "Careers", href: "/careers" },
     { label: "Customer Support", href: "/contact" },
   ],
   services: [

@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Briefcase, MapPin, CheckCircle2, Building2 } from "lucide-react";
-import { careerPositions, getCareerBySlug } from "@/lib/data/careers";
+import { getPublicCareerBySlug, getRecruitmentUrl } from "@/lib/public-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
+import ApplyRecruitmentButton from "@/components/careers/ApplyRecruitmentButton";
 
-export async function generateStaticParams() {
-  return careerPositions.map((job) => ({ slug: job.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -15,7 +14,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const job = getCareerBySlug(slug);
+  const job = await getPublicCareerBySlug(slug);
   if (!job)
     return {
       title: "Posisi Karir Tidak Ditemukan | Autentik",
@@ -33,9 +32,11 @@ export default async function JobDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const job = getCareerBySlug(slug);
+  const job = await getPublicCareerBySlug(slug);
 
   if (!job) notFound();
+
+  const recruitmentUrl = await getRecruitmentUrl();
 
   return (
     <>
@@ -57,7 +58,7 @@ export default async function JobDetailPage({
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedElement type="fade-up">
             <Link
-              href="/news"
+              href="/careers"
               className="inline-flex items-center gap-2 text-slate-300 hover:text-white text-sm mb-8 transition-colors"
             >
               <ArrowLeft size={16} />
@@ -142,13 +143,7 @@ export default async function JobDetailPage({
                 <Building2 size={16} />
                 <span>PT Autentik Karya Analitika (Semarang, Jawa Tengah)</span>
               </div>
-              <Link
-                href="/news"
-                className="px-8 py-3.5 rounded-xl font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] shadow-md transition-all inline-flex items-center gap-2"
-              >
-                Lamar via Halaman Karir
-                <ArrowLeft size={16} className="rotate-180" />
-              </Link>
+              <ApplyRecruitmentButton url={recruitmentUrl} className="px-8 py-3.5" />
             </div>
           </AnimatedElement>
         </div>

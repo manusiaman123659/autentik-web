@@ -7,13 +7,6 @@ export interface Solution {
   anchor: string;
 }
 
-export interface Industry {
-  id: string;
-  icon: string;
-  title: string;
-  description: string;
-}
-
 export interface Article {
   slug: string;
   badge: string;
@@ -79,18 +72,6 @@ export interface Partner {
   shortName: string;
   logoUrl?: string;
   url?: string;
-}
-
-export interface Project {
-  id: string;
-  slug: string;
-  name: string;
-  client: string;
-  location: string;
-  year: string;
-  category: string;
-  summary: string;
-  imageUrl?: string;
 }
 
 export interface ContactFormData {
