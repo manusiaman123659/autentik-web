@@ -10,6 +10,8 @@ import type { GroupCompany, Partner } from "@/types";
 export interface PublicBrandItem {
   name: string;
   logoSrc: string;
+  logoSrcDark?: string;
+  /** Value used for ?brand= query param on /katalog-produk */
   brandFilter: string;
 }
 
@@ -19,6 +21,7 @@ export const staticBrandItems: PublicBrandItem[] = staticBrands
   .map((b) => ({
     name: b.name,
     logoSrc: b.logoLight ?? b.logoDark ?? FALLBACK_BRAND_LOGO,
+    logoSrcDark: b.logoDark ?? b.logoLight ?? FALLBACK_BRAND_LOGO,
     brandFilter: b.name,
   }))
   .filter((b) => b.logoSrc);
@@ -180,6 +183,7 @@ export async function listPublicBrands(): Promise<PublicBrandItem[]> {
     .map((r) => ({
       name: r.name,
       logoSrc: r.logo_light ?? r.logo_dark ?? FALLBACK_BRAND_LOGO,
+      logoSrcDark: r.logo_dark ?? r.logo_light ?? FALLBACK_BRAND_LOGO,
       brandFilter: r.name,
     }))
     .filter((b) => b.logoSrc);

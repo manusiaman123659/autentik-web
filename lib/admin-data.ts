@@ -416,6 +416,151 @@ export async function getCareer(id: string): Promise<CareerRow | null> {
   return data as CareerRow;
 }
 
+export interface BrandRow {
+  id: string;
+  name: string;
+  segment: string | null;
+  segment_color: string | null;
+  tagline: string | null;
+  description: string | null;
+  accent_color: string | null;
+  logo_light: string | null;
+  logo_dark: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export async function listBrands(): Promise<BrandRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("brands")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[admin-data] brands", error);
+    return [];
+  }
+  return (data ?? []) as BrandRow[];
+}
+
+export async function getBrand(id: string): Promise<BrandRow | null> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("brands")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as BrandRow;
+}
+
+export interface TeamMemberRow {
+  id: string;
+  name: string;
+  role: string;
+  role_color: string | null;
+  bio: string | null;
+  image_url: string | null;
+  is_visible: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export async function listTeamMembers(): Promise<TeamMemberRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[admin-data] team_members", error);
+    return [];
+  }
+  return (data ?? []) as TeamMemberRow[];
+}
+
+export async function getTeamMember(id: string): Promise<TeamMemberRow | null> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as TeamMemberRow;
+}
+
+export interface GroupCompanyRow {
+  id: string;
+  name: string;
+  legal_name: string | null;
+  logo_url: string | null;
+  url: string | null;
+  is_visible: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export async function listGroupCompanies(): Promise<GroupCompanyRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("group_companies")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[admin-data] group_companies", error);
+    return [];
+  }
+  return (data ?? []) as GroupCompanyRow[];
+}
+
+export async function getGroupCompany(id: string): Promise<GroupCompanyRow | null> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("group_companies")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as GroupCompanyRow;
+}
+
+export interface PartnerRow {
+  id: string;
+  name: string;
+  short_name: string | null;
+  logo_url: string | null;
+  url: string | null;
+  is_visible: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export async function listPartners(): Promise<PartnerRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("partners")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[admin-data] partners", error);
+    return [];
+  }
+  return (data ?? []) as PartnerRow[];
+}
+
+export async function getPartner(id: string): Promise<PartnerRow | null> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("partners")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data as PartnerRow;
+}
+
 export async function getStoreSettings(): Promise<Record<string, unknown>> {
   const supabase = await getSupabase();
   const { data, error } = await supabase

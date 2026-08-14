@@ -113,6 +113,36 @@
   .dark .dark\:border-slate-700 { border-color: #334155; }
 }
 
+/* ─── Brands marquee ────────────────────────────────────────────────────────── */
+@keyframes brand-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.brand-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  width: max-content;
+  padding: 1.5rem 0;
+  animation: brand-marquee 45s linear infinite;
+}
+
+.brand-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.brand-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-marquee-track {
+    animation: none;
+  }
+}
+
 /* ─── GSAP initial states (prevent flash) ──────────────────────────────────── */
 .gsap-fade-up {
   opacity: 0;

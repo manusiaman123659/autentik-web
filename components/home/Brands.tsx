@@ -2,23 +2,29 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useTheme } from "@/components/ThemeProvider";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 
 interface BrandItem {
   name: string;
   logoSrc: string;
+  logoSrcDark?: string;
   /** Value used for ?brand= query param on /katalog-produk */
   brandFilter: string;
 }
 
 export default function Brands({ items }: { items: BrandItem[] }) {
+  const { theme } = useTheme();
+
   if (items.length === 0) return null;
 
+  const marqueeItems = [...items, ...items];
+
   return (
-    <section className="py-24 px-8 lg:px-16" id="brands" style={{ backgroundColor: "var(--bg-secondary)" }}>
-      <div className="max-w-7xl mx-auto">
+    <section className="py-24" id="brands" style={{ backgroundColor: "var(--bg-secondary)" }}>
+      <div className="max-w-7xl mx-auto px-8 lg:px-16">
         <AnimatedElement type="fade-up">
-          <div className="mb-12">
+          <div className="mb-14">
             <div className="flex items-center space-x-3 mb-4">
               <div className="h-[2px] w-6 bg-[#0EA5A0]" />
               <h4
@@ -42,30 +48,27 @@ export default function Brands({ items }: { items: BrandItem[] }) {
             </p>
           </div>
         </AnimatedElement>
+      </div>
 
-        <AnimatedElement type="stagger" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-          {items.map((brand) => (
+      <div className="brand-marquee-mask relative overflow-hidden">
+        <div className="brand-marquee-track">
+          {marqueeItems.map((brand, i) => (
             <Link
-              key={brand.name}
+              key={`${brand.name}-${i}`}
               href={`/katalog-produk?brand=${brand.brandFilter}`}
-              className="h-32 lg:h-40 rounded-2xl flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 p-5 relative group overflow-hidden border cursor-pointer"
-              style={{
-                backgroundColor: "var(--bg-card)",
-                borderColor: "var(--border-subtle)",
-              }}
+              aria-label={`Lihat produk ${brand.name}`}
+              className="flex items-center justify-center shrink-0 h-24 md:h-28 px-10 opacity-75 hover:opacity-100 transition-opacity duration-300"
             >
-              <div className="relative w-full h-full flex items-center justify-center p-2 rounded-xl bg-white">
-                <Image
-                  src={brand.logoSrc}
-                  alt={brand.name}
-                  width={160}
-                  height={80}
-                  className="max-h-16 max-w-[85%] object-contain transition-transform duration-300 group-hover:scale-105"
-                />
-              </div>
+              <Image
+                src={theme === "dark" ? (brand.logoSrcDark ?? brand.logoSrc) : brand.logoSrc}
+                alt={brand.name}
+                width={160}
+                height={80}
+                className="max-h-16 md:max-h-[72px] w-auto h-auto max-w-[200px] object-contain"
+              />
             </Link>
           ))}
-        </AnimatedElement>
+        </div>
       </div>
     </section>
   );
