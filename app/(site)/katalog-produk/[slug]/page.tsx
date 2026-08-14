@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -17,6 +16,7 @@ import type { ProductRow } from "@/lib/admin-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
+import ProductMediaTabs from "@/components/product/ProductMediaTabs";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -42,6 +42,7 @@ function toPublicProduct(row: ProductRow) {
       : [],
     imageUrl: row.image_url ?? undefined,
     brochureUrl: row.brochure_url ?? undefined,
+    model3dUrl: row.model_3d_url ?? undefined,
     fulfillmentType: row.fulfillment_type ?? "ready_stock",
   };
 }
@@ -98,35 +99,13 @@ export default async function ProductDetailPage({ params }: Props) {
       <section className="py-12" style={{ backgroundColor: "var(--bg-primary)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedElement type="fade-up" className="grid lg:grid-cols-2 gap-12 items-start">
-            {/* Left — Image */}
-            <div className="space-y-4">
-              {/* Main image */}
-              <div
-                className="w-full aspect-square rounded-2xl flex items-center justify-center relative overflow-hidden border"
-                style={{
-                  backgroundColor: "var(--bg-secondary)",
-                  borderColor: "var(--border-subtle)",
-                }}
-              >
-                {product.imageUrl ? (
-                  <Image
-                    src={product.imageUrl}
-                    alt={product.name}
-                    fill
-                    className="object-contain p-8"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    priority
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-[120px] opacity-15 select-none">🔬</div>
-                )}
-                <div className="absolute top-4 left-4 z-10">
-                  <span className={DESIGN_TOKENS.badges.categoryNeutral}>
-                    {product.brand}
-                  </span>
-                </div>
-              </div>
-            </div>
+            {/* Left — Media (Photo / 3D tabs) */}
+            <ProductMediaTabs
+              name={product.name}
+              brand={product.brand}
+              imageUrl={product.imageUrl}
+              model3dUrl={product.model3dUrl}
+            />
 
             {/* Right — Details */}
             <div>

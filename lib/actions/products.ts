@@ -38,7 +38,7 @@ function storagePathFromPublicUrl(url: string | null | undefined): string | null
   if (idx === -1) return null;
   const path = decodeURIComponent(clean.slice(idx + STORAGE_PUBLIC_MARKER.length));
   // Only delete objects living under the paths this app manages.
-  if (!(path.startsWith("products/") || path.startsWith("brochures/"))) return null;
+  if (!(path.startsWith("products/") || path.startsWith("brochures/") || path.startsWith("models/"))) return null;
   return path || null;
 }
 
@@ -78,16 +78,18 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
 
   const isNonReady = p.fulfillmentType !== "ready_stock";
 
-  // For updates of B2B products, remember the previous brochure so we can
-  // delete the replaced/removed PDF from Storage after a successful save.
+  // For updates of B2B products, remember the previous media so we can
+  // delete replaced/removed files from Storage after a successful save.
   let oldBrochureUrl: string | null = null;
+  let oldModel3dUrl: string | null = null;
   if (isB2B && p.id?.trim()) {
     const { data: existing } = await supabase
       .from("products")
-      .select("brochure_url")
+      .select("brochure_url, model_3d_url")
       .eq("id", p.id.trim())
       .maybeSingle();
     oldBrochureUrl = existing?.brochure_url ?? null;
+    oldModel3dUrl = existing?.model_3d_url ?? null;
   }
 
   const record = isB2B
@@ -102,6 +104,7 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
         description: p.description,
         image_url: p.imageUrl || null,
         brochure_url: p.brochureUrl?.trim() ? stripQuery(p.brochureUrl.trim()) : null,
+        model_3d_url: p.model3dUrl?.trim() ? stripQuery(p.model3dUrl.trim()) : null,
         features: p.features.filter((f) => f.trim()),
         specs: p.specs.filter((s) => s.label.trim() || s.value.trim()),
         product_type: "b2b_system" as const,
@@ -152,12 +155,18 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
     return { success: false, message: "Gagal menyimpan produk. " + error.message };
   }
 
-  // Remove the previous brochure PDF when it was replaced or removed.
+  // Remove the previous brochure/model PDF/GLB when it was replaced or removed.
   const newBrochureUrl = isB2B
     ? (record as { brochure_url: string | null }).brochure_url
     : null;
+  const newModel3dUrl = isB2B
+    ? (record as { model_3d_url: string | null }).model_3d_url
+    : null;
   if (oldBrochureUrl && oldBrochureUrl !== newBrochureUrl) {
     await removeStorageObjectIfAny(supabase, oldBrochureUrl, "old brochure");
+  }
+  if (oldModel3dUrl && oldModel3dUrl !== newModel3dUrl) {
+    await removeStorageObjectIfAny(supabase, oldModel3dUrl, "old 3d model");
   }
 
   await recordAudit(
@@ -180,7 +189,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 
   const { data: existing } = await supabase
     .from("products")
-    .select("brochure_url")
+    .select("brochure_url, model_3d_url")
     .eq("id", id)
     .maybeSingle();
 
@@ -190,8 +199,9 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     return { success: false, message: "Gagal menghapus produk. " + error.message };
   }
 
-  // Remove the brochure PDF so it does not orphan in the bucket.
+  // Remove the brochure/model files so they do not orphan in the bucket.
   await removeStorageObjectIfAny(supabase, existing?.brochure_url, "brochure on product delete");
+  await removeStorageObjectIfAny(supabase, existing?.model_3d_url, "3d model on product delete");
 
   await recordAudit("product.deleted", "product", id, { id });
   revalidateProductRoutes();

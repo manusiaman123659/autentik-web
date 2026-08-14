@@ -13,6 +13,7 @@ import {
   ArrowUp,
   ArrowDown,
   FileText,
+  Box,
 } from "lucide-react";
 import { upsertProduct } from "@/lib/actions/products";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
@@ -41,6 +42,7 @@ export interface ProductFormValues {
   categoryColor: string;
   imageUrl: string;
   brochureUrl: string;
+  model3dUrl: string;
   features: string[];
   specs: FeatureInput[];
   fulfillmentType: FulfillmentType;
@@ -70,6 +72,7 @@ function toFormValues(product: ProductRow | undefined, productType: ProductType)
     categoryColor: product?.category_color ?? "#0B1F3A",
     imageUrl: product?.image_url ?? "",
     brochureUrl: product?.brochure_url ?? "",
+    model3dUrl: product?.model_3d_url ?? "",
     features: Array.isArray(product?.features)
       ? product.features.map((f) => String(f ?? "")).filter(Boolean)
       : [],
@@ -118,6 +121,35 @@ const normalizeHex = (value: string, fallback: string) => {
   if (/^#[0-9a-f]{6}$/.test(v)) return v;
   return fallback;
 };
+
+async function uploadToMedia(
+  file: File,
+  options: { pathPrefix: string; contentType: string; errorContext: string }
+): Promise<string> {
+  const supabase = createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) throw new Error("Sesi Anda telah berakhir. Silakan masuk kembali.");
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
+  const path = `${options.pathPrefix}/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage.from("media").upload(path, file, {
+    contentType: options.contentType,
+    upsert: false,
+  });
+  if (error) {
+    if (error.message.toLowerCase().includes("row-level security")) {
+      throw new Error(
+        "Gagal mengunggah: kebijakan akses storage belum diterapkan di Supabase (jalankan migrasi 0004)."
+      );
+    }
+    throw new Error(`Gagal mengunggah ${options.errorContext}. ${error.message}`);
+  }
+  const { data } = supabase.storage.from("media").getPublicUrl(path);
+  return data.publicUrl;
+}
 
 function ColorField({
   label,
@@ -238,10 +270,14 @@ const [saving, setSaving] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [brochureUploading, setBrochureUploading] = useState(false);
   const [brochureUploadError, setBrochureUploadError] = useState("");
+  const [modelUploading, setModelUploading] = useState(false);
+  const [modelUploadError, setModelUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const brochureInputRef = useRef<HTMLInputElement>(null);
+  const modelInputRef = useRef<HTMLInputElement>(null);
 
   const brochureFilename = decodeURIComponent(form.brochureUrl.split("/").pop() ?? "") || "brosur.pdf";
+  const modelFilename = decodeURIComponent(form.model3dUrl.split("/").pop() ?? "") || "model.glb";
 
   const isSparepart = productType === "sparepart";
   const isNonReady = form.fulfillmentType !== "ready_stock";
@@ -355,36 +391,43 @@ const [saving, setSaving] = useState(false);
     }
     setBrochureUploading(true);
     try {
-      const supabase = createClient();
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        setBrochureUploadError("Sesi Anda telah berakhir. Silakan masuk kembali.");
-        return;
-      }
-
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
-      const path = `brochures/${productType}/${Date.now()}-${safeName}`;
-      const { error } = await supabase.storage.from("media").upload(path, file, {
+      const publicUrl = await uploadToMedia(file, {
+        pathPrefix: `brochures/${productType}`,
         contentType: "application/pdf",
-        upsert: false,
+        errorContext: "PDF",
       });
-      if (error) {
-        if (error.message.toLowerCase().includes("row-level security")) {
-          setBrochureUploadError("Gagal mengunggah: kebijakan akses storage belum diterapkan di Supabase (jalankan migrasi 0004).");
-        } else {
-          setBrochureUploadError("Gagal mengunggah PDF. " + error.message);
-        }
-        return;
-      }
-      const { data } = supabase.storage.from("media").getPublicUrl(path);
-      set("brochureUrl", data.publicUrl);
-    } catch {
-      setBrochureUploadError("Terjadi kesalahan saat mengunggah PDF.");
+      set("brochureUrl", publicUrl);
+    } catch (e) {
+      setBrochureUploadError(e instanceof Error ? e.message : "Terjadi kesalahan saat mengunggah PDF.");
     } finally {
       setBrochureUploading(false);
+    }
+  };
+
+  const handleModelChange = async (file: File | undefined) => {
+    if (!file) return;
+    setModelUploadError("");
+    const isGlb = /\.glb$/i.test(file.name);
+    if (!isGlb) {
+      setModelUploadError("File harus berupa model 3D (.glb).");
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      setModelUploadError("Ukuran file model 3D maksimal 25MB.");
+      return;
+    }
+    setModelUploading(true);
+    try {
+      const publicUrl = await uploadToMedia(file, {
+        pathPrefix: `models/${productType}`,
+        contentType: "model/gltf-binary",
+        errorContext: "model 3D",
+      });
+      set("model3dUrl", publicUrl);
+    } catch (e) {
+      setModelUploadError(e instanceof Error ? e.message : "Terjadi kesalahan saat mengunggah model 3D.");
+    } finally {
+      setModelUploading(false);
     }
   };
 
@@ -640,6 +683,73 @@ onChange={(e) => set("description", e.target.value)}
             </button>
           )}
           <FieldError message={brochureUploadError || errors.brochureUrl} />
+        </section>
+      )}
+
+      {!isSparepart && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">Model 3D (opsional)</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+            Unggah file model 3D jadi (.glb) untuk viewer interaktif di halaman detail produk. Maksimal 25MB.
+          </p>
+          <input
+            ref={modelInputRef}
+            type="file"
+            accept=".glb,model/gltf-binary"
+            className="hidden"
+            onChange={(e) => {
+              void handleModelChange(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          {form.model3dUrl ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <Box size={20} className="text-[#0EA5A0] flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                    {modelFilename}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => modelInputRef.current?.click()}
+                    disabled={modelUploading}
+                    className="text-xs font-semibold text-[#0EA5A0] hover:underline disabled:opacity-60"
+                  >
+                    {modelUploading ? "Mengunggah..." : "Ganti file"}
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => set("model3dUrl", "")}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:underline flex-shrink-0"
+              >
+                <Trash2 size={14} />
+                Hapus
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => modelInputRef.current?.click()}
+              disabled={modelUploading}
+              className="w-full rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-[#0EA5A0] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <div className="flex flex-col items-center justify-center gap-2 py-8 px-4">
+                {modelUploading ? (
+                  <Loader2 size={24} className="animate-spin text-[#0EA5A0]" />
+                ) : (
+                  <Box size={24} className="text-slate-400" />
+                )}
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  {modelUploading ? "Mengunggah..." : "Pilih & Unggah Model 3D (.glb)"}
+                </p>
+                <p className="text-xs text-slate-400">GLB — maksimal 25MB</p>
+              </div>
+            </button>
+          )}
+          <FieldError message={modelUploadError || errors.model3dUrl} />
         </section>
       )}
 

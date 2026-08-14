@@ -19,6 +19,7 @@ export interface ProductRow {
   specs?: { label: string; value: string }[];
   image_url?: string | null;
   brochure_url?: string | null;
+  model_3d_url?: string | null;
   price?: number | null;
   compare_at_price?: number | null;
   weight_grams?: number | null;

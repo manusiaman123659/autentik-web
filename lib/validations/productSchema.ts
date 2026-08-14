@@ -34,6 +34,7 @@ export const productSchema = z.discriminatedUnion("productType", [
   baseProduct.extend({
     productType: z.literal("b2b_system"),
     brochureUrl: z.string().optional(),
+    model3dUrl: z.string().optional(),
   }),
   baseProduct
     .extend({
