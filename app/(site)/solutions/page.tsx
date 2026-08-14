@@ -149,7 +149,7 @@ const fulfillmentPaths = [
     points: ["Pengadaan dikelola tim kami", "Technical support khusus", "Spesifikasi teknis terverifikasi"],
     cta: {
       label: "Hubungi Technical Support",
-      href: "https://wa.me/6281234567890?text=Halo, saya butuh bantuan technical support dan pengadaan produk pihak ketiga.",
+      href: "https://wa.me/6282137384029?text=Halo, saya butuh bantuan technical support dan pengadaan produk pihak ketiga.",
       external: true,
     },
     tone: "#25D366",

@@ -16,7 +16,7 @@ const RATE_LIMIT_WINDOW_MINUTES = 60;
 const RATE_LIMIT_MAX_MESSAGES = 15;
 
 const FALLBACK_REPLY =
-  "Mohon maaf, layanan AI sedang sibuk. Silakan coba beberapa saat lagi, atau lanjutkan lewat tombol 'Chat dengan CS' di bawah panel bantuan.";
+  "Mohon maaf, layanan AI sedang sibuk. Silakan coba beberapa saat lagi, atau hubungi kami via WhatsApp.";
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const limited = !error && allowed === false;
 
     const reply = limited
-      ? "Anda sudah mencapai batas pertanyaan untuk sesi ini. Silakan lanjutkan percakapan dengan tim kami melalui tombol 'Chat dengan CS'."
+      ? "Anda sudah mencapai batas pertanyaan untuk sesi ini. Silakan lanjutkan percakapan dengan tim kami melalui WhatsApp."
       : await askGemini(message);
 
     const response = NextResponse.json({

@@ -163,7 +163,7 @@ export async function getDashboardStats() {
   monthStart.setHours(0, 0, 0, 0);
   const iso = monthStart.toISOString();
 
-  const [pending, revenue, unread, lowStock, unreadChat] = await Promise.all([
+  const [pending, revenue, unread, lowStock] = await Promise.all([
     supabase.from("orders").select("id", { count: "exact" }).in("status", ["pending", "paid"]),
     supabase
       .from("orders")
@@ -175,7 +175,6 @@ export async function getDashboardStats() {
       .from("products")
       .select("id, stock, low_stock_threshold")
       .eq("product_type", "sparepart"),
-    getUnreadChatCount(),
   ]);
 
   const revenueTotal = Array.isArray(revenue.data)
@@ -192,7 +191,6 @@ export async function getDashboardStats() {
     revenueThisMonth: revenueTotal,
     unreadMessages: unread.count ?? 0,
     lowStockCount: lowStockTotal,
-    unreadChatCount: unreadChat,
   };
 }
 
@@ -379,122 +377,4 @@ export async function getStoreSettings(): Promise<Record<string, unknown>> {
     };
   }
   return (data as { value: Record<string, unknown> }).value;
-}
-
-export interface ChatConversationRow {
-  id: string;
-  session_id: string;
-  visitor_name?: string | null;
-  status: "open" | "resolved";
-  last_read_at?: string | null;
-  last_message_at: string;
-  created_at: string;
-}
-
-export interface ChatMessageRow {
-  id: string;
-  conversation_id: string;
-  sender_role: "visitor" | "staff";
-  sender_name?: string | null;
-  body: string;
-  created_at: string;
-}
-
-export interface ChatConversationWithMeta extends ChatConversationRow {
-  last_message?: string | null;
-  last_sender?: string | null;
-  unread_count: number;
-}
-
-async function getUnreadCountFor(supabase: Awaited<ReturnType<typeof getSupabase>>, convo: ChatConversationRow): Promise<number> {
-  let query = supabase
-    .from("chat_messages")
-    .select("id", { count: "exact" })
-    .eq("conversation_id", convo.id)
-    .eq("sender_role", "visitor");
-  if (convo.last_read_at) {
-    query = query.gt("created_at", convo.last_read_at);
-  }
-  const { count, error } = await query;
-  if (error) {
-    console.error("[admin-data] chat unread count:", { conversationId: convo.id, error });
-  }
-  return count ?? 0;
-}
-
-export async function listChatConversations(): Promise<ChatConversationWithMeta[]> {
-  const supabase = await getSupabase();
-  const { data, error } = await supabase
-    .from("chat_conversations")
-    .select("*")
-    .order("last_message_at", { ascending: false })
-    .limit(100);
-  if (error) {
-    console.error("[admin-data] chat conversations", error);
-    return [];
-  }
-
-  const conversations = (data ?? []) as ChatConversationRow[];
-
-  const unreadCounts = await Promise.all(
-    conversations.map((c) => getUnreadCountFor(supabase, c))
-  );
-
-  const lastMessages = await Promise.all(
-    conversations.map((c) =>
-      supabase
-        .from("chat_messages")
-        .select("body, sender_role")
-        .eq("conversation_id", c.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    )
-  );
-  for (const res of lastMessages) {
-    if (res.error) {
-      console.error("[admin-data] chat last message:", res.error);
-    }
-  }
-
-  return conversations.map((c, i) => ({
-    ...c,
-    unread_count: unreadCounts[i],
-    last_message: lastMessages[i].data?.body ?? null,
-    last_sender: lastMessages[i].data?.sender_role ?? null,
-  }));
-}
-
-export async function getChatConversation(
-  id: string
-): Promise<{ conversation: ChatConversationRow; messages: ChatMessageRow[] } | null> {
-  const supabase = await getSupabase();
-  const { data: conversation, error } = await supabase
-    .from("chat_conversations")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (error || !conversation) return null;
-
-  const { data: messages, error: messagesError } = await supabase
-    .from("chat_messages")
-    .select("*")
-    .eq("conversation_id", id)
-    .order("created_at", { ascending: true });
-  if (messagesError) {
-    console.error("[admin-data] chat messages:", { id, error: messagesError });
-  }
-
-  return {
-    conversation: conversation as ChatConversationRow,
-    messages: (messages ?? []) as ChatMessageRow[],
-  };
-}
-
-export async function getUnreadChatCount(): Promise<number> {
-  const supabase = await getSupabase();
-  const { data } = await supabase.from("chat_conversations").select("*");
-  const conversations = (data ?? []) as ChatConversationRow[];
-  const counts = await Promise.all(conversations.map((c) => getUnreadCountFor(supabase, c)));
-  return counts.reduce((acc, n) => acc + n, 0);
 }

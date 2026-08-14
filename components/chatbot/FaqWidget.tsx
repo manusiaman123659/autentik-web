@@ -9,27 +9,18 @@ import {
   MessagesSquare,
   Send,
   Bot,
-  Loader2,
 } from "lucide-react";
 import { faqItems } from "@/lib/data/faq";
-import { createClient } from "@/utils/supabase/client";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface ChatMessage {
   role: "user" | "assistant";
   text: string;
 }
 
-interface HistoryMessage {
-  id: string;
-  conversation_id: string;
-  sender_role: "visitor" | "staff";
-  sender_name?: string | null;
-  body: string;
-  created_at: string;
-}
-
 const CHAT_TIMEOUT_MS = 25000;
+const SUPPORT_WA_LINK = `https://wa.me/6282137384029?text=${encodeURIComponent(
+  "Halo, saya ingin bertanya tentang produk/layanan Autentik."
+)}`;
 
 export default function FaqWidget() {
   const [open, setOpen] = useState(false);
@@ -38,15 +29,7 @@ export default function FaqWidget() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
 
-  const [csActive, setCsActive] = useState(false);
-  const [csInput, setCsInput] = useState("");
-  const [csMessages, setCsMessages] = useState<ChatMessage[]>([]);
-  const [csToken, setCsToken] = useState<string | null>(null);
-  const [csConnecting, setCsConnecting] = useState(false);
-  const [csSending, setCsSending] = useState(false);
-
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const supabaseRef = useRef<SupabaseClient | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -59,27 +42,7 @@ export default function FaqWidget() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [chatMessages, chatLoading, csMessages, csSending]);
-
-  useEffect(() => {
-    if (!csToken || !csActive) return;
-    const client = supabaseRef.current ?? createClient();
-    supabaseRef.current = client;
-    const channel = client
-      .channel(`conversation:${csToken}`)
-      .on("broadcast", { event: "reply" }, (payload) => {
-        const p = payload as { payload?: { body?: string; sender_name?: string | null } };
-        const text = p?.payload?.body;
-        if (typeof text === "string" && text.trim()) {
-          setCsMessages((prev) => [...prev, { role: "assistant", text }]);
-        }
-      })
-      .subscribe();
-
-    return () => {
-      client.removeChannel(channel).catch(() => {});
-    };
-  }, [csToken, csActive]);
+  }, [chatMessages, chatLoading]);
 
   const handleSendChat = async (message?: string) => {
     const text = (message ?? chatInput).trim();
@@ -109,7 +72,7 @@ export default function FaqWidget() {
           ...prev,
           {
             role: "assistant",
-            text: "Maaf, terjadi kendala teknis. Silakan coba lagi atau lanjutkan lewat tombol 'Chat dengan CS' di bawah.",
+            text: "Maaf, terjadi kendala teknis. Silakan coba lagi atau hubungi kami via WhatsApp di bawah.",
           },
         ]);
       }
@@ -119,7 +82,7 @@ export default function FaqWidget() {
         ...prev,
         {
           role: "assistant",
-          text: "Maaf, pertanyaan Anda tidak dapat diproses saat ini. Silakan coba beberapa saat lagi, atau lanjutkan lewat tombol 'Chat dengan CS' di bawah.",
+          text: "Maaf, pertanyaan Anda tidak dapat diproses saat ini. Silakan coba beberapa saat lagi, atau hubungi kami via WhatsApp di bawah.",
         },
       ]);
     } finally {
@@ -130,94 +93,6 @@ export default function FaqWidget() {
   const handleQuickQuestion = (question: string) => {
     handleSendChat(question);
   };
-
-  const startCsChat = async () => {
-    if (csConnecting) return;
-
-    if (csToken) {
-      setCsActive(true);
-      return;
-    }
-
-    setCsConnecting(true);
-    try {
-      const startRes = await fetch("/api/chat-cs/start", { method: "POST" });
-      const startData = await startRes.json();
-      if (!startRes.ok || !startData.success || !startData.broadcastToken) {
-        setCsMessages((prev) => [
-          ...prev,
-          { role: "assistant", text: "Gagal terhubung ke tim Autentik. Silakan coba beberapa saat lagi." },
-        ]);
-        return;
-      }
-
-      setCsToken(startData.broadcastToken);
-
-      const historyRes = await fetch("/api/chat-cs/history", { method: "POST" });
-      const historyData = await historyRes.json();
-      if (historyRes.ok && historyData.success) {
-        if (historyData.broadcastToken) {
-          setCsToken(historyData.broadcastToken);
-        }
-        if (Array.isArray(historyData.messages)) {
-          const rows = historyData.messages as HistoryMessage[];
-          setCsMessages(
-            rows.map((m) => ({
-              role: m.sender_role === "staff" ? "assistant" : "user",
-              text: m.body,
-            }))
-          );
-        }
-      }
-    } catch {
-      setCsMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: "Gagal terhubung ke tim Autentik. Silakan coba beberapa saat lagi." },
-      ]);
-    } finally {
-      setCsConnecting(false);
-      setCsActive(true);
-    }
-  };
-
-  const handleSendCs = async (message?: string) => {
-    const text = (message ?? csInput).trim();
-    if (!text || csSending || !csToken) return;
-
-    setCsInput("");
-    setCsMessages((prev) => [...prev, { role: "user", text }]);
-    setCsSending(true);
-
-    try {
-      const res = await fetch("/api/chat-cs/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        const serverMessage =
-          typeof data?.message === "string" && data.message.trim()
-            ? data.message
-            : "Gagal mengirim pesan. Silakan coba lagi.";
-        setCsMessages((prev) => [
-          ...prev.slice(0, -1),
-          { role: "assistant", text: serverMessage },
-        ]);
-      }
-    } catch {
-      setCsMessages((prev) => [
-        ...prev.slice(0, -1),
-        { role: "assistant", text: "Koneksi bermasalah, pesan tidak terkirim. Silakan coba lagi." },
-      ]);
-    } finally {
-      setCsSending(false);
-    }
-  };
-
-  const subtitle = csActive
-    ? "Terhubung dengan tim Autentik"
-    : "Asisten AI Autentik, menjawab otomatis";
 
   return (
     <>
@@ -236,18 +111,14 @@ export default function FaqWidget() {
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#0EA5A0]/15">
-                {csActive ? (
-                  <Headphones size={18} className="text-[#0EA5A0]" />
-                ) : (
-                  <MessagesSquare size={18} className="text-[#0EA5A0]" />
-                )}
+                <MessagesSquare size={18} className="text-[#0EA5A0]" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold truncate" style={{ color: "var(--text-primary)" }}>
                   Pusat Bantuan
                 </p>
                 <p className="text-[11px] truncate" style={{ color: "var(--text-muted)" }}>
-                  {subtitle}
+                  Asisten AI Autentik, menjawab otomatis
                 </p>
               </div>
             </div>
@@ -263,56 +134,7 @@ export default function FaqWidget() {
 
           {/* Body */}
           <div className="overflow-y-auto flex-1" style={{ backgroundColor: "var(--bg-card)" }}>
-            {csActive ? (
-              <div className="p-4 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => setCsActive(false)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0EA5A0] hover:underline"
-                >
-                  <ArrowLeft size={14} />
-                  Kembali ke pertanyaan cepat
-                </button>
-
-                {csMessages.length === 0 && !csSending ? (
-                  <p className="text-sm leading-relaxed py-2" style={{ color: "var(--text-secondary)" }}>
-                    Halo 👋 Tim Autentik akan membalas pesan Anda. Balasan staf muncul langsung di
-                    percakapan ini.
-                  </p>
-                ) : (
-                  csMessages.map((m, i) => (
-                    <div
-                      key={i}
-                      className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[85%] px-3.5 py-2.5 text-sm leading-relaxed rounded-2xl whitespace-pre-line ${
-                          m.role === "user" ? "text-white" : "border"
-                        }`}
-                        style={
-                          m.role === "user"
-                            ? { backgroundColor: "#0EA5A0" }
-                            : { backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }
-                        }
-                      >
-                        {m.text}
-                      </div>
-                    </div>
-                  ))
-                )}
-                {csSending && (
-                  <div className="flex justify-end">
-                    <div
-                      className="px-3.5 py-2.5 text-sm rounded-2xl"
-                      style={{ backgroundColor: "#0EA5A0", opacity: 0.6, color: "#fff" }}
-                    >
-                      <Loader2 size={14} className="animate-spin" />
-                    </div>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-            ) : chatActive ? (
+            {chatActive ? (
               <div className="p-4 space-y-3">
                 <button
                   type="button"
@@ -396,35 +218,24 @@ export default function FaqWidget() {
                 className="flex-1 flex items-center gap-2 rounded-xl border px-3 py-2.5"
                 style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}
               >
-                {csActive ? (
-                  <Headphones size={16} className="text-[#0EA5A0] flex-shrink-0" />
-                ) : (
-                  <Bot size={16} className="text-[#0EA5A0] flex-shrink-0" />
-                )}
+                <Bot size={16} className="text-[#0EA5A0] flex-shrink-0" />
                 <input
                   type="text"
-                  value={csActive ? csInput : chatInput}
-                  onChange={(e) => (csActive ? setCsInput(e.target.value) : setChatInput(e.target.value))}
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      if (csActive) handleSendCs();
-                      else handleSendChat();
-                    }
+                    if (e.key === "Enter") handleSendChat();
                   }}
-                  placeholder={csActive ? "Tulis pesan untuk tim Autentik…" : "Tanya soal produk atau layanan Autentik…"}
-                  maxLength={csActive ? 1000 : 500}
+                  placeholder="Tanya soal produk atau layanan Autentik…"
+                  maxLength={500}
                   className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-slate-400"
                   style={{ color: "var(--text-primary)" }}
                 />
               </div>
               <button
                 type="button"
-                onClick={() => (csActive ? handleSendCs() : handleSendChat())}
-                disabled={
-                  csActive
-                    ? csSending || !csInput.trim() || !csToken
-                    : chatLoading || !chatInput.trim()
-                }
+                onClick={() => handleSendChat()}
+                disabled={chatLoading || !chatInput.trim()}
                 aria-label="Kirim pesan"
                 className="p-2.5 rounded-xl text-white transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#0EA5A0" }}
@@ -433,42 +244,24 @@ export default function FaqWidget() {
               </button>
             </div>
             <p className="text-[11px] mt-1.5" style={{ color: "var(--text-muted)" }}>
-              {csActive
-                ? "Pesan Anda masuk ke kotak masuk tim Autentik."
-                : "Jawaban dihasilkan otomatis oleh AI."}
+              Jawaban dihasilkan otomatis oleh AI.
             </p>
           </div>
 
           {/* Footer */}
           <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
-            {csActive ? (
-              <button
-                type="button"
-                onClick={() => setCsActive(false)}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border"
-                style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
-              >
-                <ArrowLeft size={16} />
-                Kembali ke Asisten AI
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={startCsChat}
-                disabled={csConnecting}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ backgroundColor: "#0EA5A0" }}
-              >
-                {csConnecting ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Headphones size={16} />
-                )}
-                {csConnecting ? "Menghubungkan…" : "Chat dengan CS"}
-              </button>
-            )}
+            <a
+              href={SUPPORT_WA_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
+              style={{ backgroundColor: "#25D366" }}
+            >
+              <Headphones size={16} />
+              Hubungi via WhatsApp
+            </a>
             <p className="text-center text-[11px] mt-2" style={{ color: "var(--text-muted)" }}>
-              Respon tim kami 1–2 hari kerja
+              Tim kami membalas dalam 1–2 hari kerja
             </p>
           </div>
         </div>

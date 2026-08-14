@@ -8,7 +8,7 @@ interface FulfillmentCtaProps {
   variant?: "detail" | "card";
 }
 
-const SUPPORT_WA = "6281234567890";
+const SUPPORT_WA = "6282137384029";
 
 export default function ProductFulfillmentCta({
   fulfillmentType,
