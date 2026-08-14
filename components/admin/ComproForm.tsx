@@ -44,7 +44,7 @@ export default function ComproForm({ initial }: { initial: ComproSettings }) {
       return;
     }
     if (file.size > MAX_PDF_SIZE) {
-      setUploadError("Ukuran file maksimal 25MB.");
+      setUploadError("Ukuran file maksimal 50MB.");
       return;
     }
     setUploading(true);

@@ -19,7 +19,7 @@ Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT
 - Tidak ada test runner; verifikasi dengan `npm run lint` + `npm run build` (build melakukan typecheck). Jalankan keduanya sebelum menyelesaikan sebuah perubahan.
 
 ## Gotcha Next.js 16 di repo ini
-- **API request async wajib**: `params`/`searchParams`/`cookies()`/`headers()` berupa Promise dan harus di-await. Halaman dinamis di sini sudah mengikuti `type Props = { params: Promise<{ slug: string }> }` lalu `const { slug } = await params` (mis. `app/katalog-produk/[slug]/page.tsx:20`). Pertahankan pola itu.
+- **API request async wajib**: `params`/`searchParams`/`cookies()`/`headers()` berupa Promise dan harus di-await. Halaman dinamis di sini sudah mengikuti `type Props = { params: Promise<{ slug: string }> }` lalu `const { slug } = await params` (mis. `app/(site)/katalog-produk/[slug]/page.tsx`). Pertahankan pola itu.
 - Turbopack adalah default untuk dev dan build; tidak perlu flag `--turbopack`. `next build` gagal jika ada webpack config — jangan menambahkannya.
 - `revalidateTag` butuh argumen profil `cacheLife` kedua; API caching `unstable_*` kini stabil.
 - `middleware` diganti nama jadi `proxy` — **dan memang dipakai di repo ini** (lihat "Autentikasi Admin & CMS" di bawah untuk fungsinya). Jangan anggap kodnya mati.
@@ -30,7 +30,7 @@ Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT
 - **Company profile `/about` kini dua mode**: `components/ui/CompanyProfileViewer.tsx` (komponen client, framer-motion) menampilkan **render PDF per-halaman via `pdfjs-dist`** (slide kiri/kanan ala PPT: panah, keyboard, thumbnail strip, fullscreen — di-lazy-load hanya saat manifest ada), atau **fallback slideshow hardcoded lama** (`TOTAL_SLIDES` = 40, `/images/compro/slide-{n}.jpg`, `COMPRO-AKA-2026.pdf`) bila manifest kosong. CTA download di seksi "Profil Perusahaan" `app/(site)/about/page.tsx`.
 - **Manifest company profile disimpan di `site_settings` (key `compro`)** — tanpa migrasi baru (tabel + RLS `settings_public_select` anon baca sudah ada). Skema di `lib/validations/comproSchema.ts`, diatur lewat section admin `/admin/compro` (`components/admin/ComproForm.tsx` + `lib/actions/compro.ts`), dibaca server-side di halaman `/about` (pakai `cookies()` → halaman jadi dynamic) dengan fallback ke nilai hardcoded bila kosong/error. Upload PDF (maks **50MB**) memakai bucket `media` (pola `ProductForm` / `0004_media_storage_policies.sql`) ke path `compro/<timestamp>-<name>.pdf`.
 - **UI copy, pesan error, dan respons API dalam Bahasa Indonesia** (`lang="id"`). Jaga copy baru dalam bahasa Indonesia.
-- Halaman adalah Server Components secara default; tambahkan `"use client"` hanya untuk interaktivitas (seksi home, tampilan contact/news, form, GSAP).
+- Halaman adalah Server Components secara default; tambahkan `"use client"` hanya untuk interaktivitas (seksi home, tampilan contact/careers, form, GSAP).
 - Aset gambar ada di `public/images/` (subfolder brand/product/partner); URL gambar produk direferensikan dari `lib/data/products.ts`.
 
 ### Wiring halaman publik → Supabase
@@ -40,7 +40,7 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 - `/about` — company profile manifest (`site_settings` key `compro`, fallback viewer hardcoded) + Grup Kami (`group_companies`) + Partner Kami (`partners`).
 - Seksi home — **Brands** (`brands`) & **HomeCareers** (`careers`), fetch server-side di `app/(site)/page.tsx` lalu di-pass sebagai props ke komponen client.
 - **SearchModal** — query anon client-side (browser Supabase client) utk produk b2b `published`+`is_active` dan karir `open`; RLS menegakkan filter publik.
-- **Sisa statis**: `solutions` (`lib/data/solutions.ts`), konteks AI (`lib/ai/*`), seksi team/About di `/about` (`lib/data/team.ts`), Hero home (sengaja hardcoded). `industries.ts` & `projects.ts` **sudah dihapus** (dead code).
+- **Sisa statis**: `solutions` (`lib/data/solutions.ts`), konteks AI (`lib/ai/*`), seksi team/About di `/about` (`lib/data/team.ts`), Hero home (sengaja hardcoded). `industries.ts` & `projects.ts` **sudah dihapus** (dead code). `lib/data/news.ts` **tetap dipertahankan** meski halaman `/news` sudah tidak ada — dipakai `scripts/build-seed.ts` untuk seed tabel `articles` (dormant); jangan hapus.
 - Pola: fungsi di `lib/public-data.ts` beri fallback ke array statis `lib/data/*` bila Supabase error; katalog/karir/home memakai `export const dynamic = "force-dynamic"`.
 
 ## Styling & design system
@@ -51,6 +51,7 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 
 ## Form & route API
 - **Form publik** (contact form, login) memakai react-hook-form + `@hookform/resolvers` + **zod v4**; skema ada di `lib/validations/*.ts` dan dibagi antara form client dengan server handler.
+- **Zod v4**: `z.enum(arr, { errorMap })` **tidak valid** — argumen kedua untuk enum adalah string message, bukan `errorMap`: `z.enum(careerTypes, "Tipe pekerjaan tidak valid")` (contoh `lib/validations/careerSchema.ts`).
 - **Form admin** (mis. `ProductForm` di `/admin/produk`, `/admin/sparepart`) **tidak** memakai react-hook-form. Mereka memakai `useState` lokal untuk state field dan memanggil server action langsung saat submit. Ikuti pola ini untuk form admin baru — jangan perkenalkan react-hook-form ke `app/admin/`.
 - **Upload gambar admin**: `ProductForm` meng-upload gambar client-side lewat browser Supabase client (`utils/supabase/client.ts`) ke bucket publik `media` (policy RLS `storage.objects` khusus staf di `0004_media_storage_policies.sql`) lalu menyimpan URL publik hasilnya di `products.image_url`. Tidak ada field input URL.
 - `app/api/contact` memvalidasi dengan zod `safeParse` lalu memasukkan submission ke tabel `contact_messages` (anon insert via RLS) — muncul di `/admin/inquiry`. Jaga bentuk respons `{ success, message, errors? }`.
@@ -85,7 +86,10 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
   update public.profiles set role = 'admin' where email = 'your@email.com';
   ```
 - **Gotcha PostgREST**: jika sebuah halaman tampil kosong tepat setelah migrasi membuat/mengubah tabel, cache skema PostgREST mungkin usang — jalankan `NOTIFY pgrst, 'reload schema';` di SQL editor.
-- Env Supabase: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` di `.env.local`. Client: `utils/supabase/client.ts` (browser) / `server.ts` (RSC) / `middleware.ts`; refresh sesi di-wire lewat `proxy.ts`. Tidak ada key yang di-commit.
+- Env Supabase: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` di `.env.local`. Client: `utils/supabase/client.ts` (browser) / `utils/supabase/server.ts` (RSC) / `utils/supabase/middleware.ts`; refresh sesi di-wire lewat `proxy.ts`. Tidak ada key yang di-commit.
 
 ## Status repo
-Seluruh pekerjaan di atas belum di-commit — `git log` kini hanya menampilkan commit awal `Create Next App`. Ini konteks informasional (menjelaskan mengapa tidak ada history PR untuk dicek), bukan instruksi: **jangan `git commit` atau `git push`** kecuali diminta eksplisit di sebuah tugas.
+Seluruh pekerjaan wiring publik→Supabase, admin `/admin/karir`, dan URL recruitment **sudah di-commit** (commit terbaru: `df55bef` "menambah admin careers"; sebelumnya `bbbcb02` hapus live chat CS, `66b3ee5` design 3D, `093cf80` brosur/katalog). Konteks informasional, bukan instruksi: **jangan `git commit` atau `git push`** kecuali diminta eksplisit di sebuah tugas.
+
+## Skill custom project
+Skill proyek ada di `.agents/skills/` (ter-daftar via `opencode.json` → `skills.paths: [".agents/skills"]`, di-scan rekursif untuk `**/SKILL.md`): `admin-crud-pattern`, `no-ai-slop-design`, `supabase`, `supabase-migration-safety`, `supabase-postgres-best-practices`, `verification-before-done`. Load skill relevan sebelum menulis kode (isi penuh via tool `skill`). Skill baru = folder `.agents/skills/<nama>/SKILL.md`, frontmatter `name` (wajib, = nama folder) + `description` (wajib).
