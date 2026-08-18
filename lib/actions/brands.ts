@@ -52,7 +52,7 @@ async function removeStorageObjectIfAny(
 
 function revalidateBrandRoutes() {
   revalidatePath("/");
-  revalidatePath("/katalog-produk");
+  revalidatePath("/products");
   revalidatePath("/store");
   revalidatePath("/admin/merek");
   revalidatePath("/admin");

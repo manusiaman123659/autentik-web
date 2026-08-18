@@ -52,7 +52,7 @@ export default function NotFound() {
               Kembali ke Home
             </Link>
             <Link
-              href="/katalog-produk"
+              href="/products"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold border transition-all hover:border-[#0EA5A0] hover:text-[#14B8A6] text-white"
               style={{ borderColor: "rgba(255,255,255,0.2)" }}
             >

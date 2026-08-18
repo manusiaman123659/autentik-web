@@ -9,7 +9,7 @@ interface BrandItem {
   name: string;
   logoSrc: string;
   logoSrcDark?: string;
-  /** Value used for ?brand= query param on /katalog-produk */
+  /** Value used for ?brand= query param on /products */
   brandFilter: string;
 }
 
@@ -55,7 +55,7 @@ export default function Brands({ items }: { items: BrandItem[] }) {
           {marqueeItems.map((brand, i) => (
             <Link
               key={`${brand.name}-${i}`}
-              href={`/katalog-produk?brand=${brand.brandFilter}`}
+              href={`/products?brand=${brand.brandFilter}`}
               aria-label={`Lihat produk ${brand.name}`}
               className="flex items-center justify-center shrink-0 h-24 md:h-28 px-10 opacity-75 hover:opacity-100 transition-opacity duration-300"
             >

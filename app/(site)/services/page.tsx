@@ -584,7 +584,7 @@ export default function ServicesPage() {
                 <ArrowRight size={18} />
               </Link>
               <Link
-                href="/katalog-produk"
+                href="/products"
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white border border-white/20 bg-white/5 hover:bg-white/10 transition-all"
               >
                 Lihat Katalog Produk

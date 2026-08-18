@@ -522,7 +522,7 @@ export default async function AboutPage() {
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
-                href="/katalog-produk"
+                href="/products"
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white transition-all shadow-lg hover:opacity-90"
                 style={{ backgroundColor: "#0EA5A0" }}
               >

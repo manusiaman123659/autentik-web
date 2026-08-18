@@ -11,7 +11,7 @@ export interface PublicBrandItem {
   name: string;
   logoSrc: string;
   logoSrcDark?: string;
-  /** Value used for ?brand= query param on /katalog-produk */
+  /** Value used for ?brand= query param on /products */
   brandFilter: string;
 }
 

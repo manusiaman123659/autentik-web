@@ -48,7 +48,7 @@ Rules:
   the kind of gap this project deliberately avoids.
 - `revalidatePath()` targets the admin list path so the UI reflects the change
   immediately, and the public path too if the module is wired to a public page
-  (e.g. `/katalog-produk`, `/store`, `/careers`).
+  (e.g. `/products`, `/store`, `/careers`).
 - Uses the server-side Supabase client from `utils/supabase/server.ts`
   (cookie-based session, respects RLS as the logged-in staff user) — never the
   service role key, and never the anon client, for admin actions.

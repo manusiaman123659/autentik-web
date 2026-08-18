@@ -29,8 +29,8 @@ interface SearchJob {
 const sitePages = [
   { title: "Home", href: "/", category: "Page" },
   { title: "About Us", href: "/about", category: "Page" },
-  { title: "Products", href: "/katalog-produk", category: "Page" },
-  { title: "Services", href: "/solutions", category: "Page" },
+  { title: "Products", href: "/products", category: "Page" },
+  { title: "Services", href: "/services", category: "Page" },
   { title: "Careers", href: "/careers", category: "Page" },
   { title: "Contact", href: "/contact", category: "Page" },
   { title: "Store", href: "/store", category: "Page" },
@@ -175,7 +175,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 {filteredProducts.map((prod) => (
                   <button
                     key={prod.slug}
-                    onClick={() => handleSelect(`/katalog-produk/${prod.slug}`)}
+                    onClick={() => handleSelect(`/products/${prod.slug}`)}
                     className="w-full text-left p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors flex items-center justify-between group"
                   >
                     <div>

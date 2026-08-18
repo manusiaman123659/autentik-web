@@ -50,10 +50,10 @@ const footerLinks = {
     { label: "Customer Support", href: "/contact" },
   ],
   services: [
-    { label: "IoT Telemetry & Monitoring", href: "/solutions#iot-monitoring" },
-    { label: "Lab Furniture & Engineering", href: "/solutions#lab-engineering" },
-    { label: "Calibration & Maintenance", href: "/solutions#calibration" },
-    { label: "Water Treatment Systems", href: "/solutions#water-treatment" },
+    { label: "IoT Telemetry & Monitoring", href: "/services#iot-monitoring" },
+    { label: "Lab Furniture & Engineering", href: "/services#lab-engineering" },
+    { label: "Calibration & Maintenance", href: "/services#calibration" },
+    { label: "Water Treatment Systems", href: "/services#water-treatment" },
   ],
 };
 

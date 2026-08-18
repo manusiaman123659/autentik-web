@@ -29,37 +29,37 @@ const coreSolutions = [
     icon: "Cpu",
     title: "Pemantauan & Telemetri IoT",
     description: "Pemantauan kualitas air & emisi otomatis realtime.",
-    href: "/solutions#iot-monitoring",
+    href: "/services#iot-monitoring",
   },
   {
     icon: "LayoutDashboard",
     title: "Rekayasa & Furnitur Lab",
     description: "Desain kustom tata letak lab, Fume Hood & Workbench.",
-    href: "/solutions#lab-engineering",
+    href: "/services#lab-engineering",
   },
   {
     icon: "Settings",
     title: "Kalibrasi & Perawatan",
     description: "Servis berkala & kalibrasi akurasi standar ISO.",
-    href: "/solutions#calibration",
+    href: "/services#calibration",
   },
   {
     icon: "Droplets",
     title: "Pengolahan Air Industri",
     description: "Sistem air murni RO/EDI & otomasi IPAL.",
-    href: "/solutions#water-treatment",
+    href: "/services#water-treatment",
   },
   {
     icon: "BarChart2",
     title: "Platform Cloud & Analytics",
     description: "Dashboard kustomisasi & integrasi API ERP.",
-    href: "/solutions#platform-integration",
+    href: "/services#platform-integration",
   },
   {
     icon: "Headset",
     title: "Konsultasi & Audit Teknis",
     description: "Studi kelayakan & pendampingan akreditasi lab.",
-    href: "/solutions#consulting",
+    href: "/services#consulting",
   },
 ];
 

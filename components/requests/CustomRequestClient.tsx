@@ -92,7 +92,7 @@ export default function CustomRequestClient({
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedElement type="fade-up">
             <Link
-              href={productSlug ? `/katalog-produk/${productSlug}` : "/katalog-produk"}
+              href={productSlug ? `/products/${productSlug}` : "/products"}
               className="inline-flex items-center gap-1.5 text-sm mb-6 hover:text-[#14B8A6] transition-colors"
               style={{ color: "var(--text-secondary)" }}
             >

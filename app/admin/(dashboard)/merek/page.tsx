@@ -15,7 +15,7 @@ export default async function AdminMerekPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Merek"
-        description="Merek produk yang tampil di strip brand halaman utama & filter /katalog-produk (hanya status Aktif yang tampil publik)"
+        description="Merek produk yang tampil di strip brand halaman utama & filter /products (hanya status Aktif yang tampil publik)"
         actionLabel="Tambah Merek"
         actionHref="/admin/merek/new"
       />

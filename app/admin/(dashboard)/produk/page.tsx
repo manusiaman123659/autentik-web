@@ -15,7 +15,7 @@ export default async function AdminProdukPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Produk Utama (B2B)"
-        description="Produk bertipe b2b_system yang tampil di halaman /katalog-produk"
+        description="Produk bertipe b2b_system yang tampil di halaman /products"
         actionLabel="Tambah Produk"
         actionHref="/admin/produk/new"
       />

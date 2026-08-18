@@ -22,7 +22,7 @@ export const faqItems: FaqItem[] = [
     question: "Cara memesan produk B2B (sistem custom)",
     keywords: ["b2b", "pesan", "custom", "sistem", "instalasi", "katalog", "beli", "produk"],
     answer:
-      "Buka /katalog-produk untuk melihat produk sistem kami, lalu gunakan tombol 'Tanya via WhatsApp' atau 'Hubungi Sales' pada halaman produk. Tim sales akan membantu kebutuhan spesifik, penawaran harga, dan proses instalasi.",
+      "Buka /products untuk melihat produk sistem kami, lalu gunakan tombol 'Tanya via WhatsApp' atau 'Hubungi Sales' pada halaman produk. Tim sales akan membantu kebutuhan spesifik, penawaran harga, dan proses instalasi.",
   },
   {
     id: "order-store",

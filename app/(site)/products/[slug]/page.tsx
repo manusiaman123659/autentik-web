@@ -75,14 +75,14 @@ export default async function ProductDetailPage({ params }: Props) {
             </Link>
             <ChevronRight size={12} style={{ color: "var(--text-muted)" }} />
             <Link
-              href="/katalog-produk"
+              href="/products"
               className="hover:text-[#0EA5A0] transition-colors"
             >
               Katalog Produk
             </Link>
             <ChevronRight size={12} style={{ color: "var(--text-muted)" }} />
             <Link
-              href={`/katalog-produk?brand=${product.brand}`}
+              href={`/products?brand=${product.brand}`}
               className="hover:text-[#0EA5A0] transition-colors"
             >
               {product.brand}
@@ -111,7 +111,7 @@ export default async function ProductDetailPage({ params }: Props) {
             <div>
               {/* Back link */}
               <Link
-                href={`/katalog-produk?brand=${product.brand}`}
+                href={`/products?brand=${product.brand}`}
                 className="inline-flex items-center gap-1.5 text-sm hover:text-[#14B8A6] transition-colors mb-6"
                 style={{ color: "var(--text-secondary)" }}
               >

@@ -11,7 +11,7 @@ export default async function AdminProdukNewPage() {
   const brands = await listBrands();
   return (
     <div>
-      <PageHeader title="Tambah Produk B2B" description="Produk ini akan tampil di /katalog-produk saat aktif." backHref="/admin/produk" />
+      <PageHeader title="Tambah Produk B2B" description="Produk ini akan tampil di /products saat aktif." backHref="/admin/produk" />
       <ProductForm productType="b2b_system" brands={brands} />
     </div>
   );

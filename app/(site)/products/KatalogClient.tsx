@@ -70,21 +70,21 @@ const FEATURED_SOLUTIONS = [
     tag: "TALPHA & AUTENTIK",
     title: "IoT Monitoring & Smart Sensors",
     description: "Pemantauan suhu, kelembapan, dan lingkungan laboratorium real-time berbasis IoT dengan notifikasi otomatis.",
-    link: "/katalog-produk?brand=Talpha",
+    link: "/products?brand=Talpha",
   },
   {
     icon: Droplets,
     tag: "CYLAB WATER TECH",
     title: "Ultra Pure Water Purification",
     description: "Sistem pemurnian air laboratorium Tipe I & II standar ASTM D1193-91 dan Reverse Osmosis industri.",
-    link: "/katalog-produk?brand=Cylab",
+    link: "/products?brand=Cylab",
   },
   {
     icon: FlaskConical,
     tag: "ULLUN INFRASTRUCTURE",
     title: "Laboratory Furniture & Safety",
     description: "Laminar Air Flow, Biosafety Cabinet, Fumehood, dan kabinet penyimpanan kimia tahan asam berstandar ISO.",
-    link: "/katalog-produk?brand=Ullun",
+    link: "/products?brand=Ullun",
   },
 ];
 
@@ -143,7 +143,7 @@ function ProductCard({
             {product.category}
           </p>
 
-          <Link href={`/katalog-produk/${product.slug}`}>
+          <Link href={`/products/${product.slug}`}>
             <h3
               className="text-lg font-bold group-hover:text-[#0EA5A0] transition-colors line-clamp-2 leading-snug"
               style={{ color: "var(--text-primary)" }}
@@ -184,7 +184,7 @@ function ProductCard({
       {/* Two Actions Footer: View Details & Request Quote */}
       <div className="p-6 pt-0 grid grid-cols-2 gap-3">
         <Link
-          href={`/katalog-produk/${product.slug}`}
+          href={`/products/${product.slug}`}
           className="py-3 px-3 rounded-xl border text-xs font-bold text-center transition-all hover:bg-[#0EA5A0]/10 hover:text-[#0EA5A0] flex items-center justify-center gap-1"
           style={{
             borderColor: "var(--border-subtle)",
@@ -242,9 +242,9 @@ function KatalogContent({ products }: { products: Product[] }) {
     }
 
     if (brandChip === "Semua") {
-      router.replace("/katalog-produk", { scroll: false });
+      router.replace("/products", { scroll: false });
     } else {
-      router.replace(`/katalog-produk?brand=${brandChip}`, { scroll: false });
+      router.replace(`/products?brand=${brandChip}`, { scroll: false });
     }
   };
 
@@ -253,9 +253,9 @@ function KatalogContent({ products }: { products: Product[] }) {
     setActiveBrand(catBrand);
     setCurrentPage(1);
     if (catBrand === "Semua") {
-      router.replace("/katalog-produk", { scroll: false });
+      router.replace("/products", { scroll: false });
     } else {
-      router.replace(`/katalog-produk?brand=${catBrand}`, { scroll: false });
+      router.replace(`/products?brand=${catBrand}`, { scroll: false });
     }
   };
 
@@ -265,7 +265,7 @@ function KatalogContent({ products }: { products: Product[] }) {
     setSearchQuery("");
     setSortBy("relevance");
     setCurrentPage(1);
-    router.replace("/katalog-produk", { scroll: false });
+    router.replace("/products", { scroll: false });
   };
 
   // Filter & Sort Logic

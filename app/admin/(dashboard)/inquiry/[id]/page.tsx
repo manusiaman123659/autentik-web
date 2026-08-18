@@ -58,7 +58,7 @@ export default async function AdminInquiryDetailPage({ params }: Props) {
             <span className="font-semibold text-slate-800 dark:text-slate-100">{msg.product_name}</span>
             {msg.product_slug && (
               <a
-                href={`/katalog-produk/${msg.product_slug}`}
+                href={`/products/${msg.product_slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-[#0EA5A0] hover:underline"

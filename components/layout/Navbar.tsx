@@ -14,8 +14,8 @@ import { useCart } from "@/components/cart/CartProvider";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/katalog-produk", label: "Products" },
-  { href: "/solutions", label: "Services" },
+  { href: "/products", label: "Products" },
+  { href: "/services", label: "Services" },
   { href: "/careers", label: "Careers" },
   { href: "/contact", label: "Contact" },
 ];

@@ -31,7 +31,7 @@ export default function FeaturedProducts() {
               align="left"
             />
             <Link
-              href="/katalog-produk"
+              href="/products"
               className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#14B8A6] hover:text-[#0D9E98] transition-colors whitespace-nowrap mb-1"
             >
               Lihat Semua
@@ -86,7 +86,7 @@ export default function FeaturedProducts() {
                 </p>
 
                 <Link
-                  href={`/katalog-produk/${product.slug}`}
+                  href={`/products/${product.slug}`}
                   className="inline-flex items-center gap-1 text-sm font-semibold text-[#14B8A6] hover:text-[#0D9E98] transition-colors group/link"
                 >
                   Detail Produk
@@ -103,7 +103,7 @@ export default function FeaturedProducts() {
         {/* Mobile "View All" */}
         <div className="mt-8 text-center sm:hidden">
           <Link
-            href="/katalog-produk"
+            href="/products"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-md text-sm font-semibold text-white"
             style={{ backgroundColor: "#0B1F3A" }}
           >

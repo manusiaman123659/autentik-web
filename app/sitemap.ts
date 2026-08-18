@@ -7,11 +7,11 @@ const baseUrl =
 
 const STATIC_ROUTES: { path: string; priority: number }[] = [
   { path: "/", priority: 1 },
-  { path: "/katalog-produk", priority: 0.9 },
+  { path: "/products", priority: 0.9 },
   { path: "/store", priority: 0.9 },
   { path: "/careers", priority: 0.9 },
   { path: "/about", priority: 0.8 },
-  { path: "/solutions", priority: 0.8 },
+  { path: "/services", priority: 0.8 },
   { path: "/contact", priority: 0.8 },
   { path: "/custom-request", priority: 0.7 },
 ];
@@ -52,7 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const catalogEntries = (b2bProducts ?? []).map((p) =>
-    toEntry(`/katalog-produk/${p.slug}`, p.updated_at)
+    toEntry(`/products/${p.slug}`, p.updated_at)
   );
   const storeEntries = (spareparts ?? []).map((p) =>
     toEntry(`/store/${p.slug}`, p.updated_at)
