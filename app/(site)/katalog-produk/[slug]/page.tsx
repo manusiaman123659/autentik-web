@@ -52,8 +52,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const row = await getProductBySlug(slug);
   if (!row) return {};
   return {
-    title: `${row.name} — ${row.brand} | PT Autentik Karya Analitika`,
-    description: row.description,
+    title: row.seo_title || `${row.name} — ${row.brand} | PT Autentik Karya Analitika`,
+    description: row.seo_description || row.description,
   };
 }
 
