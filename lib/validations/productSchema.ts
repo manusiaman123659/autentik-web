@@ -17,6 +17,7 @@ const baseProduct = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug hanya huruf kecil, angka, dan tanda hubung"),
   name: z.string().min(2, "Nama produk minimal 2 karakter"),
   brand: z.string().min(1, "Merek wajib diisi"),
+  brandId: z.string().trim().optional(),
   category: z.string().min(1, "Kategori wajib diisi"),
   description: z.string().min(10, "Deskripsi minimal 10 karakter"),
   brandColor: z.string().min(1, "Warna merek wajib diisi"),

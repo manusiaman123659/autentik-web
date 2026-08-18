@@ -78,6 +78,16 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
 
   const isNonReady = p.fulfillmentType !== "ready_stock";
 
+  let brandId = p.brandId?.trim() || null;
+  if (!brandId) {
+    const { data: match } = await supabase
+      .from("brands")
+      .select("id")
+      .ilike("name", p.brand)
+      .maybeSingle();
+    if (match) brandId = match.id;
+  }
+
   // For updates of B2B products, remember the previous media so we can
   // delete replaced/removed files from Storage after a successful save.
   let oldBrochureUrl: string | null = null;
@@ -98,6 +108,7 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
         slug: p.slug,
         name: p.name,
         brand: p.brand,
+        brand_id: brandId,
         brand_color: p.brandColor,
         category: p.category,
         category_color: p.categoryColor,
@@ -126,6 +137,7 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
         slug: p.slug,
         name: p.name,
         brand: p.brand,
+        brand_id: brandId,
         brand_color: p.brandColor,
         category: p.category,
         category_color: p.categoryColor,

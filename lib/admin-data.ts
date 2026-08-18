@@ -10,6 +10,7 @@ export interface ProductRow {
   product_type: "b2b_system" | "sparepart";
   sku?: string | null;
   brand: string;
+  brand_id?: string | null;
   brand_color?: string | null;
   category: string;
   category_color?: string | null;

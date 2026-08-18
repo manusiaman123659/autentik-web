@@ -23,7 +23,7 @@ import {
   type FulfillmentType,
   type ProductType,
 } from "@/lib/validations/productSchema";
-import type { ProductRow } from "@/lib/admin-data";
+import type { BrandRow, ProductRow } from "@/lib/admin-data";
 
 interface FeatureInput {
   label: string;
@@ -36,6 +36,7 @@ export interface ProductFormValues {
   slug: string;
   name: string;
   brand: string;
+  brandId: string;
   category: string;
   description: string;
   brandColor: string;
@@ -66,6 +67,7 @@ function toFormValues(product: ProductRow | undefined, productType: ProductType)
     slug: product?.slug ?? "",
     name: product?.name ?? "",
     brand: product?.brand ?? "",
+    brandId: product?.brand_id ?? "",
     category: product?.category ?? "",
     description: product?.description ?? "",
     brandColor: product?.brand_color ?? "#0EA5A0",
@@ -258,9 +260,11 @@ function RowDragHandle({ index, count, onItemDrop, onMove }: RowDragProps) {
 export default function ProductForm({
   productType,
   initial,
+  brands = [],
 }: {
   productType: ProductType;
   initial?: ProductRow;
+  brands?: BrandRow[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState<ProductFormValues>(() => toFormValues(initial, productType));
@@ -281,6 +285,22 @@ const [saving, setSaving] = useState(false);
 
   const isSparepart = productType === "sparepart";
   const isNonReady = form.fulfillmentType !== "ready_stock";
+
+  const brandSelection =
+    (brands.find((b) => b.id === form.brandId) ? form.brandId : "") ||
+    (brands.find((b) => b.name === form.brand)?.id ?? "");
+
+  const handleBrandSelect = (value: string) => {
+    if (value === "__custom__") {
+      set("brandId", "");
+      return;
+    }
+    const brand = brands.find((b) => b.id === value);
+    if (brand) {
+      set("brandId", brand.id);
+      set("brand", brand.name);
+    }
+  };
 
   const set = <K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -505,7 +525,38 @@ const [saving, setSaving] = useState(false);
           </div>
 <div>
             <label className={labelClass}>Merek</label>
-            <input className={inputClass} value={form.brand} onChange={(e) => set("brand", e.target.value)} placeholder="Talpha" />
+            <select
+              className={inputClass}
+              value={brandSelection || "__custom__"}
+              onChange={(e) => handleBrandSelect(e.target.value)}
+            >
+              {brands.length === 0 && (
+                <option value="__custom__" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                  — Belum ada merek terdaftar —
+                </option>
+              )}
+              <option value="__custom__" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                Merek lain… (tulis manual)
+              </option>
+              {brands.map((b) => (
+                <option key={b.id} value={b.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                  {b.name}
+                  {b.is_active ? "" : " (nonaktif)"}
+                </option>
+              ))}
+            </select>
+            {brandSelection ? (
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                Merek {form.brand} tertaut ke data merek terdaftar — nama diisi otomatis.
+              </p>
+            ) : (
+              <input
+                className={`${inputClass} mt-2`}
+                value={form.brand}
+                onChange={(e) => set("brand", e.target.value)}
+                placeholder="Talpha"
+              />
+            )}
             <FieldError message={errors.brand} />
             {isSparepart && (
               <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
