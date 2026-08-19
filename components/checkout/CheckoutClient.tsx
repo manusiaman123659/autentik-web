@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, ShoppingBag, Package, AlertCircle, ChevronRight, ArrowLeft } from "lucide-react";
 import { useCart } from "@/components/cart/CartProvider";
@@ -12,6 +12,9 @@ import { checkoutOrderSchema, type CheckoutOrderFormData } from "@/lib/validatio
 import { submitCheckout } from "@/lib/actions/checkout";
 import { formatRupiah } from "@/lib/format";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
+import { createClient as createSupabaseClient } from "@/utils/supabase/client";
+
+const supabase = createSupabaseClient();
 
 const inputClass =
   "w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors";
@@ -22,14 +25,60 @@ export default function CheckoutClient() {
   const { items, hydrated, subtotal, totalItems, clearCart } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [shippingCost, setShippingCost] = useState<number | null>(null);
+  const [estimating, setEstimating] = useState(false);
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<CheckoutOrderFormData>({
     resolver: zodResolver(checkoutOrderSchema),
   });
+
+  const city = useWatch({ control, name: "city" });
+  const province = useWatch({ control, name: "province" });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!city?.trim() || !province?.trim() || items.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShippingCost(null);
+      setEstimating(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setEstimating(true);
+      try {
+        const { data } = await supabase.rpc("estimate_shipping_cost", {
+          p_items: items.map((i) => ({ product_id: i.id, quantity: i.quantity })),
+          p_shipping_address: { city, province },
+        });
+        if (!cancelled) setShippingCost(typeof data === "number" ? data : 0);
+      } catch {
+        if (!cancelled) setShippingCost(null);
+      } finally {
+        if (!cancelled) setEstimating(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [city, province, items]);
+
+  const estimateShipping = async (): Promise<number> => {
+    try {
+      const { data } = await supabase.rpc("estimate_shipping_cost", {
+        p_items: items.map((i) => ({ product_id: i.id, quantity: i.quantity })),
+        p_shipping_address: { city: city ?? "", province: province ?? "" },
+      });
+      return typeof data === "number" ? data : 0;
+    } catch {
+      return 0;
+    }
+  };
 
   if (!hydrated) {
     return (
@@ -77,6 +126,9 @@ export default function CheckoutClient() {
         return;
       }
 
+      const finalShipping =
+        shippingCost !== null ? shippingCost : data.city?.trim() && data.province?.trim() ? await estimateShipping() : 0;
+
       const snapshot: OrderSnapshot = {
         code: result.orderCode,
         createdAt: new Date().toISOString(),
@@ -92,7 +144,8 @@ export default function CheckoutClient() {
           quantity: i.quantity,
         })),
         subtotal,
-        total: subtotal,
+        shippingCost: finalShipping,
+        total: subtotal + finalShipping,
       };
 
       try {
@@ -278,11 +331,24 @@ export default function CheckoutClient() {
                 </div>
                 <div className="flex items-center justify-between" style={{ color: "var(--text-secondary)" }}>
                   <span>Ongkos kirim</span>
-                  <span className="text-xs font-light">Dihitung saat konfirmasi</span>
+                  {estimating ? (
+                    <span className="text-xs font-light flex items-center gap-1.5">
+                      <Loader2 size={12} className="animate-spin text-[#0EA5A0]" />
+                      Menghitung...
+                    </span>
+                  ) : shippingCost !== null ? (
+                    <span className="font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>
+                      {shippingCost > 0 ? formatRupiah(shippingCost) : "Gratis"}
+                    </span>
+                  ) : (
+                    <span className="text-xs font-light">Isi kota & provinsi untuk estimasi</span>
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="font-bold" style={{ color: "var(--text-primary)" }}>Total</span>
-                  <span className="text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>{formatRupiah(subtotal)}</span>
+                  <span className="text-lg font-extrabold tabular-nums" style={{ color: "var(--text-primary)" }}>
+                    {formatRupiah(subtotal + (shippingCost ?? 0))}
+                  </span>
                 </div>
               </div>
 

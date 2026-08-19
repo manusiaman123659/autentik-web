@@ -13,6 +13,7 @@ export interface OrderSnapshot {
     quantity: number;
   }[];
   subtotal: number;
+  shippingCost?: number;
   total: number;
 }
 

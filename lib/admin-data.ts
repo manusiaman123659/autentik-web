@@ -579,3 +579,57 @@ export async function getStoreSettings(): Promise<Record<string, unknown>> {
   }
   return (data as { value: Record<string, unknown> }).value;
 }
+
+export interface ShippingZoneRow {
+  id: string;
+  name: string;
+  provinces: string[];
+  cities: string[];
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShippingRateRow {
+  id: string;
+  zone_id: string;
+  weight_from_g: number;
+  weight_to_g: number;
+  cost: number;
+}
+
+export interface ShippingZoneWithRates extends ShippingZoneRow {
+  rates: ShippingRateRow[];
+}
+
+export async function getShippingZones(): Promise<ShippingZoneWithRates[]> {
+  const supabase = await getSupabase();
+  const { data: zones, error } = await supabase
+    .from("shipping_zones")
+    .select("id, name, provinces, cities, sort_order, is_active, created_at, updated_at")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  if (error || !zones) return [];
+
+  const zoneIds = (zones as ShippingZoneRow[]).map((z) => z.id);
+  if (zoneIds.length === 0) return [];
+
+  const { data: rates } = await supabase
+    .from("shipping_rates")
+    .select("id, zone_id, weight_from_g, weight_to_g, cost")
+    .in("zone_id", zoneIds)
+    .order("weight_from_g", { ascending: true });
+
+  const rateMap = new Map<string, ShippingRateRow[]>();
+  for (const r of (rates ?? []) as ShippingRateRow[]) {
+    const list = rateMap.get(r.zone_id) ?? [];
+    list.push(r);
+    rateMap.set(r.zone_id, list);
+  }
+
+  return (zones as ShippingZoneRow[]).map((z) => ({
+    ...z,
+    rates: rateMap.get(z.id) ?? [],
+  }));
+}

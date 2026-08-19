@@ -132,6 +132,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               trackingCourier: order.tracking_courier ?? "",
               trackingNumber: order.tracking_number ?? "",
               cancelReason: order.cancel_reason ?? "",
+              shippingCost: order.shipping_cost,
             }}
           />
         </div>

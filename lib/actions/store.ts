@@ -162,13 +162,27 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
   };
   if (data.status === "paid") patch.payment_status = "paid";
 
+  const audit: Record<string, unknown> = { status: data.status };
+  if (data.shippingCost !== undefined) {
+    const { data: ord } = await supabase
+      .from("orders")
+      .select("subtotal")
+      .eq("id", id)
+      .single();
+    const subtotal = Number(ord?.subtotal ?? 0);
+    patch.shipping_cost = data.shippingCost;
+    patch.total = subtotal + data.shippingCost;
+    audit.shipping_cost = data.shippingCost;
+    audit.total = patch.total;
+  }
+
   const { error } = await supabase.from("orders").update(patch as never).eq("id", id);
   if (error) {
     console.error("[action] update order", error);
     return { success: false, message: "Gagal memperbarui pesanan. " + error.message };
   }
 
-  await recordAudit("order.status_changed", "order", id, { status: data.status });
+  await recordAudit("order.status_changed", "order", id, audit);
   revalidatePath("/admin/orders");
   revalidatePath("/admin/orders/" + id);
   revalidatePath("/admin");

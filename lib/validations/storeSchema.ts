@@ -17,6 +17,7 @@ export const orderStatusSchema = z
     trackingCourier: z.string().default(""),
     trackingNumber: z.string().default(""),
     cancelReason: z.string().default(""),
+    shippingCost: z.coerce.number().min(0, "Ongkir tidak boleh negatif").max(1_000_000_000).optional(),
   })
   .superRefine((val, ctx) => {
     if (val.status === "shipped" && !val.trackingNumber.trim()) {

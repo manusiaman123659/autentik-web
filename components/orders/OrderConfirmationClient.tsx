@@ -160,7 +160,13 @@ export default function OrderConfirmationClient({
             </div>
             <div className="flex items-center justify-between" style={{ color: "var(--text-secondary)" }}>
               <span>Ongkos kirim</span>
-              <span className="text-xs font-light">Dihitung saat konfirmasi</span>
+              {snapshot.shippingCost !== undefined ? (
+                <span className="font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+                  {snapshot.shippingCost > 0 ? formatRupiah(snapshot.shippingCost) : "Gratis"}
+                </span>
+              ) : (
+                <span className="text-xs font-light">Dihitung saat konfirmasi</span>
+              )}
             </div>
             <div className="flex items-center justify-between pt-2">
               <span className="font-bold" style={{ color: "var(--text-primary)" }}>Total</span>
