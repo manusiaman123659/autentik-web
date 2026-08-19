@@ -42,7 +42,13 @@ function StockBadge({ stock, low }: { stock: number; low: number }) {
   );
 }
 
-function ProductCard({ product }: { product: ProductRow }) {
+function ProductCard({
+  product,
+  waNumber,
+}: {
+  product: ProductRow;
+  waNumber: string | null;
+}) {
   const stock = product.stock ?? 0;
   const low = product.low_stock_threshold ?? 5;
   const fulfillment = product.fulfillment_type ?? "ready_stock";
@@ -130,6 +136,7 @@ function ProductCard({ product }: { product: ProductRow }) {
             fulfillmentType={fulfillment}
             name={product.name}
             slug={product.slug}
+            waNumber={waNumber}
             variant="card"
           />
         )}
@@ -141,9 +148,11 @@ function ProductCard({ product }: { product: ProductRow }) {
 export default function StoreClient({
   products,
   compatible,
+  waNumber,
 }: {
   products: ProductRow[];
   compatible: string | null;
+  waNumber: string | null;
 }) {
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState("all");
@@ -308,7 +317,7 @@ export default function StoreClient({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {pageItems.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} waNumber={waNumber} />
             ))}
           </div>
         )}

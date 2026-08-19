@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getProductBySlug } from "@/lib/admin-data";
+import { getWhatsAppNumber } from "@/lib/public-data";
 import CustomRequestClient from "@/components/requests/CustomRequestClient";
 
 export const metadata: Metadata = {
@@ -21,11 +22,13 @@ export default async function CustomRequestPage({ searchParams }: Props) {
     const row = await getProductBySlug(product);
     if (row) productName = row.name;
   }
+  const waNumber = await getWhatsAppNumber();
 
   return (
     <CustomRequestClient
       productSlug={product ?? null}
       productName={productName}
+      waNumber={waNumber}
     />
   );
 }

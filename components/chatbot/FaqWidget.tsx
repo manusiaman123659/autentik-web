@@ -5,12 +5,13 @@ import {
   MessageCircle,
   X,
   ArrowLeft,
-  Headphones,
   MessagesSquare,
   Send,
   Bot,
 } from "lucide-react";
 import { faqItems } from "@/lib/data/faq";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
+import { createClient } from "@/utils/supabase/client";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -18,9 +19,6 @@ interface ChatMessage {
 }
 
 const CHAT_TIMEOUT_MS = 25000;
-const SUPPORT_WA_LINK = `https://wa.me/6282137384029?text=${encodeURIComponent(
-  "Halo, saya ingin bertanya tentang produk/layanan Autentik."
-)}`;
 
 export default function FaqWidget() {
   const [open, setOpen] = useState(false);
@@ -28,6 +26,29 @@ export default function FaqWidget() {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [waNumber, setWaNumber] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    (async () => {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "whatsapp")
+        .maybeSingle();
+      if (cancelled) return;
+      const value = (data as { value?: unknown } | null)?.value as
+        | { number?: string }
+        | null;
+      setWaNumber(typeof value?.number === "string" ? value.number.trim() : null);
+    })().catch(() => {
+      if (!cancelled) setWaNumber(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -250,16 +271,12 @@ export default function FaqWidget() {
 
           {/* Footer */}
           <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
-            <a
-              href={SUPPORT_WA_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
-              style={{ backgroundColor: "#25D366" }}
-            >
-              <Headphones size={16} />
-              Hubungi via WhatsApp
-            </a>
+            <WhatsAppButton
+              number={waNumber}
+              message="Halo, saya ingin bertanya tentang produk/layanan Autentik."
+              variant="button"
+              className="w-full px-4 py-2.5 rounded-xl text-sm shadow-md"
+            />
             <p className="text-center text-[11px] mt-2" style={{ color: "var(--text-muted)" }}>
               Tim kami membalas dalam 1–2 hari kerja
             </p>

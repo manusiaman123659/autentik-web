@@ -91,7 +91,7 @@ export default function ProductMediaTabs({
           style={{ color: "var(--text-primary)", borderColor: "var(--border-color)" }}
         >
           <Box size={18} />
-          {tab === "foto" ? "Lihat Design 3D" : "Lihat Foto"}
+          {tab === "foto" ? "Lihat Produk dalam 3D" : "Lihat Foto"}
         </button>
       )}
     </div>

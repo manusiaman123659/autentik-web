@@ -5,15 +5,15 @@ interface FulfillmentCtaProps {
   fulfillmentType?: string | null;
   name: string;
   slug: string;
+  waNumber?: string | null;
   variant?: "detail" | "card";
 }
-
-const SUPPORT_WA = "6282137384029";
 
 export default function ProductFulfillmentCta({
   fulfillmentType,
   name,
   slug,
+  waNumber,
   variant = "detail",
 }: FulfillmentCtaProps) {
   if (fulfillmentType === "ready_stock") return null;
@@ -22,9 +22,11 @@ export default function ProductFulfillmentCta({
 
   const href = isCustom
     ? `/custom-request?product=${encodeURIComponent(slug)}`
-    : `https://wa.me/${SUPPORT_WA}?text=${encodeURIComponent(
-        `Halo, saya butuh bantuan technical support untuk produk ${name}. Mohon bantuannya untuk pengadaan dan dukungan teknis.`
-      )}`;
+    : waNumber
+      ? `https://wa.me/${waNumber}?text=${encodeURIComponent(
+          `Halo, saya butuh bantuan technical support untuk produk ${name}. Mohon bantuannya untuk pengadaan dan dukungan teknis.`
+        )}`
+      : "/contact";
 
   const Icon = isCustom ? PackageSearch : Headset;
   const label = isCustom ? "Ajukan Kebutuhan Custom" : "Hubungi Technical Support";

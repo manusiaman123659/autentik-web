@@ -13,12 +13,16 @@ import {
 } from "@/lib/actions/brands";
 import { useToast } from "@/components/admin/Toast";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import PaginationBar from "@/components/admin/PaginationBar";
+
+const ITEMS_PER_PAGE = 8;
 
 export default function BrandListClient({ brands }: { brands: BrandRow[] }) {
   const router = useRouter();
   const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
   const [pendingDelete, setPendingDelete] = useState<BrandRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [sortDraft, setSortDraft] = useState<Record<string, number>>({});
@@ -40,11 +44,17 @@ export default function BrandListClient({ brands }: { brands: BrandRow[] }) {
     return list;
   }, [brands, query, status]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+  const pageItems = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
   const filterActive = query !== "" || status !== "all";
 
   const resetFilters = () => {
     setQuery("");
     setStatus("all");
+    setPage(1);
   };
 
   const handleDelete = async () => {
@@ -95,7 +105,10 @@ export default function BrandListClient({ brands }: { brands: BrandRow[] }) {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
             placeholder="Cari nama, slug, segment..."
             className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 pl-9 pr-9 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
           />
@@ -112,7 +125,10 @@ export default function BrandListClient({ brands }: { brands: BrandRow[] }) {
         </div>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
           className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
         >
           <option value="all">Semua Status</option>
@@ -162,7 +178,7 @@ export default function BrandListClient({ brands }: { brands: BrandRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((b) => {
+            {pageItems.map((b) => {
               const draftVal = sortDraft[b.id];
               return (
                 <tr
@@ -252,6 +268,14 @@ export default function BrandListClient({ brands }: { brands: BrandRow[] }) {
           </tbody>
         </TableShell>
       )}
+
+      <PaginationBar
+        totalItems={filtered.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        page={safePage}
+        onPageChange={setPage}
+        noun="merek"
+      />
 
       {pendingDelete && (
         <ConfirmDialog

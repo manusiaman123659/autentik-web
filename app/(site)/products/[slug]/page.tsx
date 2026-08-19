@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   CheckCircle2,
-  MessageCircle,
   Phone,
   ChevronRight,
   Wrench,
@@ -13,10 +12,12 @@ import {
 } from "lucide-react";
 import { getProductBySlug } from "@/lib/admin-data";
 import type { ProductRow } from "@/lib/admin-data";
+import { getWhatsAppNumber } from "@/lib/public-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 import ProductMediaTabs from "@/components/product/ProductMediaTabs";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -63,6 +64,7 @@ export default async function ProductDetailPage({ params }: Props) {
   if (!row) notFound();
 
   const product = toPublicProduct(row);
+  const waNumber = await getWhatsAppNumber();
 
   return (
     <>
@@ -171,6 +173,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   fulfillmentType={product.fulfillmentType}
                   name={product.name}
                   slug={product.slug}
+                  waNumber={waNumber}
                   variant="detail"
                 />
                 {product.brochureUrl && (
@@ -186,17 +189,14 @@ export default async function ProductDetailPage({ params }: Props) {
                   </a>
                 )}
                 {product.fulfillmentType !== "third_party" && (
-                  <a
-                    href="https://wa.me/6281234567890?text=Halo, saya ingin menanyakan ketersediaan produk"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <WhatsAppButton
+                    number={waNumber}
+                    label="Tanya via WhatsApp"
+                    message="Halo, saya ingin menanyakan ketersediaan produk"
+                    variant="button"
+                    className="px-6 py-3.5 rounded-lg"
                     id="whatsapp-cta"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-white transition-all hover:opacity-90 hover:shadow-md"
-                    style={{ backgroundColor: "#25D366" }}
-                  >
-                    <MessageCircle size={18} />
-                    Tanya via WhatsApp
-                  </a>
+                  />
                 )}
                 <Link
                   href="/contact"

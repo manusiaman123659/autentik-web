@@ -10,13 +10,16 @@ import {
   type CustomRequestFormData,
 } from "@/lib/validations/contactSchema";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 
 export default function CustomRequestClient({
   productSlug,
   productName,
+  waNumber,
 }: {
   productSlug: string | null;
   productName: string | null;
+  waNumber: string | null;
 }) {
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
@@ -205,14 +208,12 @@ export default function CustomRequestClient({
                   <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
                     <MessageCircle size={13} />
                     Butuh lebih cepat? Hubungi kami via WhatsApp di{" "}
-                    <a
-                      href="https://wa.me/6281234567890?text=Halo, saya ingin konsultasi produk custom"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#0EA5A0] hover:underline font-semibold"
-                    >
-                      0812-3456-7890
-                    </a>
+                    <WhatsAppButton
+                      number={waNumber}
+                      label="WhatsApp CS / Sales"
+                      message="Halo, saya ingin konsultasi produk custom"
+                      variant="link"
+                    />
                   </p>
                 </form>
               )}

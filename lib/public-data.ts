@@ -202,3 +202,16 @@ export async function getRecruitmentUrl(): Promise<string | null> {
   const url = typeof value?.url === "string" ? value.url.trim() : "";
   return url || null;
 }
+
+export async function getWhatsAppNumber(): Promise<string | null> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "whatsapp")
+    .maybeSingle();
+  if (error || !data) return null;
+  const value = (data as { value: unknown }).value as { number?: string } | null;
+  const number = typeof value?.number === "string" ? value.number.trim() : "";
+  return number || null;
+}

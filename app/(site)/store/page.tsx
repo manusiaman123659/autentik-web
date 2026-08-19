@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { listStoreProducts } from "@/lib/admin-data";
+import { getWhatsAppNumber } from "@/lib/public-data";
 import StoreClient from "./StoreClient";
 
 export const metadata: Metadata = {
@@ -17,6 +18,9 @@ type Props = {
 export default async function StorePage({ searchParams }: Props) {
   const { compatible } = await searchParams;
   const products = await listStoreProducts();
+  const waNumber = await getWhatsAppNumber();
 
-  return <StoreClient products={products} compatible={compatible ?? null} />;
+  return (
+    <StoreClient products={products} compatible={compatible ?? null} waNumber={waNumber} />
+  );
 }

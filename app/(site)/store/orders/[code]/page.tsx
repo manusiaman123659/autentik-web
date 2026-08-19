@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import OrderConfirmationClient from "@/components/orders/OrderConfirmationClient";
+import { getWhatsAppNumber } from "@/lib/public-data";
 
 type Props = {
   params: Promise<{ code: string }>;
@@ -15,5 +16,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function OrderConfirmationPage({ params }: Props) {
   const { code } = await params;
-  return <OrderConfirmationClient code={code} />;
+  const waNumber = await getWhatsAppNumber();
+  return <OrderConfirmationClient code={code} waNumber={waNumber} />;
 }

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Inbox, PackageSearch } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { listContactMessages } from "@/lib/admin-data";
-import { PageHeader, Badge, EmptyState, TableShell, Th, Td, formatDateTime } from "@/components/admin/ui";
+import { PageHeader, EmptyState } from "@/components/admin/ui";
+import InquiryListClient from "@/components/admin/InquiryListClient";
 
 export const metadata: Metadata = {
   title: "Pesan Masuk (Contact) | Autentik CMS",
@@ -51,54 +52,7 @@ export default async function AdminInquiryPage({ searchParams }: Props) {
       {filtered.length === 0 ? (
         <EmptyState icon={<Inbox size={26} />} title="Belum ada pesan masuk" />
       ) : (
-        <TableShell>
-          <thead>
-            <tr>
-              <Th>Pengirim</Th>
-              <Th>Perusahaan</Th>
-              <Th>Pesan</Th>
-              <Th>Kategori</Th>
-              <Th>Status</Th>
-              <Th>Tanggal</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((m) => (
-              <tr
-                key={m.id}
-                className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${m.is_read ? "" : "bg-teal-50/40 dark:bg-teal-950/20"}`}
-              >
-                <Td>
-                  <Link
-                    href={`/admin/inquiry/${m.id}`}
-                    className="font-semibold text-slate-900 dark:text-white hover:text-[#0EA5A0] transition-colors block"
-                  >
-                    {m.full_name}
-                  </Link>
-                  <span className="text-xs text-slate-400">{m.email}</span>
-                </Td>
-                <Td className="text-sm">{m.company || "—"}</Td>
-                <Td className="max-w-[300px]">
-                  <span className="text-sm line-clamp-2 block text-slate-600 dark:text-slate-300">{m.message}</span>
-                </Td>
-                <Td>
-                  {(m.category ?? "general") === "custom_request" ? (
-                    <Badge tone="teal" className="gap-1">
-                      <PackageSearch size={12} />
-                      Kustom
-                    </Badge>
-                  ) : (
-                    <Badge tone="slate">Umum</Badge>
-                  )}
-                </Td>
-                <Td>
-                  <Badge tone={m.is_read ? "slate" : "amber"}>{m.is_read ? "Dibaca" : "Baru"}</Badge>
-                </Td>
-                <Td className="text-xs text-slate-500 dark:text-slate-400">{formatDateTime(m.created_at)}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </TableShell>
+        <InquiryListClient messages={filtered} />
       )}
     </div>
   );

@@ -21,6 +21,9 @@ import { useToast } from "@/components/admin/Toast";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import MediaUploadField from "@/components/admin/MediaUploadField";
 import { VisibleToggle, SortCell } from "@/components/admin/RelasiBits";
+import PaginationBar from "@/components/admin/PaginationBar";
+
+const ITEMS_PER_PAGE = 8;
 
 interface FormState {
   id: string;
@@ -49,6 +52,12 @@ export default function PartnerTab({ partners }: { partners: PartnerRow[] }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PartnerRow | null>(null);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(partners.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+  const pageItems = partners.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const isEdit = Boolean(form?.id);
 
@@ -282,7 +291,7 @@ export default function PartnerTab({ partners }: { partners: PartnerRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {partners.map((p) => (
+            {pageItems.map((p) => (
               <tr
                 key={p.id}
                 className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
@@ -346,6 +355,14 @@ export default function PartnerTab({ partners }: { partners: PartnerRow[] }) {
           </tbody>
         </TableShell>
       )}
+
+      <PaginationBar
+        totalItems={partners.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        page={safePage}
+        onPageChange={setPage}
+        noun="partner"
+      />
 
       {pendingDelete && (
         <ConfirmDialog

@@ -23,6 +23,9 @@ import { useToast } from "@/components/admin/Toast";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import MediaUploadField from "@/components/admin/MediaUploadField";
 import { VisibleToggle, SortCell } from "@/components/admin/RelasiBits";
+import PaginationBar from "@/components/admin/PaginationBar";
+
+const ITEMS_PER_PAGE = 8;
 
 interface FormState {
   id: string;
@@ -53,6 +56,12 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<TeamMemberRow | null>(null);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(team.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+  const pageItems = team.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const isEdit = Boolean(form?.id);
 
@@ -302,7 +311,7 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {team.map((m) => (
+            {pageItems.map((m) => (
               <tr
                 key={m.id}
                 className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
@@ -364,6 +373,14 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
           </tbody>
         </TableShell>
       )}
+
+      <PaginationBar
+        totalItems={team.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        page={safePage}
+        onPageChange={setPage}
+        noun="anggota"
+      />
 
       {pendingDelete && (
         <ConfirmDialog

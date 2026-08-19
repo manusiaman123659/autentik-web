@@ -7,12 +7,12 @@ import {
   CheckCircle2,
   Package,
   Landmark,
-  MessageCircle,
   ChevronRight,
   Search,
 } from "lucide-react";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
 import { formatRupiah } from "@/lib/format";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 
 // TODO(store): ganti dengan informasi rekening resmi perusahaan ketika sudah ditentukan.
 const BANK_INFO = {
@@ -35,7 +35,13 @@ function readSnapshot(code: string): OrderSnapshot | null {
   }
 }
 
-export default function OrderConfirmationClient({ code }: { code: string }) {
+export default function OrderConfirmationClient({
+  code,
+  waNumber,
+}: {
+  code: string;
+  waNumber: string | null;
+}) {
   const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -76,16 +82,12 @@ export default function OrderConfirmationClient({ code }: { code: string }) {
               Kembali ke Store
               <ChevronRight size={16} />
             </Link>
-            <a
-              href="https://wa.me/6281234567890"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-              style={{ backgroundColor: "#25D366", color: "#fff" }}
-            >
-              <MessageCircle size={16} />
-              Hubungi Kami
-            </a>
+            <WhatsAppButton
+              number={waNumber}
+              label="Hubungi Kami"
+              variant="button"
+              className="px-6 py-3 rounded-xl text-sm"
+            />
           </div>
         </div>
       </div>
@@ -197,16 +199,13 @@ export default function OrderConfirmationClient({ code }: { code: string }) {
             Silakan sertakan kode pesanan <span className="font-mono font-semibold">{snapshot.code}</span> sebagai
             referensi saat transfer.
           </p>
-          <a
-            href="https://wa.me/6281234567890"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-            style={{ backgroundColor: "#25D366", color: "#fff" }}
-          >
-            <MessageCircle size={16} />
-            Kirim Bukti via WhatsApp
-          </a>
+          <WhatsAppButton
+            number={waNumber}
+            label="Kirim Bukti via WhatsApp"
+            message={`Halo, saya ingin mengirim bukti pembayaran untuk pesanan ${snapshot.code}.`}
+            variant="button"
+            className="mt-4 px-6 py-3 rounded-xl text-sm"
+          />
         </div>
 
         <div className="flex justify-center pb-8">

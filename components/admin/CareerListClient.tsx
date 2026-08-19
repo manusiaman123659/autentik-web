@@ -9,12 +9,16 @@ import { Badge, TableShell, Th, Td, statusTone } from "@/components/admin/ui";
 import { deleteCareer } from "@/lib/actions/careers";
 import { useToast } from "@/components/admin/Toast";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import PaginationBar from "@/components/admin/PaginationBar";
+
+const ITEMS_PER_PAGE = 8;
 
 export default function CareerListClient({ careers }: { careers: CareerRow[] }) {
   const router = useRouter();
   const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
   const [pendingDelete, setPendingDelete] = useState<CareerRow | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -35,11 +39,17 @@ export default function CareerListClient({ careers }: { careers: CareerRow[] }) 
     return list;
   }, [careers, query, status]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+  const pageItems = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
   const filterActive = query !== "" || status !== "all";
 
   const resetFilters = () => {
     setQuery("");
     setStatus("all");
+    setPage(1);
   };
 
   const handleDelete = async () => {
@@ -60,7 +70,10 @@ export default function CareerListClient({ careers }: { careers: CareerRow[] }) 
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
             placeholder="Cari judul, slug, departemen..."
             className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 pl-9 pr-9 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
           />
@@ -77,7 +90,10 @@ export default function CareerListClient({ careers }: { careers: CareerRow[] }) 
         </div>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
           className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
         >
           <option value="all">Semua Status</option>
@@ -127,7 +143,7 @@ export default function CareerListClient({ careers }: { careers: CareerRow[] }) 
             </tr>
           </thead>
           <tbody>
-            {filtered.map((c) => (
+            {pageItems.map((c) => (
               <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <Td>
                   <div className="min-w-0">
@@ -174,6 +190,14 @@ export default function CareerListClient({ careers }: { careers: CareerRow[] }) 
           </tbody>
         </TableShell>
       )}
+
+      <PaginationBar
+        totalItems={filtered.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        page={safePage}
+        onPageChange={setPage}
+        noun="lowongan"
+      />
 
       {pendingDelete && (
         <ConfirmDialog

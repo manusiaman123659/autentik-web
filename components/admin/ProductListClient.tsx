@@ -2,17 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Package,
-  Search,
-  X,
-  RotateCcw,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Package, Search, X, RotateCcw } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
 import { Badge, TableShell, Th, Td, statusTone } from "@/components/admin/ui";
 import DeleteProductButton from "@/components/admin/DeleteProductButton";
+import PaginationBar from "@/components/admin/PaginationBar";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -214,51 +208,13 @@ export default function ProductListClient({ products }: { products: ProductRow[]
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Menampilkan{" "}
-            <span className="font-semibold text-slate-900 dark:text-white">
-              {filtered.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + ITEMS_PER_PAGE, filtered.length)}
-            </span>{" "}
-            dari <span className="font-semibold text-slate-900 dark:text-white">{filtered.length}</span> produk
-          </p>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              disabled={safePage === 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              aria-label="Halaman sebelumnya"
-              className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent disabled:dark:hover:bg-transparent transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setPage(n)}
-                className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
-                  n === safePage
-                    ? "bg-[#0EA5A0] text-white"
-                    : "border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-            <button
-              type="button"
-              disabled={safePage === totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              aria-label="Halaman berikutnya"
-              className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-transparent disabled:dark:hover:bg-transparent transition-colors"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      <PaginationBar
+        totalItems={filtered.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+        page={safePage}
+        onPageChange={setPage}
+        noun="produk"
+      />
     </div>
   );
 }

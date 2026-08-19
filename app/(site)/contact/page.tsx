@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getWhatsAppNumber } from "@/lib/public-data";
 import ContactClient from "./ContactClient";
 
 export const metadata: Metadata = {
@@ -7,6 +8,7 @@ export const metadata: Metadata = {
     "Hubungi tim teknis PT Autentik Karya Analitika untuk konsultasi perangkat IoT Quality Monitoring Devices dan solusi produk industri berbasis teknologi IoT.",
 };
 
-export default function ContactPage() {
-  return <ContactClient />;
+export default async function ContactPage() {
+  const waNumber = await getWhatsAppNumber();
+  return <ContactClient waNumber={waNumber} />;
 }

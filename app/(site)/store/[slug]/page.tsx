@@ -5,14 +5,15 @@ import Image from "next/image";
 import {
   ArrowLeft,
   ChevronRight,
-  MessageCircle,
   Package,
   CheckCircle2,
 } from "lucide-react";
 import { getProductBySlug } from "@/lib/admin-data";
+import { getWhatsAppNumber } from "@/lib/public-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import { formatRupiah } from "@/lib/format";
 
@@ -46,6 +47,8 @@ export default async function StoreProductPage({ params }: Props) {
   const fulfillmentType = row.fulfillment_type ?? "ready_stock";
   const isReady = fulfillmentType === "ready_stock";
   const isThirdParty = fulfillmentType === "third_party";
+
+  const waNumber = await getWhatsAppNumber();
 
   const details = [
     { label: "Merek", value: row.brand },
@@ -212,20 +215,18 @@ export default async function StoreProductPage({ params }: Props) {
                     fulfillmentType={fulfillmentType}
                     name={row.name}
                     slug={row.slug}
+                    waNumber={waNumber}
                     variant="detail"
                   />
                 )}
                 {!isThirdParty && (
-                  <a
-                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo, saya ingin menanyakan ketersediaan sparepart ${row.name}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-white transition-all hover:opacity-90 hover:shadow-md"
-                    style={{ backgroundColor: "#25D366" }}
-                  >
-                    <MessageCircle size={18} />
-                    Tanya via WhatsApp
-                  </a>
+                  <WhatsAppButton
+                    number={waNumber}
+                    label="Tanya via WhatsApp"
+                    message={`Halo, saya ingin menanyakan ketersediaan sparepart ${row.name}`}
+                    variant="button"
+                    className="px-6 py-3.5 rounded-lg"
+                  />
                 )}
               </div>
             </div>
