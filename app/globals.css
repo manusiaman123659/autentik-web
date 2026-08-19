@@ -111,6 +111,26 @@
   .dark .dark\:text-slate-300 { color: #cbd5e1; }
   .dark .dark\:text-slate-400 { color: #94a3b8; }
   .dark .dark\:border-slate-700 { border-color: #334155; }
+
+  /* ── Thin, reusable scrollbar (Firefox + Chromium) ── */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-muted);
+  }
 }
 
 /* ─── Brands marquee ────────────────────────────────────────────────────────── */
