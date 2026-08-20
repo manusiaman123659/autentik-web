@@ -1,5 +1,10 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+// Catatan: komponen ini me-render SEMUA tombol nomor halaman
+// (Array.from({ length: totalPages })) tanpa cap/ellipsis. Untuk dataset
+// besar (ribuan baris) jumlah tombol bisa banyak — hardening masa depan:
+// batasi tombol + tampilkan "…". Belum perlu untuk skala saat ini.
+
 interface PaginationBarProps {
   totalItems: number;
   itemsPerPage: number;

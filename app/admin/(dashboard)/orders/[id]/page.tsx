@@ -5,6 +5,7 @@ import { getOrder } from "@/lib/admin-data";
 import { PageHeader, Badge, Card, statusTone, formatRupiah } from "@/components/admin/ui";
 import { ORDER_STATUS_LABELS } from "@/lib/validations/storeSchema";
 import OrderStatusForm from "@/components/admin/OrderStatusForm";
+import OrderDeleteButton from "@/components/admin/OrderDeleteButton";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -135,6 +136,20 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               shippingCost: order.shipping_cost,
             }}
           />
+        </div>
+      </Card>
+
+      <Card className="border-red-200 dark:border-red-900">
+        <div className="px-5 py-4 border-b border-red-100 dark:border-red-900/50">
+          <h2 className="text-sm font-bold text-red-500">Zona Berbahaya</h2>
+        </div>
+        <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            Hapus pesanan ini secara permanen. Hanya pesanan berstatus{" "}
+            <span className="font-semibold text-slate-700 dark:text-slate-200">Dibatalkan</span> yang
+            bisa dihapus — stok otomatis dikembalikan saat dibatalkan.
+          </p>
+          <OrderDeleteButton orderId={order.id} orderCode={order.order_code} />
         </div>
       </Card>
     </div>

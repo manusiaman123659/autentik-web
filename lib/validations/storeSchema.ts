@@ -3,6 +3,10 @@ import { z } from "zod";
 export const ORDER_STATUSES = ["pending", "paid", "shipped", "completed", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+// Pagination daftar pesanan admin (/admin/orders) — dipakai server page & client.
+export const ORDER_PAGE_SIZES = [10, 25, 50] as const;
+export const ORDER_DEFAULT_PAGE_SIZE = 25;
+
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "Pending",
   paid: "Dibayar",

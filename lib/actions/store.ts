@@ -210,6 +210,37 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
   return { success: true, message: "Status pesanan diperbarui." };
 }
 
+export async function deleteOrder(orderId: string): Promise<ActionResult> {
+  const admin = await getAdminUser();
+  if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
+
+  if (!orderId) return { success: false, message: "ID pesanan wajib diisi." };
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  // RPC delete_order (0019): hanya pesanan status 'cancelled' yang boleh
+  // dihapus (stok sudah dikembalikan saat cancel) — atomik + row lock di DB.
+  const { data: deleted, error: rpcError } = await supabase.rpc("delete_order", {
+    p_order_id: orderId,
+  });
+  if (rpcError) {
+    console.error("[action] delete_order", rpcError);
+    return { success: false, message: "Gagal menghapus pesanan. " + rpcError.message };
+  }
+  if (deleted !== true) {
+    return { success: false, message: "Pesanan tidak ditemukan." };
+  }
+
+  await recordAudit("order.deleted", "order", orderId, { order_id: orderId, deleted: true });
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/orders/" + orderId);
+  revalidatePath("/admin/stok");
+  revalidatePath("/admin");
+
+  return { success: true, message: "Pesanan dihapus permanen." };
+}
+
 export async function updateStock(productId: string, input: unknown): Promise<ActionResult> {
   const admin = await getAdminUser();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };

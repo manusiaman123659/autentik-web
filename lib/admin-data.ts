@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import type { OrderStatus } from "@/lib/validations/storeSchema";
+import { ORDER_DEFAULT_PAGE_SIZE } from "@/lib/validations/storeSchema";
 import type { ComproSettings } from "@/lib/validations/comproSchema";
 
 export interface ProductRow {
@@ -236,16 +237,31 @@ export async function getRecentMessages(limit = 5): Promise<ContactMessageRow[]>
   return (data ?? []) as ContactMessageRow[];
 }
 
-export async function listOrders(status?: string): Promise<OrderRow[]> {
+export interface ListOrdersParams {
+  status?: OrderStatus | "all";
+  page?: number; // 1-based
+  pageSize?: number; // default ORDER_DEFAULT_PAGE_SIZE
+}
+
+export async function listOrders(params: ListOrdersParams = {}): Promise<{ orders: OrderRow[]; total: number }> {
   const supabase = await getSupabase();
-  let query = supabase.from("orders").select("*").order("created_at", { ascending: false });
-  if (status && status !== "all") query = query.eq("status", status);
-  const { data, error } = await query;
+  const status = params.status && params.status !== "all" ? params.status : undefined;
+  const pageSize = params.pageSize ?? ORDER_DEFAULT_PAGE_SIZE;
+  const page = Math.max(1, params.page ?? 1);
+
+  let query = supabase
+    .from("orders")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range((page - 1) * pageSize, page * pageSize - 1);
+  if (status) query = query.eq("status", status);
+
+  const { data, error, count } = await query;
   if (error) {
     console.error("[admin-data] orders", error);
-    return [];
+    return { orders: [], total: 0 };
   }
-  return (data ?? []) as OrderRow[];
+  return { orders: (data ?? []) as OrderRow[], total: count ?? 0 };
 }
 
 export async function getOrder(id: string) {
