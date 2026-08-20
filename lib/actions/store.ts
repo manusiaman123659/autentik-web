@@ -176,6 +176,22 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
     audit.total = patch.total;
   }
 
+  // Cancel => restore stok atomik via RPC (guard anti double-restore di DB).
+  // status/cancel_reason sudah di-set RPC dalam satu transaksi; patch biasa
+  // tetap jalan untuk field tracking/opsional (idempotent).
+  let stockRestored = false;
+  if (data.status === "cancelled") {
+    const { data: restored, error: rpcError } = await supabase.rpc("cancel_order", {
+      p_order_id: id,
+      p_cancel_reason: data.cancelReason || null,
+    });
+    if (rpcError) {
+      console.error("[action] cancel_order", rpcError);
+      return { success: false, message: "Gagal membatalkan pesanan dan mengembalikan stok. " + rpcError.message };
+    }
+    stockRestored = restored === true;
+  }
+
   const { error } = await supabase.from("orders").update(patch as never).eq("id", id);
   if (error) {
     console.error("[action] update order", error);
@@ -183,8 +199,12 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
   }
 
   await recordAudit("order.status_changed", "order", id, audit);
+  if (data.status === "cancelled" && stockRestored) {
+    await recordAudit("order.stock_restored", "order", id, { order_id: id, restored: true });
+  }
   revalidatePath("/admin/orders");
   revalidatePath("/admin/orders/" + id);
+  revalidatePath("/admin/stok");
   revalidatePath("/admin");
 
   return { success: true, message: "Status pesanan diperbarui." };
