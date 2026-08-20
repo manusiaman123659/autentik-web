@@ -8,7 +8,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, ShoppingBag, Package, AlertCircle, ChevronRight, ArrowLeft } from "lucide-react";
 import { useCart } from "@/components/cart/CartProvider";
-import { checkoutOrderSchema, type CheckoutOrderFormData } from "@/lib/validations/storeSchema";
+import { checkoutFormSchema, type CheckoutFormData } from "@/lib/validations/storeSchema";
 import { submitCheckout } from "@/lib/actions/checkout";
 import { formatRupiah } from "@/lib/format";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
@@ -33,8 +33,8 @@ export default function CheckoutClient() {
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<CheckoutOrderFormData>({
-    resolver: zodResolver(checkoutOrderSchema),
+  } = useForm<CheckoutFormData>({
+    resolver: zodResolver(checkoutFormSchema),
   });
 
   const city = useWatch({ control, name: "city" });
@@ -112,7 +112,7 @@ export default function CheckoutClient() {
     );
   }
 
-  const onSubmit = async (data: CheckoutOrderFormData) => {
+  const onSubmit = async (data: CheckoutFormData) => {
     setSubmitting(true);
     setServerError("");
     try {

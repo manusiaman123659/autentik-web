@@ -76,6 +76,15 @@ export const checkoutOrderSchema = z.object({
 
 export type CheckoutOrderFormData = z.input<typeof checkoutOrderSchema>;
 
+// Schema untuk form checkout (client). `items` DILEPAS karena bukan field form
+// yang di-register react-hook-form (di-inject manual di onSubmit dari keranjang).
+// Memakainya sebagai resolver mencegah validasi senyap gagal karena `items`
+// tidak pernah ada di form values (root cause: klik "Buat Pesanan" tidak
+// melakukan apa pun tanpa pesan error). Server tetap memakai
+// `checkoutOrderSchema` (ketat) lewat submitCheckout yang selalu menerima items.
+export const checkoutFormSchema = checkoutOrderSchema.omit({ items: true });
+export type CheckoutFormData = z.input<typeof checkoutFormSchema>;
+
 export const storeSettingsSchema = z.object({
   currency: z.string().min(1, "Mata uang wajib diisi"),
   enableShipping: z.boolean().default(false),
