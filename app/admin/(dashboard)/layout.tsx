@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/admin";
 import AdminShell from "@/components/admin/AdminShell";
+import AdminThemeProvider from "@/components/admin/AdminThemeProvider";
 import { ToastProvider } from "@/components/admin/Toast";
 
 export default async function AdminDashboardLayout({
@@ -13,7 +14,9 @@ export default async function AdminDashboardLayout({
 
   return (
     <ToastProvider>
-      <AdminShell user={admin}>{children}</AdminShell>
+      <AdminThemeProvider>
+        <AdminShell user={admin}>{children}</AdminShell>
+      </AdminThemeProvider>
     </ToastProvider>
   );
 }

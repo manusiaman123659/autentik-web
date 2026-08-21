@@ -15,10 +15,13 @@ import {
   PanelLeftOpen,
   ChevronDown,
   ChevronRight,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { ADMIN_NAV_GROUPS, type AdminUser } from "@/lib/admin-sections";
 import { SECTION_ICONS } from "@/components/admin/sectionIcons";
 import { createClient } from "@/utils/supabase/client";
+import { useAdminTheme } from "@/components/admin/AdminThemeProvider";
 
 interface AdminShellProps {
   user: AdminUser;
@@ -79,6 +82,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const { theme, toggleTheme } = useAdminTheme();
   const collapsed = useSyncExternalStore(
     subscribeSidebar,
     getSidebarSnapshot,
@@ -227,6 +231,17 @@ export default function AdminShell({ user, children }: AdminShellProps) {
             {!isCollapsed && "Lihat Situs"}
           </Link>
           <button
+            onClick={toggleTheme}
+            title={isCollapsed ? (theme === "dark" ? "Mode Terang" : "Mode Gelap") : undefined}
+            aria-label={isCollapsed ? (theme === "dark" ? "Mode Terang" : "Mode Gelap") : undefined}
+            className={`flex items-center rounded-lg text-sm font-medium text-slate-300 hover:bg-white/10 transition-colors ${
+              isCollapsed ? "justify-center px-0 py-2.5 w-full" : "gap-2.5 px-3 py-2.5"
+            }`}
+          >
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            {!isCollapsed && (theme === "dark" ? "Mode Terang" : "Mode Gelap")}
+          </button>
+          <button
             onClick={handleLogout}
             disabled={signingOut}
             title={isCollapsed ? "Keluar" : undefined}
@@ -303,9 +318,18 @@ export default function AdminShell({ user, children }: AdminShellProps) {
           <span className="text-sm font-bold text-slate-900 dark:text-white">
             Autentik CMS
           </span>
-          <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wide bg-teal-500/15 text-[#0EA5A0] px-2 py-1 rounded">
-            {user.role === "admin" ? "Admin" : "Editor"}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Mode Terang" : "Mode Gelap"}
+              className="w-9 h-9 flex items-center justify-center rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wide bg-teal-500/15 text-[#0EA5A0] px-2 py-1 rounded">
+              {user.role === "admin" ? "Admin" : "Editor"}
+            </span>
+          </div>
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>

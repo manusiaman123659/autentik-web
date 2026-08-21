@@ -18,11 +18,18 @@ Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT
 - `npm run seed:build` — meregenerasi `supabase/seed.sql` dari `lib/data/*` lewat `scripts/build-seed.ts` (butuh `tsx`, devDependency). Terapkan skema + seed di SQL editor Supabase.
 - Tidak ada test runner; verifikasi dengan `npm run lint` + `npm run build` (build melakukan typecheck). Jalankan keduanya sebelum menyelesaikan sebuah perubahan.
 
+## Env Variables
+- `NEXT_PUBLIC_SUPABASE_URL` — URL project Supabase
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — publishable key (bukan service_role)
+- `NEXT_PUBLIC_SITE_URL` — untuk metadataBase (default: `http://localhost:3000`)
+- Semua di `.env.local` (sudah di-gitignore); tidak ada key yang di-commit.
+
 ## Gotcha Next.js 16 di repo ini
 - **API request async wajib**: `params`/`searchParams`/`cookies()`/`headers()` berupa Promise dan harus di-await. Halaman dinamis di sini sudah mengikuti `type Props = { params: Promise<{ slug: string }> }` lalu `const { slug } = await params` (mis. `app/(site)/products/[slug]/page.tsx`). Pertahankan pola itu.
 - Turbopack adalah default untuk dev dan build; tidak perlu flag `--turbopack`. `next build` gagal jika ada webpack config — jangan menambahkannya.
 - `revalidateTag` butuh argumen profil `cacheLife` kedua; API caching `unstable_*` kini stabil.
 - `middleware` diganti nama jadi `proxy` — **dan memang dipakai di repo ini** (lihat "Autentikasi Admin & CMS" di bawah untuk fungsinya). Jangan anggap kodnya mati.
+- **`proxy.ts`** = Supabase auth session refresh (bukan middleware biasa). Fungsi: `createClient(request)` → `supabase.auth.getUser()` → propagate cookies baru. Matcher: semua route kecuali static files (`_next/static`, `_next/image`, `favicon.ico`, `*.svg|png|jpg|jpeg|gif|webp`). Jangan modifikasi kecuali perlu ubah matcher/auth flow.
 - Default `next/image` berubah (mis. `qualities` default `[75]`, `minimumCacheTTL` 4 jam).
 
 ## Konten & arsitektur
@@ -56,6 +63,7 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 - **Upload gambar admin**: `ProductForm` meng-upload gambar client-side lewat browser Supabase client (`utils/supabase/client.ts`) ke bucket publik `media` (policy RLS `storage.objects` khusus staf di `0004_media_storage_policies.sql`) lalu menyimpan URL publik hasilnya di `products.image_url`. Tidak ada field input URL.
 - **Linking produk → merek**: `products.brand` tetap **teks bebas** (tidak pernah dipaksa jadi FK). `products.brand_id` (FK opsional → `brands.id`, on delete set null) diisi bila admin memilih merek dari dropdown `ProductForm` (prop `brands` dari `listBrands()`); opsi **"Merek lain… (tulis manual)"** ada sengaja untuk kasus di luar daftar merek (sparepart generik, brand belum terdaftar) → `brand_id` NULL, bukan bug. Saat simpan `lib/actions/products.ts` men-derive `brand_id` otomatis (case-insensitive) bila teks brand cocok dengan merek terdaftar. Filter publik (`/products`, `/store`, `SearchModal`, marquee home) **tetap berbasis string `products.brand`**, TIDAK memakai `brand_id` — mengubahnya ke berbasis `brand_id` bukan perilaku saat ini.
 - `app/api/contact` memvalidasi dengan zod `safeParse` lalu memasukkan submission ke tabel `contact_messages` (anon insert via RLS) — muncul di `/admin/inquiry`. Jaga bentuk respons `{ success, message, errors? }`.
+- **Order snapshot**: `lib/order-snapshot.ts` menyimpan snapshot order di sessionStorage setelah checkout. Dipakai di halaman konfirmasi publik `/store/orders/[code]` (bukan DB).
 
 ## Data admin & pola server action
 - **`lib/admin-data.ts`** adalah lapisan data server-only (memakai `cookies()`) untuk membaca data admin (statistik dashboard, orders, inquiries, dsb). **Jangan pernah import ke komponen client** — batasan sama seperti `lib/admin.ts` di bawah, tapi yang ini untuk fetch data, bukan auth.
@@ -96,8 +104,29 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 - **Gotcha PostgREST**: jika sebuah halaman tampil kosong tepat setelah migrasi membuat/mengubah tabel, cache skema PostgREST mungkin usang — jalankan `NOTIFY pgrst, 'reload schema';` di SQL editor.
 - Env Supabase: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` di `.env.local`. Client: `utils/supabase/client.ts` (browser) / `utils/supabase/server.ts` (RSC) / `utils/supabase/middleware.ts`; refresh sesi di-wire lewat `proxy.ts`. Tidak ada key yang di-commit.
 
-## Status repo
-Seluruh pekerjaan wiring publik→Supabase, admin `/admin/karir`, dan URL recruitment **sudah di-commit** (commit terbaru: `cb76d4d` "link produk ke merek terdaftar"; sebelumnya `5638002` admin merek + marquee/dark-light, `df55bef` "menambah admin careers", `bbbcb02` hapus live chat CS, `66b3ee5` design 3D, `093cf80` brosur/katalog). Konteks informasional, bukan instruksi: **jangan `git commit` atau `git push`** kecuali diminta eksplisit di sebuah tugas.
+## How to
+- **Tambah admin section baru** → load skill `admin-crud-pattern`
+- **Tambah/ubah migration SQL** → load skill `supabase-migration-safety`
+- **Tambah/ubah UI** → load skill `no-ai-slop-design`
+- **Selesai task** → load skill `verification-before-done` (tampilkan full lint output, full SQL block, jangan auto-commit)
+
+## Directory structure
+- `app/(site)/` — halaman publik (products, store, careers, about, contact, services, custom-request)
+- `app/admin/(dashboard)/` — 13 admin sections (orders, sparepart, stok, produk, compro, merek, karir, relasi, inquiry, lead, akses-staff, integrasi, riwayat)
+- `components/admin/` — 35 komponen admin UI (reuse primitives dari `ui.tsx`)
+- `lib/actions/` — 10 server action files (brands, careers, checkout, compro, products, recruitment, relasi, settings, shipping, store)
+- `lib/validations/` — 11 Zod schemas
+- `lib/data/` — static fallback data (jangan hapus meski sudah di-wire ke Supabase)
+- `supabase/migrations/` — 19 SQL migrations (0001-0019); file baru lanjut `0020_`
+- `utils/supabase/` — client (browser), server (RSC), middleware (proxy)
+- `.agents/skills/` — 6 custom skills (admin-crud-pattern, no-ai-slop-design, supabase, supabase-migration-safety, supabase-postgres-best-practices, verification-before-done)
+
+## Runtime testing
+- Tampilkan full lint output, bukan summary
+- Untuk SQL migration: tampilkan full `CREATE FUNCTION ... $$ ... $$` block
+- Setelah edit, re-read file untuk pastikan tidak ada stale duplicate
+- Migrasi belum "done" sampai dijalankan di SQL editor
+- Jangan auto-commit; tunggu approval
 
 ## Skill custom project
 Skill proyek ada di `.agents/skills/` (ter-daftar via `opencode.json` → `skills.paths: [".agents/skills"]`, di-scan rekursif untuk `**/SKILL.md`): `admin-crud-pattern`, `no-ai-slop-design`, `supabase`, `supabase-migration-safety`, `supabase-postgres-best-practices`, `verification-before-done`. Load skill relevan sebelum menulis kode (isi penuh via tool `skill`). Skill baru = folder `.agents/skills/<nama>/SKILL.md`, frontmatter `name` (wajib, = nama folder) + `description` (wajib).

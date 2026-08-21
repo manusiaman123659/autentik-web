@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   --color-navy-950: #050d1a;
   --color-navy-900: #0b1f3a;
@@ -103,14 +105,6 @@
   .container-custom {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
-
-  /* ── Dark mode Tailwind utilities ── */
-  .dark .dark\:bg-slate-900  { background-color: #0f172a; }
-  .dark .dark\:bg-slate-800  { background-color: #1e293b; }
-  .dark .dark\:text-white    { color: #ffffff; }
-  .dark .dark\:text-slate-300 { color: #cbd5e1; }
-  .dark .dark\:text-slate-400 { color: #94a3b8; }
-  .dark .dark\:border-slate-700 { border-color: #334155; }
 
   /* ── Thin, reusable scrollbar (Firefox + Chromium) ── */
   .scrollbar-thin {
