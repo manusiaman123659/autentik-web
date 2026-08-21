@@ -64,7 +64,7 @@ export default function Brands({ items }: { items: BrandItem[] }) {
                 alt={brand.name}
                 width={160}
                 height={80}
-                className="max-h-16 md:max-h-[72px] w-auto h-auto max-w-[200px] object-contain"
+                className="h-10 md:h-12 w-auto max-w-[180px] object-contain"
               />
             </Link>
           ))}
