@@ -70,3 +70,29 @@ export async function markMessageRead(id: string, isRead: boolean): Promise<Acti
 
   return { success: true, message: isRead ? "Pesan ditandai sudah dibaca." : "Pesan ditandai belum dibaca." };
 }
+
+export async function saveBankAccount(input: {
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+}): Promise<ActionResult> {
+  const admin = await getAdminUser();
+  if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { error } = await supabase
+    .from("site_settings")
+    .upsert({ key: "bank_account", value: input }, { onConflict: "key" });
+  if (error) {
+    console.error("[action] save bank account", error);
+    return { success: false, message: "Gagal menyimpan rekening. " + error.message };
+  }
+
+  await recordAudit("site_settings.updated", "site_settings", "bank_account", input);
+  revalidatePath("/admin/integrasi");
+  revalidatePath("/store/orders");
+
+  return { success: true, message: "Informasi rekening berhasil disimpan." };
+}

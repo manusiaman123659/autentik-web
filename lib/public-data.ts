@@ -215,3 +215,27 @@ export async function getWhatsAppNumber(): Promise<string | null> {
   const number = typeof value?.number === "string" ? value.number.trim() : "";
   return number || null;
 }
+
+export async function getBankAccount(): Promise<{
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+} | null> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "bank_account")
+    .maybeSingle();
+  if (error || !data) return null;
+  const value = (data as { value: unknown }).value as {
+    bankName?: string;
+    accountNumber?: string;
+    accountHolder?: string;
+  } | null;
+  const bankName = typeof value?.bankName === "string" ? value.bankName.trim() : "";
+  const accountNumber = typeof value?.accountNumber === "string" ? value.accountNumber.trim() : "";
+  const accountHolder = typeof value?.accountHolder === "string" ? value.accountHolder.trim() : "";
+  if (!bankName && !accountNumber && !accountHolder) return null;
+  return { bankName, accountNumber, accountHolder };
+}

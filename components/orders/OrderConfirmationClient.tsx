@@ -14,13 +14,6 @@ import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
 import { formatRupiah } from "@/lib/format";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 
-// TODO(store): ganti dengan informasi rekening resmi perusahaan ketika sudah ditentukan.
-const BANK_INFO = {
-  bank: "Bank Contoh",
-  accountName: "PT Autentik Karya Analitika",
-  accountNumber: "0000-0000-0000",
-};
-
 function readSnapshot(code: string): OrderSnapshot | null {
   try {
     const raw = sessionStorage.getItem(orderSnapshotKey(code));
@@ -38,9 +31,11 @@ function readSnapshot(code: string): OrderSnapshot | null {
 export default function OrderConfirmationClient({
   code,
   waNumber,
+  bankAccount,
 }: {
   code: string;
   waNumber: string | null;
+  bankAccount: { bankName: string; accountNumber: string; accountHolder: string } | null;
 }) {
   const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -187,20 +182,26 @@ export default function OrderConfirmationClient({
             Lakukan transfer manual ke rekening berikut, lalu kirim bukti transfer. Status pesanan akan
             diperbarui oleh tim kami setelah pembayaran terkonfirmasi.
           </p>
-          <div className="rounded-xl border p-4 space-y-1.5 text-sm" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Bank</span>
-              <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{BANK_INFO.bank}</span>
+          {bankAccount ? (
+            <div className="rounded-xl border p-4 space-y-1.5 text-sm" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Bank</span>
+                <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{bankAccount.bankName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Atas Nama</span>
+                <span className="font-semibold text-right" style={{ color: "var(--text-primary)" }}>{bankAccount.accountHolder}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: "var(--text-secondary)" }}>No. Rekening</span>
+                <span className="font-mono font-bold" style={{ color: "var(--text-primary)" }}>{bankAccount.accountNumber}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Atas Nama</span>
-              <span className="font-semibold text-right" style={{ color: "var(--text-primary)" }}>{BANK_INFO.accountName}</span>
+          ) : (
+            <div className="rounded-xl border p-4 text-sm" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+              <p style={{ color: "var(--text-secondary)" }}>Info rekening akan dikonfirmasi oleh tim kami via WhatsApp.</p>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>No. Rekening</span>
-              <span className="font-mono font-bold" style={{ color: "var(--text-primary)" }}>{BANK_INFO.accountNumber}</span>
-            </div>
-          </div>
+          )}
           <p className="text-[11px] text-slate-400 mt-3 font-light">
             Silakan sertakan kode pesanan <span className="font-mono font-semibold">{snapshot.code}</span> sebagai
             referensi saat transfer.
