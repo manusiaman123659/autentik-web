@@ -43,7 +43,7 @@ export const profileMissions = [
 export const profileCoreValues = [
   {
     name: "Faith in God",
-    id: "Kami percaya akan keberadaan & kuasa Tuhan",
+    id: "Kami percaya akan keberadaan dan kuasa Tuhan",
   },
   {
     name: "Innovative",
@@ -54,12 +54,12 @@ export const profileCoreValues = [
     id: "Menghadapi perubahan dengan percaya diri",
   },
   {
-    name: "Service",
+    name: "Serve",
     id: "Memberikan layanan terbaik kepada pelanggan secara profesional",
   },
   {
-    name: "Loyalty",
-    id: "Melaksanakan tugas dan tanggung jawab secara sadar dan penuh integritas dengan memberi solusi yang tuntas",
+    name: "Totality",
+    id: "Secara sadar dan penuh integritas melaksanakan tugas dan tanggung jawab dengan memberi solusi yang tuntas",
   },
 ];
 
