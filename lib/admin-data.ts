@@ -33,6 +33,7 @@ export interface ProductRow {
   status?: string | null;
   seo_title?: string | null;
   seo_description?: string | null;
+  deleted_at?: string | null;
 }
 
 export interface OrderRow {
@@ -53,6 +54,7 @@ export interface OrderRow {
   notes?: string | null;
   cancel_reason?: string | null;
   created_at: string;
+  deleted_at?: string | null;
 }
 
 export interface OrderItemRow {
@@ -109,6 +111,33 @@ export interface StaffRow {
   full_name?: string | null;
   role: "admin" | "editor";
   is_active: boolean;
+  created_at: string;
+}
+
+export interface RfqRow {
+  id: string;
+  rfq_code: string;
+  product_id: string | null;
+  company_name: string;
+  pic_name: string;
+  email: string;
+  phone_number: string;
+  estimated_quantity: number;
+  target_date: string | null;
+  notes: string | null;
+  status: string;
+  created_at: string;
+  product_name?: string | null;
+}
+
+export interface TechDocRow {
+  id: string;
+  product_id: string;
+  title: string;
+  file_type: string;
+  file_url: string;
+  file_size_kb: number | null;
+  requires_lead: boolean;
   created_at: string;
 }
 
@@ -179,17 +208,19 @@ export async function getDashboardStats() {
   const iso = monthStart.toISOString();
 
   const [pending, revenue, unread, lowStock] = await Promise.all([
-    supabase.from("orders").select("id", { count: "exact" }).in("status", ["pending", "paid"]),
+    supabase.from("orders").select("id", { count: "exact" }).in("status", ["pending", "paid"]).is("deleted_at", null),
     supabase
       .from("orders")
       .select("total")
       .in("status", ["paid", "shipped", "completed"])
-      .gte("created_at", iso),
+      .gte("created_at", iso)
+      .is("deleted_at", null),
     supabase.from("contact_messages").select("id", { count: "exact" }).eq("is_read", false),
     supabase
       .from("products")
       .select("id, stock, low_stock_threshold")
-      .eq("product_type", "sparepart"),
+      .eq("product_type", "sparepart")
+      .is("deleted_at", null),
   ]);
 
   const revenueTotal = Array.isArray(revenue.data)
@@ -214,6 +245,7 @@ export async function getRecentOrders(limit = 5): Promise<OrderRow[]> {
   const { data, error } = await supabase
     .from("orders")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) {
@@ -252,6 +284,7 @@ export async function listOrders(params: ListOrdersParams = {}): Promise<{ order
   let query = supabase
     .from("orders")
     .select("*", { count: "exact" })
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
   if (status) query = query.eq("status", status);
@@ -266,7 +299,7 @@ export async function listOrders(params: ListOrdersParams = {}): Promise<{ order
 
 export async function getOrder(id: string) {
   const supabase = await getSupabase();
-  const { data: order, error } = await supabase.from("orders").select("*").eq("id", id).maybeSingle();
+  const { data: order, error } = await supabase.from("orders").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !order) return null;
   const { data: items } = await supabase
     .from("order_items")
@@ -300,6 +333,36 @@ export async function listLeads(): Promise<LeadRow[]> {
     return [];
   }
   return (data ?? []) as LeadRow[];
+}
+
+export async function listRfq(): Promise<RfqRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("quotation_requests")
+    .select("*, products!quotation_requests_product_id_fkey(name)")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[admin-data] rfq", error);
+    return [];
+  }
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    ...row,
+    product_name: (row.products as { name?: string } | null)?.name ?? null,
+  })) as RfqRow[];
+}
+
+export async function listTechnicalDocuments(productId: string): Promise<TechDocRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("technical_documents")
+    .select("*")
+    .eq("product_id", productId)
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("[admin-data] technical documents", error);
+    return [];
+  }
+  return (data ?? []) as TechDocRow[];
 }
 
 export async function listStaff(): Promise<StaffRow[]> {
@@ -338,6 +401,7 @@ export async function listProductsByType(
     .from("products")
     .select("*")
     .eq("product_type", productType)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (query && query.trim()) {
     const q = `%${query.trim()}%`;
@@ -358,6 +422,7 @@ export async function listStoreProducts(): Promise<ProductRow[]> {
     .select("*")
     .eq("product_type", "sparepart")
     .eq("is_store_visible", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) {
     console.error("[admin-data] store products", error);
@@ -368,7 +433,7 @@ export async function listStoreProducts(): Promise<ProductRow[]> {
 
 export async function getProduct(id: string): Promise<ProductRow | null> {
   const supabase = await getSupabase();
-  const { data, error } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase.from("products").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !data) return null;
   return data as ProductRow;
 }
@@ -379,6 +444,7 @@ export async function getProductBySlug(slug: string): Promise<ProductRow | null>
     .from("products")
     .select("*")
     .eq("slug", slug)
+    .is("deleted_at", null)
     .maybeSingle();
   if (error || !data) return null;
   return data as ProductRow;
@@ -407,6 +473,7 @@ export interface CareerRow {
   status: string;
   sort_order: number;
   created_at: string;
+  deleted_at?: string | null;
 }
 
 export async function listCareers(): Promise<CareerRow[]> {
@@ -414,6 +481,7 @@ export async function listCareers(): Promise<CareerRow[]> {
   const { data, error } = await supabase
     .from("careers")
     .select("*")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) {
     console.error("[admin-data] careers", error);
@@ -428,6 +496,7 @@ export async function getCareer(id: string): Promise<CareerRow | null> {
     .from("careers")
     .select("*")
     .eq("id", id)
+    .is("deleted_at", null)
     .maybeSingle();
   if (error || !data) return null;
   return data as CareerRow;

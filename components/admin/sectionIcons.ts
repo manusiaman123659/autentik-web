@@ -13,6 +13,7 @@ import {
   CreditCard,
   History,
   Presentation,
+  FileText,
 } from "lucide-react";
 
 export const SECTION_ICONS: Record<string, LucideIcon> = {
@@ -26,6 +27,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   relasi: Users,
   inquiry: Inbox,
   lead: MessageCircle,
+  rfq: FileText,
   chat: MessagesSquare,
   "akses-staff": UserCog,
   integrasi: CreditCard,

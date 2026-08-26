@@ -5,6 +5,8 @@ import { ArrowLeft, Briefcase, MapPin, CheckCircle2, Building2 } from "lucide-re
 import { getPublicCareerBySlug, getRecruitmentUrl } from "@/lib/public-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import ApplyRecruitmentButton from "@/components/careers/ApplyRecruitmentButton";
+import JsonLd from "@/components/seo/JsonLd";
+import { jobPostingSchema } from "@/lib/seo/jsonLd";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,7 @@ export default async function JobDetailPage({
 
   return (
     <>
+      <JsonLd data={jobPostingSchema(job)} />
       {/* Job Header */}
       <section
         className="pt-32 pb-20 relative overflow-hidden"

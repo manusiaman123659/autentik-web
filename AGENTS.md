@@ -21,8 +21,10 @@ Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT
 ## Env Variables
 - `NEXT_PUBLIC_SUPABASE_URL` — URL project Supabase
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — publishable key (bukan service_role)
+- `SUPABASE_SERVICE_ROLE_KEY` — service role key (server-only, bypasses RLS; hanya dipakai di `lib/supabase/admin.ts`)
 - `NEXT_PUBLIC_SITE_URL` — untuk metadataBase (default: `http://localhost:3000`)
-- Semua di `.env.local` (sudah di-gitignore); tidak ada key yang di-commit.
+- `GEMINI_API_KEY` — Google Gemini API key untuk chatbot AI (`/api/chat`)
+- Semua di `.env.local` (sudah di-gitignore); tidak ada key yang di-commit. Lihat `.env.example` untuk template.
 
 ## Gotcha Next.js 16 di repo ini
 - **API request async wajib**: `params`/`searchParams`/`cookies()`/`headers()` berupa Promise dan harus di-await. Halaman dinamis di sini sudah mengikuti `type Props = { params: Promise<{ slug: string }> }` lalu `const { slug } = await params` (mis. `app/(site)/products/[slug]/page.tsx`). Pertahankan pola itu.
@@ -81,10 +83,10 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 ## Autentikasi Admin & CMS (Supabase)
 - **Tombol login** di navbar/menu mobile adalah `components/auth/AdminNavButton.tsx` (client): "Masuk" → `/admin/login`, berubah jadi "Admin" + logout saat signed in.
 - **Routes**: `app/admin/login` (login publik) dan `app/admin/(dashboard)/*` (ter-guard). `app/admin/(dashboard)/layout.tsx` memanggil `getAdminUser()`; jika gagal `redirect("/admin/login")`.
-- **Status section**: `BUILT_SECTION_KEYS` di `lib/admin-sections.ts` = tepat **13 section** yang sudah dibangun: produk, **compro**, sparepart, stok, orders, inquiry, lead, integrasi, akses-staff, riwayat, **karir**, **merek**, **relasi** (dashboard adalah `/admin`, bukan key section). Section compro, karir, merek, relasi punya route sendiri (`/admin/compro`, `/admin/karir`, `/admin/merek`, `/admin/relasi`). **Semua section sudah dibangun** — tidak ada lagi placeholder; route catch-all `app/admin/(dashboard)/[section]/` memanggil `notFound()` untuk key apa pun yang ada di `BUILT_SECTION_KEYS` (key yang sudah dibangun ada di folder route sendiri, bukan di catch-all). Cek `BUILT_SECTION_KEYS` sebelum berasumsi sebuah halaman section ada.
+- **Status section**: `BUILT_SECTION_KEYS` di `lib/admin-sections.ts` = tepat **14 section keys** yang sudah dibangun: produk, **compro**, sparepart, stok, orders, inquiry, lead, **rfq**, integrasi, akses-staff, riwayat, **karir**, **merek**, **relasi** (dashboard adalah `/admin`, bukan key section). Section compro, karir, merek, relasi, rfq punya route sendiri (`/admin/compro`, `/admin/karir`, `/admin/merek`, `/admin/relasi`, `/admin/rfq`). **Semua section sudah dibangun** — tidak ada lagi placeholder; route catch-all `app/admin/(dashboard)/[section]/` memanggil `notFound()` untuk key apa pun yang ada di `BUILT_SECTION_KEYS` (key yang sudah dibangun ada di folder route sendiri, bukan di catch-all). Cek `BUILT_SECTION_KEYS` sebelum berasumsi sebuah halaman section ada.
 - **`lib/admin.ts`** = server-only; `getAdminUser()` (react `cache`) memvalidasi sesi via `auth.getUser()` lalu memuat baris `profiles` (self-select RLS) dan membutuhkan `role in ('admin','editor')` + `is_active`. **Jangan import ke komponen client** — ia menarik `next/headers`. Data/tipe murni bersama ada di `lib/admin-sections.ts` (re-export dari `lib/admin.ts`; import dari `admin-sections` di kode client, mis. `components/admin/AdminShell.tsx`).
 - `lib/admin-sections.ts` mengekspor `ADMIN_SECTIONS` (link/meta section) dan `AdminUser`. Ikon section: `components/admin/sectionIcons.ts`.
-- Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0019_order_delete.sql`** (file baru lanjut `0020_`):
+- Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0021_b2b_rfq_and_technical_docs.sql`** (file baru lanjut `0022_`):
   - `0001_schema.sql` — skema dasar; trigger `profiles` awalnya membuat `role='editor'` saat signup (diubah `0015` menjadi `'viewer'`).
   - `0002_store_orders.sql` — menambah tabel `orders`, `order_items`, `whatsapp_leads`, plus kolom e-commerce (price, stock, weight, dsb.) di `products`.
   - `0007_chat_rate_limit.sql` — rate-limit chatbot AI (tabel `ai_chat_sessions`, RPC `track_chat_message`) untuk `/api/chat`.
@@ -95,6 +97,9 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
   - `0017_shipping_cost.sql` — kalkulator ongkir internal (Jalur A, tabel tarif): tabel `shipping_zones` (provinsi/kota) + `shipping_rates` (rentang berat gram × ongkir), RLS staff-all + public-select zona aktif, RPC baru `estimate_shipping_cost(jsonb, jsonb)` (SECURITY DEFINER) = **satu sumber logika ongkir**; `create_checkout_order` di-recreate memakainya untuk isi `shipping_cost`/`total`. Master switch = `site_settings` key `store` → `enableShipping` (false → ongkir 0, perilaku lama). Zona tak cocok → 0; berat melebihi band terakhir → cost band terakhir. Admin kelola di `/admin/integrasi` (bagian "Tarif Ongkir"), koreksi manual via `OrderStatusForm` di detail order.
   - `0018_order_cancel_restock.sql` — restore stok otomatis saat order di-cancel: RPC `cancel_order(uuid, text)` (SECURITY DEFINER, authenticated + guard `is_staff()`) men-transisi status → `cancelled` **dan** mengembalikan `products.stock` dari `order_items` secara **atomik** (row lock order + produk dalam 1 transaksi). Guard anti double-restore: status lama sudah `cancelled` → no-op (return false). Dipanggil `updateOrderStatus` hanya saat status baru `cancelled`; audit terpisah `order.stock_restored`; revalidate `/admin/stok`. Tanpa logika simetris re-decrement saat order di-restore dari cancelled (dikoreksi manual via `/admin/stok`).
   - `0019_order_delete.sql` — hapus permanen pesanan: RPC `delete_order(uuid)` (SECURITY DEFINER, authenticated + guard `is_staff()`) **hanya** untuk pesanan berstatus `cancelled` (menjamin stok sudah dikembalikan oleh `cancel_order`); row lock order, `delete` order → `order_items` ikut via cascade, order tak ditemukan → no-op (return false). Dipanggil `deleteOrder` (`lib/actions/store.ts`) dari tombol "Hapus Pesanan" di detail order (`components/admin/OrderDeleteButton.tsx`, zona berbahaya, status ≠ cancelled ditolak dgn pesan); audit `order.deleted`; revalidate `/admin/orders`.
+  - `0020_bank_account_setting.sql` — pengaturan rekening bank (site_settings).
+  - `0021_b2b_rfq_and_technical_docs.sql` — tabel RFQ (Request for Quotation) B2B + dokumen teknis produk; section admin `/admin/rfq` dengan list/detail view (`RfqListClient.tsx`, `RfqDetailClient.tsx`).
+  - `0022_soft_delete_and_security.sql` — soft-delete pada `orders`, `products`, `quotation_requests`, `careers`; RPC `soft_delete_order(text, uuid, text)` dan `restore_order(text, uuid)`; RLS policy updates untuk exclude `deleted_at IS NULL`; indexes pada `orders.deleted_at` dan `products.deleted_at`.
 - **Nomor WhatsApp publik — satu sumber kebenaran**: `site_settings` key `whatsapp` dibaca server-side via `getWhatsAppNumber()` (`lib/public-data.ts`, memakai `cookies()` → halaman pemakainya dynamic) dan client-side via browser Supabase client di `components/chatbot/FaqWidget.tsx` (fetch sekali saat mount, tombol disabled sampai terisi). UI link/tombol WA memakai `components/ui/WhatsAppButton.tsx` (client dumb, props `number` + `label?`/`message?`/`variant?: "link"|"button"`/`className?`/`id?`; disabled saat `number` null). **Ganti nomor = `UPDATE site_settings` key `whatsapp`** (belum ada form admin) — jangan hardcode di komponen. `lib/whatsapp.ts` (konstanta lama) sudah dihapus; tidak ada dua sumber.
 - **Chatbot AI (Gemini)** tetap dipakai penuh: `components/chatbot/FaqWidget.tsx` hanya mode AI (`/api/chat`, rate-limit `ai_chat_sessions`), dengan tombol "Hubungi via WhatsApp" ke nomor dari `site_settings` key `whatsapp` sebagai fallback kontak. Tidak ada live chat CS/Tawk lagi.
 - Promosikan admin pertama di SQL editor Supabase:
@@ -112,12 +117,16 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 
 ## Directory structure
 - `app/(site)/` — halaman publik (products, store, careers, about, contact, services, custom-request)
-- `app/admin/(dashboard)/` — 13 admin sections (orders, sparepart, stok, produk, compro, merek, karir, relasi, inquiry, lead, akses-staff, integrasi, riwayat)
-- `components/admin/` — 35 komponen admin UI (reuse primitives dari `ui.tsx`)
-- `lib/actions/` — 10 server action files (brands, careers, checkout, compro, products, recruitment, relasi, settings, shipping, store)
-- `lib/validations/` — 11 Zod schemas
+- `app/admin/(dashboard)/` — 14 admin sections (orders, sparepart, stok, produk, compro, merek, karir, relasi, inquiry, lead, rfq, akses-staff, integrasi, riwayat)
+- `components/admin/` — komponen admin UI (reuse primitives dari `ui.tsx`)
+- `components/ui/` — komponen publik bersama (Button, Badge, SectionHeading, WhatsAppButton, CompanyProfileViewer, ScrollAnimations)
+- `components/product/` — komponen produk (Product3DViewer, ProductMediaTabs, RfqButton/Modal, TechnicalDocsSection, GatedDownloadModal)
+- `components/cart/`, `components/checkout/`, `components/orders/` — alur e-commerce
+- `components/careers/`, `components/requests/` — komponen karir & custom request
+- `lib/actions/` — 12 server action files (brands, careers, checkout, compro, products, recruitment, relasi, rfq, settings, shipping, store, technicalDocuments)
+- `lib/validations/` — 12 Zod schemas (brand, career, chat, compro, contact, login, product, recruitment, relasi, rfq, shipping, store)
 - `lib/data/` — static fallback data (jangan hapus meski sudah di-wire ke Supabase)
-- `supabase/migrations/` — 19 SQL migrations (0001-0019); file baru lanjut `0020_`
+- `supabase/migrations/` — 22 SQL migrations (0001-0022); file baru lanjut `0023_`
 - `utils/supabase/` — client (browser), server (RSC), middleware (proxy)
 - `.agents/skills/` — 6 custom skills (admin-crud-pattern, no-ai-slop-design, supabase, supabase-migration-safety, supabase-postgres-best-practices, verification-before-done)
 

@@ -342,7 +342,7 @@ export default function CompanyProfileViewer({
           <a
             href={pdfUrl}
             download={pdfFilename}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-white bg-[#0EA5A0]/20 hover:bg-[#0EA5A0]/40 border border-[#0EA5A0]/30 transition-all duration-200 hover:scale-[1.03]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium border border-white/10 backdrop-blur transition-all"
             title="Download PDF"
           >
             <Download size={14} />
@@ -393,10 +393,10 @@ export default function CompanyProfileViewer({
         <button
           onClick={goPrev}
           disabled={currentSlide === 0}
-          className={`absolute left-2 sm:left-4 z-20 p-2 sm:p-3 rounded-full transition-all duration-300 ${
+          className={`absolute left-2 sm:left-4 z-20 p-2.5 rounded-full bg-slate-900/60 hover:bg-slate-900/90 text-white border border-white/15 backdrop-blur-md transition-all shadow-lg focus:outline-none ${
             currentSlide === 0
               ? "opacity-20 cursor-not-allowed"
-              : "bg-black/40 hover:bg-black/70 text-white hover:scale-110 backdrop-blur-sm shadow-lg border border-white/10"
+              : "hover:scale-110"
           }`}
           aria-label="Previous slide"
         >
@@ -405,10 +405,10 @@ export default function CompanyProfileViewer({
         <button
           onClick={goNext}
           disabled={currentSlide >= slideLimit}
-          className={`absolute right-2 sm:right-4 z-20 p-2 sm:p-3 rounded-full transition-all duration-300 ${
+          className={`absolute right-2 sm:right-4 z-20 p-2.5 rounded-full bg-slate-900/60 hover:bg-slate-900/90 text-white border border-white/15 backdrop-blur-md transition-all shadow-lg focus:outline-none ${
             currentSlide >= slideLimit
               ? "opacity-20 cursor-not-allowed"
-              : "bg-black/40 hover:bg-black/70 text-white hover:scale-110 backdrop-blur-sm shadow-lg border border-white/10"
+              : "hover:scale-110"
           }`}
           aria-label="Next slide"
         >
@@ -481,23 +481,15 @@ export default function CompanyProfileViewer({
 
       {/* ─── Bottom Bar ─── */}
       <div
-        className={`flex items-center justify-between px-4 sm:px-6 py-2.5 ${
+        className={`flex items-center justify-center px-4 sm:px-6 py-2.5 ${
           isFullscreen
             ? "bg-black/60 border-t border-white/10"
             : "bg-gradient-to-r from-[#050d1a] to-[#0B1F3A] rounded-b-2xl"
         }`}
       >
-        <p className="text-white/40 text-[10px] sm:text-xs font-light">
+        <p className="text-slate-300 dark:text-slate-400 text-xs font-light">
           Gunakan panah ◀ ▶ atau geser untuk navigasi
         </p>
-        <a
-          href={pdfUrl}
-          download={pdfFilename}
-          className="flex items-center gap-1.5 text-[#0EA5A0] hover:text-[#0cbaaf] text-[10px] sm:text-xs font-medium transition-colors"
-        >
-          <Download size={12} />
-          {pdfFilename}
-        </a>
       </div>
     </div>
   );

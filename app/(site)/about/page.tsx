@@ -8,7 +8,6 @@ import {
   Target,
   Sparkles,
   ArrowRight,
-  Download,
   FileText,
 } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
@@ -85,9 +84,6 @@ const firstValues = [
   },
 ];
 
-const DEFAULT_PDF_URL = "/images/compro/COMPRO-AKA-2026.pdf";
-const DEFAULT_PDF_FILENAME = "COMPRO-AKA-2026.pdf";
-
 async function getComproManifest(): Promise<ComproManifestProp | null> {
   try {
     const cookieStore = await cookies();
@@ -121,7 +117,7 @@ export default async function AboutPage() {
   ]);
   return (
     <>
-      {/* Hero Section */}
+      {/* ─── Section 1: Hero & Sekilas Perusahaan ─── */}
       <section
         className="pt-36 pb-24 relative overflow-hidden"
         style={{
@@ -143,9 +139,10 @@ export default async function AboutPage() {
           }}
         />
 
-        <div className="max-w-7xl mx-auto px-6 lg:px-16 relative z-10 text-center">
-          <AnimatedElement type="fade-up" className="mx-auto flex flex-col items-center">
-            <div className="mb-8 w-32 h-32 flex justify-center items-center hover:scale-105 transition-all duration-500 bg-white rounded-full p-4 shadow-2xl">
+        <div className="max-w-7xl mx-auto px-6 lg:px-16 relative z-10">
+          {/* Hero Header */}
+          <AnimatedElement type="fade-up" className="text-center mb-16">
+            <div className="mb-8 w-32 h-32 mx-auto flex justify-center items-center hover:scale-105 transition-all duration-500 bg-white rounded-full p-4 shadow-2xl">
               <Image
                 src="/images/logo_aka/akaaaaaaa.png"
                 alt="Autentik Logo"
@@ -154,80 +151,62 @@ export default async function AboutPage() {
                 className="w-24 h-24 object-contain transition-transform duration-500"
               />
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white mb-6 leading-tight">
-              PT AUTENTIK KARYA ANALITIKA
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white mb-4 leading-tight">
+              Membangun Solusi Cerdas
+              <br />
+              <span className="text-[#0EA5A0]">&amp; Otomasi Berkelanjutan</span>
             </h1>
-            <p className="text-xl md:text-2xl text-slate-200 leading-relaxed font-light max-w-4xl">
-              Perusahaan teknologi pintar yang senantiasa berkomitmen untuk memberikan dan meningkatkan kepuasan pelanggan.
+            <p className="text-lg md:text-xl text-slate-300 leading-relaxed font-light max-w-3xl mx-auto mb-4">
+              PT Autentik Karya Analitika adalah perusahaan teknologi pintar yang berkomitmen memberikan solusi otomasi dan IoT industri terintegrasi untuk laboratorium, manufaktur, dan lingkungan kerja di seluruh Indonesia.
+            </p>
+            <p className="text-sm text-slate-400 font-light">
+              Smart Technology is Yours
             </p>
           </AnimatedElement>
-        </div>
-      </section>
 
-      {/* Visi & Misi Section */}
-      <section className="py-24 px-6 lg:px-16" style={{ backgroundColor: "var(--bg-secondary)" }}>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-stretch">
-          
-          {/* VISI CARD */}
-          <AnimatedElement type="fade-up">
-            <div
-              className="p-10 md:p-12 rounded-3xl border shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between"
-              style={{
-                backgroundColor: "var(--bg-card)",
-                borderColor: "var(--border-subtle)",
-              }}
-            >
-              <div>
-                <h2
-                  className="text-3xl font-bold mb-8 flex items-center gap-4 border-b pb-6"
-                  style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                >
-                  <span className="text-[#0EA5A0] font-black italic text-4xl">II.</span> Visi
-                </h2>
-                <p
-                  className="text-xl md:text-2xl leading-relaxed font-medium mb-4"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Menjadi perusahaan yang unggul di bidang penerapan teknologi pintar untuk akses kehidupan yang lebih baik.
+          {/* Visi & Misi Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+            {/* VISI */}
+            <AnimatedElement type="fade-up">
+              <div className="p-8 md:p-10 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 h-full flex flex-col justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
+                    <span className="text-[#0EA5A0] font-black italic text-3xl">II.</span>
+                    <span className="text-white">Visi</span>
+                  </h2>
+                  <p className="text-lg md:text-xl leading-relaxed font-medium text-white mb-4">
+                    Menjadi perusahaan yang unggul di bidang penerapan teknologi pintar untuk akses kehidupan yang lebih baik.
+                  </p>
+                </div>
+                <p className="text-sm italic mt-4 font-light text-slate-400">
+                  (To become a leading company in applying smart technology for a better life)
                 </p>
               </div>
-              <p className="text-sm italic mt-6 font-light" style={{ color: "var(--text-secondary)" }}>
-                (To become a leading company in applying smart technology for a better life)
-              </p>
-            </div>
-          </AnimatedElement>
+            </AnimatedElement>
 
-          {/* MISI CARD */}
-          <AnimatedElement type="fade-up">
-            <div
-              className="p-10 md:p-12 rounded-3xl border shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between"
-              style={{
-                backgroundColor: "var(--bg-card)",
-                borderColor: "var(--border-subtle)",
-              }}
-            >
-              <div>
-                <h2
-                  className="text-3xl font-bold mb-8 flex items-center gap-4 border-b pb-6"
-                  style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                >
-                  <span className="text-[#0EA5A0] font-black italic text-4xl">III.</span> Misi
-                </h2>
-                <ul className="space-y-6 font-medium list-none">
-                  {missionPoints.map((point) => (
-                    <li key={point.number} className="relative pl-6">
-                      <span className="absolute left-0 top-2.5 w-2 h-2 rounded-full bg-[#0EA5A0]" />
-                      <span style={{ color: "var(--text-primary)" }}>{point.text}</span>
-                      <span className="text-xs italic mt-1.5 block font-light" style={{ color: "var(--text-secondary)" }}>
-                        ({point.english})
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+            {/* MISI */}
+            <AnimatedElement type="fade-up">
+              <div className="p-8 md:p-10 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 h-full flex flex-col justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
+                    <span className="text-[#0EA5A0] font-black italic text-3xl">III.</span>
+                    <span className="text-white">Misi</span>
+                  </h2>
+                  <ul className="space-y-4 font-medium list-none">
+                    {missionPoints.map((point) => (
+                      <li key={point.number} className="relative pl-5">
+                        <span className="absolute left-0 top-2 w-2 h-2 rounded-full bg-[#0EA5A0]" />
+                        <span className="text-white">{point.text}</span>
+                        <span className="text-xs italic mt-1 block font-light text-slate-400">
+                          ({point.english})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-            </div>
-          </AnimatedElement>
-
+            </AnimatedElement>
+          </div>
         </div>
       </section>
 
@@ -354,7 +333,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* Company Profile Presentation Section */}
+      {/* ─── Section 4: Interactive Deck ─── */}
       <section className="py-24 px-6 lg:px-16" style={{ backgroundColor: "var(--bg-primary)" }}>
         <div className="max-w-6xl mx-auto">
           <AnimatedElement type="fade-up" className="text-center mb-12">
@@ -372,7 +351,7 @@ export default async function AboutPage() {
               className="text-3xl md:text-4xl font-bold tracking-tight mb-4"
               style={{ color: "var(--text-primary)" }}
             >
-              Profil Perusahaan
+              Profil Perusahaan &amp; Dokumen Resmi
             </h2>
             <p className="text-base sm:text-lg font-light max-w-2xl mx-auto leading-relaxed" style={{ color: "var(--text-secondary)" }}>
               Jelajahi company profile kami untuk mengetahui lebih dalam tentang visi, misi, produk, dan layanan yang kami tawarkan.
@@ -391,22 +370,10 @@ export default async function AboutPage() {
             </div>
           </AnimatedElement>
 
-          {/* Download CTA */}
           <AnimatedElement type="fade-up">
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a
-                href={comproManifest?.pdfUrl ?? DEFAULT_PDF_URL}
-                download={comproManifest?.pdfFilename ?? DEFAULT_PDF_FILENAME}
-                className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-bold text-white transition-all shadow-lg hover:opacity-90 hover:scale-[1.02] active:scale-[0.98]"
-                style={{ backgroundColor: "#0EA5A0" }}
-              >
-                <Download size={18} />
-                Download Company Profile (PDF)
-              </a>
-              <p className="text-xs font-light" style={{ color: "var(--text-secondary)" }}>
-                Format PDF &bull; Geser slide untuk melihat semua halaman
-              </p>
-            </div>
+            <p className="mt-6 text-center text-xs font-light" style={{ color: "var(--text-secondary)" }}>
+              Format Dokumen Interaktif &bull; {comproManifest?.pdfUrl ? "Tersedia dalam PDF" : "40 Halaman"}
+            </p>
           </AnimatedElement>
         </div>
       </section>
@@ -504,37 +471,77 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* CTA Footer Banner */}
-      <section
-        className="py-20 relative overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
-      >
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <AnimatedElement type="fade-up">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-5">
-              Bermitra dengan Kami
-            </h2>
-            <p className="text-slate-300 text-lg mb-10">
-              Temukan bagaimana instrumen presisi dan solusi terintegrasi Autentik dapat meningkatkan infrastruktur laboratorium Anda.
-            </p>
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Link
-                href="/products"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white transition-all shadow-lg hover:opacity-90"
-                style={{ backgroundColor: "#0EA5A0" }}
-              >
-                Jelajahi Katalog Produk
-                <ArrowRight size={18} />
-              </Link>
-              <Link
-                href="/contact"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white border border-white/30 hover:border-white/70 hover:bg-white/10 transition-all"
-              >
-                Hubungi Dukungan
-              </Link>
+      {/* ─── Section 6: Dual CTA Banner ─── */}
+      <section className="py-24 px-6 lg:px-16" style={{ backgroundColor: "var(--bg-secondary)" }}>
+        <div className="max-w-5xl mx-auto">
+          <AnimatedElement type="stagger" className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Card 1: Kolaborasi Industri */}
+            <div
+              className="p-8 md:p-10 rounded-2xl border hover:shadow-xl transition-all duration-300 flex flex-col"
+              style={{
+                backgroundColor: "var(--bg-card)",
+                borderColor: "var(--border-subtle)",
+              }}
+            >
+              <div className="mb-6">
+                <span className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#0EA5A0]/10 text-[#0EA5A0]">
+                  <ArrowRight size={22} />
+                </span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-bold mb-3" style={{ color: "var(--text-primary)" }}>
+                Kolaborasi Industri &amp; Pengadaan
+              </h3>
+              <p className="text-sm font-light leading-relaxed mb-8 flex-1" style={{ color: "var(--text-secondary)" }}>
+                Diskusikan kebutuhan instrumen laboratorium, furnitur, kalibrasi, dan solusi teknis terintegrasi dengan tim ahli kami.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all shadow-lg hover:opacity-90"
+                  style={{ backgroundColor: "#0EA5A0" }}
+                >
+                  Hubungi Tim Sales
+                  <ArrowRight size={16} />
+                </Link>
+                <Link
+                  href="/products"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold border transition-all"
+                  style={{ color: "var(--text-primary)", borderColor: "var(--border-subtle)" }}
+                >
+                  Katalog Produk
+                </Link>
+              </div>
+            </div>
+
+            {/* Card 2: Program Karir & Magang */}
+            <div
+              className="p-8 md:p-10 rounded-2xl border hover:shadow-xl transition-all duration-300 flex flex-col"
+              style={{
+                backgroundColor: "var(--bg-card)",
+                borderColor: "var(--border-subtle)",
+              }}
+            >
+              <div className="mb-6">
+                <span className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#0EA5A0]/10 text-[#0EA5A0]">
+                  <FileText size={22} />
+                </span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-bold mb-3" style={{ color: "var(--text-primary)" }}>
+                Program Karir &amp; Magang
+              </h3>
+              <p className="text-sm font-light leading-relaxed mb-8 flex-1" style={{ color: "var(--text-secondary)" }}>
+                Bergabung bersama tim kami dalam mengembangkan teknologi IoT dan otomasi industri.
+              </p>
+              <div>
+                <Link
+                  href="/careers"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all shadow-lg hover:opacity-90"
+                  style={{ backgroundColor: "#0EA5A0" }}
+                >
+                  Lihat Posisi Tersedia
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
             </div>
           </AnimatedElement>
         </div>

@@ -2,17 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   CheckCircle2,
   Package,
   Landmark,
   ChevronRight,
   Search,
+  Printer,
 } from "lucide-react";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
 import { formatRupiah } from "@/lib/format";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
+import OptimizedImage from "@/components/ui/OptimizedImage";
+import PrintCustomerInvoice from "./PrintCustomerInvoice";
 
 function readSnapshot(code: string): OrderSnapshot | null {
   try {
@@ -90,7 +92,9 @@ export default function OrderConfirmationClient({
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
+    <>
+    <PrintCustomerInvoice snapshot={snapshot} bankAccount={bankAccount} />
+    <div className="min-h-screen print:hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
       {/* Header */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
@@ -111,10 +115,19 @@ export default function OrderConfirmationClient({
               {snapshot.code}
             </span>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 flex items-center justify-center gap-3">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">
               Menunggu Pembayaran
             </span>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors"
+              style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
+            >
+              <Printer size={14} />
+              Cetak Bukti Pesanan
+            </button>
           </div>
         </div>
       </div>
@@ -128,7 +141,7 @@ export default function OrderConfirmationClient({
               <div key={item.id} className="flex gap-4">
                 <div className="w-16 h-16 rounded-xl flex items-center justify-center overflow-hidden border flex-shrink-0" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
                   {item.image_url ? (
-                    <Image src={item.image_url} alt={item.name} width={64} height={64} className="object-contain w-full h-full p-1.5" />
+                    <OptimizedImage src={item.image_url} alt={item.name} width={64} height={64} className="object-contain w-full h-full p-1.5" />
                   ) : (
                     <Package size={24} className="text-slate-400" />
                   )}
@@ -226,5 +239,6 @@ export default function OrderConfirmationClient({
         </div>
       </div>
     </div>
+    </>
   );
 }

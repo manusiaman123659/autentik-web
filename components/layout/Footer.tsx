@@ -43,8 +43,8 @@ function YoutubeIcon({ size = 16 }: { size?: number }) {
 
 const footerLinks = {
   quickLinks: [
-    { label: "Privacy Policy", href: "#" },
-    { label: "Terms of Service", href: "#" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    { label: "Terms of Service", href: "/terms-of-service" },
     { label: "ISO Certification", href: "/about" },
     { label: "Careers", href: "/careers" },
     { label: "Customer Support", href: "/contact" },

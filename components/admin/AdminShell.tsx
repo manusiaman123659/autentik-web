@@ -280,7 +280,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
   return (
     <div className="min-h-screen flex bg-slate-100 dark:bg-slate-950">
       <aside
-        className={`hidden lg:block flex-shrink-0 bg-[#0B1F3A] sticky top-0 h-screen transition-[width] duration-300 ease-in-out ${
+        className={`hidden lg:block print:hidden flex-shrink-0 bg-[#0B1F3A] sticky top-0 h-screen transition-[width] duration-300 ease-in-out ${
           collapsed ? "w-[72px]" : "w-64"
         }`}
       >
@@ -307,7 +307,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
       )}
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="lg:hidden sticky top-0 z-40 h-14 px-4 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <header className="lg:hidden print:hidden sticky top-0 z-40 h-14 px-4 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
           <button
             aria-label="Buka menu"
             onClick={() => setMenuOpen(true)}

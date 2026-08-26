@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300" fill="none">
+  <rect width="300" height="300" rx="16" fill="#F1F5F9"/>
+  <rect x="1" y="1" width="298" height="298" rx="15" stroke="#E2E8F0" stroke-width="2"/>
+  <!-- Package icon -->
+  <g transform="translate(108, 80)" stroke="#94A3B8" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M42 0L84 24V72L42 96L0 72V24L42 0Z"/>
+    <path d="M0 24L42 48L84 24"/>
+    <path d="M42 48V96"/>
+    <path d="M126 24L84 48"/>
+  </g>
+  <!-- Text -->
+  <text x="150" y="210" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#94A3B8">
+    Tidak Ada Gambar
+  </text>
+  <text x="150" y="230" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#CBD5E1">
+    No Image Available
+  </text>
+</svg>

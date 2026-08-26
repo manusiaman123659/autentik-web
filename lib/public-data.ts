@@ -74,6 +74,7 @@ export async function listPublicCareers(): Promise<CareerPosition[]> {
       "slug, title, department, location, type, type_badge_color, summary, description, responsibilities, requirements, benefits"
     )
     .eq("status", "open")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) {
     console.error("[public-data] careers", error);
@@ -94,6 +95,7 @@ export async function getPublicCareerBySlug(
     )
     .eq("slug", slug)
     .eq("status", "open")
+    .is("deleted_at", null)
     .maybeSingle();
   if (error) {
     console.error("[public-data] career by slug", error);

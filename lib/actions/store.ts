@@ -7,6 +7,7 @@ import { getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 import { manualOrderSchema, orderStatusSchema, stockUpdateSchema } from "@/lib/validations/storeSchema";
 import { recordAudit } from "@/lib/audit";
+import { logError } from "@/lib/logger";
 import type { ProductRow } from "@/lib/admin-data";
 import type { ActionResult } from "./products";
 
@@ -112,13 +113,13 @@ export async function createManualOrder(input: unknown): Promise<ActionResult> {
     .single();
 
   if (orderError || !order) {
-    console.error("[action] create order", orderError);
+    logError("action.create_order", orderError);
     return { success: false, message: "Gagal membuat pesanan. " + (orderError?.message ?? "") };
   }
 
   const { error: itemsError } = await supabase.from("order_items").insert(items.map((it) => ({ ...it, order_id: order.id })));
   if (itemsError) {
-    console.error("[action] create order items", itemsError);
+    logError("action.create_order_items", itemsError);
     return { success: false, message: "Gagal menyimpan item pesanan. " + itemsError.message };
   }
 
@@ -130,7 +131,7 @@ export async function createManualOrder(input: unknown): Promise<ActionResult> {
         .from("products")
         .update({ stock: next })
         .eq("id", item.product_id);
-      if (stockError) console.error("[action] decrement stock", stockError);
+      if (stockError) logError("action.decrement_stock", stockError);
     }
   }
 
@@ -186,7 +187,7 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
       p_cancel_reason: data.cancelReason || null,
     });
     if (rpcError) {
-      console.error("[action] cancel_order", rpcError);
+      logError("action.cancel_order", rpcError);
       return { success: false, message: "Gagal membatalkan pesanan dan mengembalikan stok. " + rpcError.message };
     }
     stockRestored = restored === true;
@@ -194,7 +195,7 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
 
   const { error } = await supabase.from("orders").update(patch as never).eq("id", id);
   if (error) {
-    console.error("[action] update order", error);
+    logError("action.update_order", error);
     return { success: false, message: "Gagal memperbarui pesanan. " + error.message };
   }
 
@@ -219,26 +220,56 @@ export async function deleteOrder(orderId: string): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  // RPC delete_order (0019): hanya pesanan status 'cancelled' yang boleh
-  // dihapus (stok sudah dikembalikan saat cancel) — atomik + row lock di DB.
-  const { data: deleted, error: rpcError } = await supabase.rpc("delete_order", {
+  // RPC soft_delete_order (0022): set deleted_at instead of hard delete.
+  const { data: deleted, error: rpcError } = await supabase.rpc("soft_delete_order", {
     p_order_id: orderId,
+    p_admin_id: admin.id,
+    p_reason: null,
   });
   if (rpcError) {
-    console.error("[action] delete_order", rpcError);
-    return { success: false, message: "Gagal menghapus pesanan. " + rpcError.message };
+    logError("action.soft_delete_order", rpcError);
+    return { success: false, message: "Gagal mengarsipkan pesanan. " + rpcError.message };
   }
   if (deleted !== true) {
     return { success: false, message: "Pesanan tidak ditemukan." };
   }
 
-  await recordAudit("order.deleted", "order", orderId, { order_id: orderId, deleted: true });
+  await recordAudit("order.soft_deleted", "order", orderId, { order_id: orderId });
   revalidatePath("/admin/orders");
   revalidatePath("/admin/orders/" + orderId);
   revalidatePath("/admin/stok");
   revalidatePath("/admin");
 
-  return { success: true, message: "Pesanan dihapus permanen." };
+  return { success: true, message: "Pesanan berhasil diarsipkan." };
+}
+
+export async function restoreOrder(orderId: string): Promise<ActionResult> {
+  const admin = await getAdminUser();
+  if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
+
+  if (!orderId) return { success: false, message: "ID pesanan wajib diisi." };
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: restored, error: rpcError } = await supabase.rpc("restore_order", {
+    p_order_id: orderId,
+    p_admin_id: admin.id,
+  });
+  if (rpcError) {
+    logError("action.restore_order", rpcError);
+    return { success: false, message: "Gagal mengembalikan pesanan. " + rpcError.message };
+  }
+  if (restored !== true) {
+    return { success: false, message: "Pesanan tidak ditemukan atau tidak sedang diarsipkan." };
+  }
+
+  await recordAudit("order.restored", "order", orderId, { order_id: orderId });
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/orders/" + orderId);
+  revalidatePath("/admin");
+
+  return { success: true, message: "Pesanan berhasil dikembalikan." };
 }
 
 export async function updateStock(productId: string, input: unknown): Promise<ActionResult> {
@@ -255,7 +286,7 @@ export async function updateStock(productId: string, input: unknown): Promise<Ac
 
   const { error } = await supabase.from("products").update({ stock: parsed.data.stock }).eq("id", productId);
   if (error) {
-    console.error("[action] update stock", error);
+    logError("action.update_stock", error);
     return { success: false, message: "Gagal memperbarui stok. " + error.message };
   }
 

@@ -16,6 +16,8 @@ import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import { formatRupiah } from "@/lib/format";
+import JsonLd from "@/components/seo/JsonLd";
+import { productOfferSchema } from "@/lib/seo/jsonLd";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -59,6 +61,7 @@ export default async function StoreProductPage({ params }: Props) {
 
   return (
     <>
+      <JsonLd data={productOfferSchema(row)} />
       {/* Breadcrumb */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">

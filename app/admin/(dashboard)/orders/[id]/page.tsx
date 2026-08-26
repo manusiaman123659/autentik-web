@@ -6,6 +6,7 @@ import { PageHeader, Badge, Card, statusTone, formatRupiah } from "@/components/
 import { ORDER_STATUS_LABELS } from "@/lib/validations/storeSchema";
 import OrderStatusForm from "@/components/admin/OrderStatusForm";
 import OrderDeleteButton from "@/components/admin/OrderDeleteButton";
+import OrderPrintActions from "@/components/admin/OrderPrintActions";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -25,12 +26,17 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   const addr = (order.shipping_address ?? {}) as Record<string, string>;
 
   return (
-    <div className="max-w-4xl">
+    <>
+      <div className="max-w-4xl print:hidden">
       <PageHeader
         title={order.order_code}
         description={`Dibuat ${new Date(order.created_at).toLocaleString("id-ID")}`}
         backHref="/admin/orders"
       />
+
+      <div className="mb-6 flex justify-end">
+        <OrderPrintActions order={order} items={items} />
+      </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
         <Card>
@@ -152,6 +158,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           <OrderDeleteButton orderId={order.id} orderCode={order.order_code} />
         </div>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

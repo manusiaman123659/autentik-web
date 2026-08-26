@@ -16,6 +16,8 @@ import {
   Box,
 } from "lucide-react";
 import { upsertProduct } from "@/lib/actions/products";
+import { upsertTechnicalDocument, deleteTechnicalDocument } from "@/lib/actions/technicalDocuments";
+import TechnicalDocsManager from "@/components/admin/TechnicalDocsManager";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -23,11 +25,20 @@ import {
   type FulfillmentType,
   type ProductType,
 } from "@/lib/validations/productSchema";
-import type { BrandRow, ProductRow } from "@/lib/admin-data";
+import type { BrandRow, ProductRow, TechDocRow } from "@/lib/admin-data";
 
 interface FeatureInput {
   label: string;
   value: string;
+}
+
+interface TechDocItem {
+  id?: string;
+  title: string;
+  fileType: string;
+  fileUrl: string;
+  fileSizeKb: number | null;
+  requiresLead: boolean;
 }
 
 export interface ProductFormValues {
@@ -261,10 +272,12 @@ export default function ProductForm({
   productType,
   initial,
   brands = [],
+  initialDocuments = [],
 }: {
   productType: ProductType;
   initial?: ProductRow;
   brands?: BrandRow[];
+  initialDocuments?: TechDocRow[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState<ProductFormValues>(() => toFormValues(initial, productType));
@@ -276,6 +289,16 @@ const [saving, setSaving] = useState(false);
   const [brochureUploadError, setBrochureUploadError] = useState("");
   const [modelUploading, setModelUploading] = useState(false);
   const [modelUploadError, setModelUploadError] = useState("");
+  const [documents, setDocuments] = useState<TechDocItem[]>(
+    initialDocuments.map((d) => ({
+      id: d.id,
+      title: d.title,
+      fileType: d.file_type,
+      fileUrl: d.file_url,
+      fileSizeKb: d.file_size_kb,
+      requiresLead: d.requires_lead,
+    })),
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const brochureInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -469,6 +492,33 @@ const [saving, setSaving] = useState(false);
       setErrors(result.errors ?? {});
       return;
     }
+
+    const productId = form.id || (result as { productId?: string }).productId;
+    if (productId && !isSparepart) {
+      const existingIds = initialDocuments.map((d) => d.id).filter(Boolean);
+      const currentIds = documents.filter((d) => d.id).map((d) => d.id);
+
+      for (const docId of existingIds) {
+        if (!currentIds.includes(docId)) {
+          await deleteTechnicalDocument(docId!, productId);
+        }
+      }
+
+      for (const doc of documents) {
+        if (doc.title.trim() && doc.fileUrl) {
+          await upsertTechnicalDocument({
+            id: doc.id,
+            productId,
+            title: doc.title,
+            fileType: doc.fileType,
+            fileUrl: doc.fileUrl,
+            fileSizeKb: doc.fileSizeKb ?? undefined,
+            requiresLead: doc.requiresLead,
+          });
+        }
+      }
+    }
+
     router.push(isSparepart ? "/admin/sparepart" : "/admin/produk");
     router.refresh();
   };
@@ -801,6 +851,20 @@ onChange={(e) => set("description", e.target.value)}
             </button>
           )}
           <FieldError message={modelUploadError || errors.model3dUrl} />
+        </section>
+      )}
+
+      {!isSparepart && form.id && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">Dokumen Teknis</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+            Kelola dokumen teknis (datasheet, manual, CAD, sertifikat, firmware) yang bisa diunduh oleh pelanggan B2B.
+          </p>
+          <TechnicalDocsManager
+            productId={form.id}
+            documents={documents}
+            onChange={setDocuments}
+          />
         </section>
       )}
 

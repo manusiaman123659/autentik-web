@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
+import JsonLd from "@/components/seo/JsonLd";
+import { organizationSchema } from "@/lib/seo/jsonLd";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -36,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="id" className={inter.variable} suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
+        <JsonLd data={organizationSchema()} />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

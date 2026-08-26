@@ -18,6 +18,10 @@ import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 import ProductMediaTabs from "@/components/product/ProductMediaTabs";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
+import TechnicalDocsSection from "@/components/product/TechnicalDocsSection";
+import RfqButton from "@/components/product/RfqButton";
+import JsonLd from "@/components/seo/JsonLd";
+import { productSchema } from "@/lib/seo/jsonLd";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -66,8 +70,33 @@ export default async function ProductDetailPage({ params }: Props) {
   const product = toPublicProduct(row);
   const waNumber = await getWhatsAppNumber();
 
+  let documents: Array<{
+    id: string;
+    title: string;
+    file_type: string;
+    file_url: string;
+    file_size_kb: number | null;
+    requires_lead: boolean;
+  }> = [];
+
+  try {
+    const { cookies } = await import("next/headers");
+    const { createClient } = await import("@/utils/supabase/server");
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
+    const { data: docs } = await supabase
+      .from("technical_documents")
+      .select("id, title, file_type, file_url, file_size_kb, requires_lead")
+      .eq("product_id", row.id)
+      .order("created_at", { ascending: true });
+    documents = docs ?? [];
+  } catch {
+    documents = [];
+  }
+
   return (
     <>
+      <JsonLd data={productSchema(row)} />
       {/* Breadcrumb */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
@@ -168,54 +197,68 @@ export default async function ProductDetailPage({ params }: Props) {
               )}
 
               {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-                <ProductFulfillmentCta
-                  fulfillmentType={product.fulfillmentType}
-                  name={product.name}
-                  slug={product.slug}
-                  waNumber={waNumber}
-                  variant="detail"
+              <div className="space-y-3">
+                {/* Row 1: WhatsApp + Contact Sales (2-column grid) */}
+                <div className="grid grid-cols-2 gap-3">
+                  {product.fulfillmentType !== "third_party" && (
+                    <WhatsAppButton
+                      number={waNumber}
+                      label="Tanya via WhatsApp"
+                      message="Halo, saya ingin menanyakan ketersediaan produk"
+                      variant="button"
+                      className="h-11 rounded-xl text-sm font-medium"
+                      id="whatsapp-cta"
+                    />
+                  )}
+                  <Link
+                    href="/contact"
+                    id="contact-sales-cta"
+                    className="inline-flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors"
+                  >
+                    <Phone size={16} />
+                    Hubungi Sales
+                  </Link>
+                </div>
+
+                {/* Row 2: RFQ (full-width, highlight) */}
+                <RfqButton
+                  productId={row.id}
+                  productName={product.name}
                 />
+
+                {/* Row 3: Brosur (if available) */}
                 {product.brochureUrl && (
                   <a
                     href={`${product.brochureUrl}?download=`}
                     id="brochure-download-cta"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold border transition-all hover:border-[#0EA5A0] hover:text-[#0EA5A0]"
-                    style={{ color: "var(--text-primary)", borderColor: "var(--border-color)" }}
+                    className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors"
                   >
-                    <FileText size={18} />
+                    <FileText size={16} />
                     Unduh Brosur/Katalog (PDF)
-                    <Download size={16} className="opacity-70" />
+                    <Download size={14} className="opacity-60" />
                   </a>
                 )}
-                {product.fulfillmentType !== "third_party" && (
-                  <WhatsAppButton
-                    number={waNumber}
-                    label="Tanya via WhatsApp"
-                    message="Halo, saya ingin menanyakan ketersediaan produk"
-                    variant="button"
-                    className="px-6 py-3.5 rounded-lg"
-                    id="whatsapp-cta"
-                  />
-                )}
-                <Link
-                  href="/contact"
-                  id="contact-sales-cta"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold border hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-all"
-                  style={{ color: "var(--text-primary)", borderColor: "var(--border-color)" }}
-                >
-                  <Phone size={18} />
-                  Hubungi Sales
-                </Link>
+
+                {/* Row 4: Sparepart (full-width, dark) */}
                 <Link
                   href={`/store?compatible=${product.slug}`}
                   id="sparepart-cta"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-white transition-all hover:opacity-90 hover:shadow-md"
-                  style={{ backgroundColor: "#0B1F3A" }}
+                  className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium text-white bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 transition-colors"
                 >
-                  <Wrench size={18} />
+                  <Wrench size={16} />
                   Cari Sparepart Produk Ini
                 </Link>
+
+                {/* Fallback CTA (if fulfillment is third_party, show ProductFulfillmentCta separately) */}
+                {product.fulfillmentType === "third_party" && (
+                  <ProductFulfillmentCta
+                    fulfillmentType={product.fulfillmentType}
+                    name={product.name}
+                    slug={product.slug}
+                    waNumber={waNumber}
+                    variant="detail"
+                  />
+                )}
               </div>
             </div>
           </AnimatedElement>
@@ -252,6 +295,9 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
         </section>
       )}
+
+      {/* Technical Documents */}
+      <TechnicalDocsSection documents={documents} />
     </>
   );
 }
