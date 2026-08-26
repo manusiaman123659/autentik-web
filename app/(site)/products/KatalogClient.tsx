@@ -11,16 +11,16 @@ import {
   SlidersHorizontal,
   ChevronRight,
   Building2,
-  CheckCircle2,
   X,
-  Send,
   RefreshCw,
   ChevronLeft,
   Cpu,
   Droplets,
   FlaskConical,
+  FileText,
 } from "lucide-react";
 import type { Product } from "@/types";
+import RfqModal from "@/components/product/RfqModal";
 
 // Company Profile Official Categories
 const COMPANY_CATEGORIES = [
@@ -90,10 +90,10 @@ const FEATURED_SOLUTIONS = [
 
 function ProductCard({
   product,
-  onRequestQuote,
+  onRfqClick,
 }: {
   product: Product;
-  onRequestQuote: (prod: Product) => void;
+  onRfqClick: (product: Product) => void;
 }) {
   const displaySpecs = product.specs ? product.specs.slice(0, 3) : [];
 
@@ -167,7 +167,7 @@ function ProductCard({
             >
               {displaySpecs.map((spec, idx) => (
                 <div key={idx} className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400 font-medium">{spec.label}:</span>
+                  <span className="text-slate-400 font-medium">{spec.label.replace(/:\s*$/, "")}:</span>
                   <span
                     className="font-semibold truncate max-w-[170px]"
                     style={{ color: "var(--text-primary)" }}
@@ -182,23 +182,25 @@ function ProductCard({
       </div>
 
       {/* Two Actions Footer: View Details & Request Quote */}
-      <div className="p-6 pt-0 grid grid-cols-2 gap-3">
+      <div className="px-6 pb-6 pt-4 mt-auto grid grid-cols-2 gap-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
         <Link
           href={`/products/${product.slug}`}
-          className="py-3 px-3 rounded-xl border text-xs font-bold text-center transition-all hover:bg-[#0EA5A0]/10 hover:text-[#0EA5A0] flex items-center justify-center gap-1"
-          style={{
-            borderColor: "var(--border-subtle)",
-            color: "var(--text-primary)",
-          }}
+          className="inline-flex items-center justify-center h-9 px-3 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors gap-1"
         >
           <span>Detail</span>
-          <ChevronRight size={14} className="text-slate-400" />
+          <ChevronRight size={13} />
         </Link>
         <button
-          onClick={() => onRequestQuote(product)}
-          className="py-3 px-3 rounded-xl text-xs font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md flex items-center justify-center gap-1.5"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRfqClick(product);
+          }}
+          className="inline-flex items-center justify-center gap-1.5 h-9 px-2 rounded-lg text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all shadow-sm shadow-emerald-500/10"
+          title="Minta Penawaran Resmi"
         >
-          <span>Request Quote</span>
+          <FileText size={13} className="shrink-0" />
+          <span>Minta RFQ</span>
         </button>
       </div>
     </div>
@@ -217,17 +219,8 @@ function KatalogContent({ products }: { products: Product[] }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6; // 3 columns x 2 rows = 6 items per page
 
-  // Quote Modal State
-  const [quoteProduct, setQuoteProduct] = useState<Product | null>(null);
-  const [quoteSubmitted, setQuoteSubmitted] = useState(false);
-  const [quoteForm, setQuoteForm] = useState({
-    companyName: "",
-    fullName: "",
-    email: "",
-    phone: "",
-    quantity: "1",
-    notes: "",
-  });
+  // Single RFQ modal state (lifted from ProductCard)
+  const [rfqProduct, setRfqProduct] = useState<Product | null>(null);
 
   const handleBrandChipClick = (brandChip: string) => {
     setActiveBrand(brandChip);
@@ -300,23 +293,6 @@ function KatalogContent({ products }: { products: Product[] }) {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredProducts.slice(start, start + itemsPerPage);
   }, [filteredProducts, currentPage]);
-
-  const handleQuoteSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setQuoteSubmitted(true);
-    setTimeout(() => {
-      setQuoteSubmitted(false);
-      setQuoteProduct(null);
-      setQuoteForm({
-        companyName: "",
-        fullName: "",
-        email: "",
-        phone: "",
-        quantity: "1",
-        notes: "",
-      });
-    }, 2500);
-  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
@@ -599,7 +575,7 @@ function KatalogContent({ products }: { products: Product[] }) {
                   <ProductCard
                     key={product.id}
                     product={product}
-                    onRequestQuote={(prod) => setQuoteProduct(prod)}
+                    onRfqClick={(prod) => setRfqProduct(prod)}
                   />
                 ))}
               </div>
@@ -676,185 +652,6 @@ function KatalogContent({ products }: { products: Product[] }) {
         </div>
       </div>
 
-      {/* Request Quote Modal */}
-      {quoteProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div
-            className="w-full max-w-lg rounded-3xl border shadow-2xl p-6 md:p-8 animate-in zoom-in-95 duration-150"
-            style={{
-              backgroundColor: "var(--bg-card)",
-              borderColor: "var(--border-subtle)",
-            }}
-          >
-            <div className="flex items-center justify-between mb-6 border-b pb-4" style={{ borderColor: "var(--border-subtle)" }}>
-              <div>
-                <span className="text-xs font-bold uppercase text-[#0EA5A0]">B2B Quote Request</span>
-                <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  Minta Penawaran Harga (RFQ)
-                </h3>
-              </div>
-              <button
-                onClick={() => setQuoteProduct(null)}
-                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {quoteSubmitted ? (
-              <div className="py-10 text-center space-y-3">
-                <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle2 size={36} />
-                </div>
-                <h4 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Permintaan Dikirim!</h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed font-light">
-                  Tim Sales Engineer PT Autentik Karya Analitika akan mengirimkan dokumen penawaran harga resmi (RFQ) ke email Anda dalam 1x24 jam.
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleQuoteSubmit} className="space-y-4 text-xs">
-                <div
-                  className="p-3 rounded-xl border flex items-center justify-between"
-                  style={{
-                    backgroundColor: "var(--bg-secondary)",
-                    borderColor: "var(--border-subtle)",
-                  }}
-                >
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Produk Dipilih:</span>
-                    <p className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>{quoteProduct.name}</p>
-                  </div>
-                  <span className="px-2.5 py-1 rounded text-[10px] font-bold bg-[#0EA5A0] text-white">
-                    {quoteProduct.brand}
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-1" style={{ color: "var(--text-primary)" }}>Nama Perusahaan / Instansi *</label>
-                  <input
-                    type="text"
-                    required
-                    value={quoteForm.companyName}
-                    onChange={(e) => setQuoteForm({ ...quoteForm, companyName: e.target.value })}
-                    placeholder="PT / Instansi / Laboratorium"
-                    className="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                    style={{
-                      backgroundColor: "var(--bg-primary)",
-                      borderColor: "var(--border-subtle)",
-                      color: "var(--text-primary)",
-                    }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold mb-1" style={{ color: "var(--text-primary)" }}>Nama Lengkap *</label>
-                    <input
-                      type="text"
-                      required
-                      value={quoteForm.fullName}
-                      onChange={(e) => setQuoteForm({ ...quoteForm, fullName: e.target.value })}
-                      placeholder="Nama kontak"
-                      className="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                      style={{
-                        backgroundColor: "var(--bg-primary)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-1" style={{ color: "var(--text-primary)" }}>Email Perusahaan *</label>
-                    <input
-                      type="email"
-                      required
-                      value={quoteForm.email}
-                      onChange={(e) => setQuoteForm({ ...quoteForm, email: e.target.value })}
-                      placeholder="email@perusahaan.com"
-                      className="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                      style={{
-                        backgroundColor: "var(--bg-primary)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold mb-1" style={{ color: "var(--text-primary)" }}>Nomor Telepon / WA *</label>
-                    <input
-                      type="tel"
-                      required
-                      value={quoteForm.phone}
-                      onChange={(e) => setQuoteForm({ ...quoteForm, phone: e.target.value })}
-                      placeholder="0812xxxxxxxx"
-                      className="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                      style={{
-                        backgroundColor: "var(--bg-primary)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-1" style={{ color: "var(--text-primary)" }}>Estimasi Jumlah (Unit) *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      value={quoteForm.quantity}
-                      onChange={(e) => setQuoteForm({ ...quoteForm, quantity: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                      style={{
-                        backgroundColor: "var(--bg-primary)",
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-primary)",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-1" style={{ color: "var(--text-primary)" }}>Catatan / Spesifikasi Tambahan</label>
-                  <textarea
-                    rows={2}
-                    value={quoteForm.notes}
-                    onChange={(e) => setQuoteForm({ ...quoteForm, notes: e.target.value })}
-                    placeholder="Sebutkan lokasi pengiriman atau kebutuhan kustomisasi..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
-                    style={{
-                      backgroundColor: "var(--bg-primary)",
-                      borderColor: "var(--border-subtle)",
-                      color: "var(--text-primary)",
-                    }}
-                  />
-                </div>
-
-                <div className="pt-3 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setQuoteProduct(null)}
-                    className="px-4 py-2.5 rounded-xl font-semibold border text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    style={{ borderColor: "var(--border-subtle)" }}
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 rounded-xl font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] shadow-md flex items-center gap-2"
-                  >
-                    <Send size={14} />
-                    Kirim RFQ
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Enterprise Procurement CTA Section */}
       <section className="py-24 border-t" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-4xl mx-auto px-6 lg:px-12 text-center space-y-6">
@@ -889,6 +686,15 @@ function KatalogContent({ products }: { products: Product[] }) {
           </div>
         </div>
       </section>
+
+      {/* Single RFQ Modal — shared across all product cards */}
+      <RfqModal
+        key={rfqProduct?.id ?? "rfq-modal"}
+        isOpen={rfqProduct !== null}
+        onClose={() => setRfqProduct(null)}
+        productId={rfqProduct?.id}
+        productName={rfqProduct?.name}
+      />
     </div>
   );
 }

@@ -128,6 +128,7 @@ export interface RfqRow {
   status: string;
   created_at: string;
   product_name?: string | null;
+  deleted_at?: string | null;
 }
 
 export interface TechDocRow {
@@ -340,6 +341,7 @@ export async function listRfq(): Promise<RfqRow[]> {
   const { data, error } = await supabase
     .from("quotation_requests")
     .select("*, products!quotation_requests_product_id_fkey(name)")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) {
     console.error("[admin-data] rfq", error);

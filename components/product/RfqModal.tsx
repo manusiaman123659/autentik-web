@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { X, Loader2, Send, CheckCircle, Phone } from "lucide-react";
 import { type RfqFormData } from "@/lib/validations/rfqSchema";
-import { submitRfqAction } from "@/lib/actions/rfq";
 
 interface RfqModalProps {
   isOpen: boolean;
@@ -58,18 +57,23 @@ export default function RfqModal({
     setGeneralError(null);
 
     try {
-      const submitResult = await submitRfqAction(form);
+      const res = await fetch("/api/rfq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
 
-      if (!submitResult.success) {
-        setErrors(submitResult.errors ?? {});
-        setGeneralError(submitResult.message || "Gagal mengirim permintaan penawaran.");
+      if (!data.success) {
+        setErrors(data.errors ?? {});
+        setGeneralError(data.message || "Gagal mengirim permintaan penawaran.");
         setSubmitting(false);
         return;
       }
 
       setResult({
-        rfqCode: submitResult.rfqCode!,
-        waUrl: submitResult.waUrl,
+        rfqCode: data.rfqCode,
+        waUrl: data.waUrl,
       });
     } catch {
       setGeneralError("Terjadi kesalahan jaringan. Silakan coba lagi.");

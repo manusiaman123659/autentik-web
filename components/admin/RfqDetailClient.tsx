@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Phone, MessageCircle, CheckCircle, XCircle, Eye } from "lucide-react";
+import { Phone, MessageCircle, CheckCircle, XCircle, Eye, Printer } from "lucide-react";
 import type { RfqRow } from "@/lib/admin-data";
 import { updateRfqStatusAction } from "@/lib/actions/rfq";
 import { formatWhatsAppNumber } from "@/lib/utils";
@@ -96,6 +96,14 @@ export default function RfqDetailClient({ rfq }: { rfq: RfqRow }) {
             <MessageCircle size={15} />
             Kirim Email
           </a>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Printer size={15} />
+            Cetak Dokumen
+          </button>
         </div>
       </div>
     </Card>

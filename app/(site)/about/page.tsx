@@ -171,7 +171,7 @@ export default async function AboutPage() {
               <div className="p-8 md:p-10 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 h-full flex flex-col justify-between">
                 <div>
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
-                    <span className="text-[#0EA5A0] font-black italic text-3xl">II.</span>
+                    <span className="text-[#0EA5A0] font-black italic text-3xl">I.</span>
                     <span className="text-white">Visi</span>
                   </h2>
                   <p className="text-lg md:text-xl leading-relaxed font-medium text-white mb-4">
@@ -189,7 +189,7 @@ export default async function AboutPage() {
               <div className="p-8 md:p-10 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 h-full flex flex-col justify-between">
                 <div>
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
-                    <span className="text-[#0EA5A0] font-black italic text-3xl">III.</span>
+                    <span className="text-[#0EA5A0] font-black italic text-3xl">II.</span>
                     <span className="text-white">Misi</span>
                   </h2>
                   <ul className="space-y-4 font-medium list-none">
@@ -216,12 +216,13 @@ export default async function AboutPage() {
           {/* Header with Overlay Watermark */}
           <AnimatedElement type="fade-up" className="text-center mb-16">
             <h2
-              className="text-2xl md:text-3xl font-bold tracking-tight mb-4"
+              className="text-2xl md:text-3xl font-bold tracking-tight mb-4 flex items-center justify-center gap-3"
               style={{ color: "var(--text-primary)" }}
             >
-              I. Value (Falsafah Organisasi)
+              <span className="text-[#0EA5A0] font-black italic text-3xl">III.</span>
+              <span>Core Value</span>
             </h2>
-            <div className="text-6xl md:text-8xl font-black tracking-widest relative inline-block text-slate-200 dark:text-slate-800">
+            <div className="text-6xl md:text-8xl font-black tracking-tight relative inline-block text-slate-200 dark:text-slate-800">
               FIRST
               <div className="absolute inset-0 text-[#0EA5A0] opacity-90">
                 FIRST
@@ -266,10 +267,11 @@ export default async function AboutPage() {
         <div className="max-w-4xl mx-auto text-center">
           <AnimatedElement type="fade-up">
             <h2
-              className="text-3xl font-bold mb-10 border-b-2 border-[#0EA5A0] inline-block pb-3"
+              className="text-2xl md:text-3xl font-bold mb-10 flex items-center justify-center gap-3 border-b-2 border-[#0EA5A0] inline-block pb-3"
               style={{ color: "var(--text-primary)" }}
             >
-              IV. Kebijakan Mutu
+              <span className="text-[#0EA5A0] font-black italic text-3xl">IV. </span>
+              <span>Kebijakan Mutu</span>
             </h2>
             <p className="text-lg sm:text-xl font-light leading-relaxed mb-10 max-w-3xl mx-auto" style={{ color: "var(--text-secondary)" }}>
               <span className="font-bold" style={{ color: "var(--text-primary)" }}>PT. Autentik Karya Analitika</span> adalah Perusahaan teknologi pintar yang senantiasa berkomitmen untuk memberikan dan meningkatkan kepuasan pelanggan dengan cara:

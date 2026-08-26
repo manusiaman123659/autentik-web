@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Mail, Phone, Building2, Package, Calendar, MessageSquare, MapPin, Printer } from "lucide-react";
+import { Mail, Phone, Building2, Package, Calendar, MessageSquare, MapPin } from "lucide-react";
 import { listRfq } from "@/lib/admin-data";
 import { PageHeader, Card, Badge, formatDateTime } from "@/components/admin/ui";
 import RfqDetailClient from "@/components/admin/RfqDetailClient";
@@ -68,14 +68,6 @@ export default async function AdminRfqDetailPage({ params }: Props) {
                     ? "Sudah Dikirim Penawaran"
                     : "Ditolak"}
             </Badge>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="ml-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              <Printer size={14} />
-              Cetak Dokumen
-            </button>
           </div>
         </div>
 

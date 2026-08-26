@@ -1,0 +1,187 @@
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { randomUUID } from "crypto";
+import { createClient } from "@/utils/supabase/server";
+import { rfqSchema } from "@/lib/validations/rfqSchema";
+
+export const runtime = "nodejs";
+
+const SESSION_COOKIE = "autentik-rfq-session";
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 hari
+const RATE_LIMIT_WINDOW_MINUTES = 60;
+const RATE_LIMIT_MAX_SUBMISSIONS = 3;
+const MAX_CODE_ATTEMPTS = 10;
+
+function generateRfqCode(): string {
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `RFQ-${datePart}-${rand}`;
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const parsed = rfqSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Data tidak valid",
+          errors: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+
+    // ── Cookie handling: server generates/reads. Client NEVER sends. ──
+    const cookieStore = await cookies();
+    const sessionId =
+      cookieStore.get(SESSION_COOKIE)?.value ?? randomUUID();
+
+    const supabase = createClient(cookieStore);
+
+    // ── Rate limit check via RPC ──
+    const { data: allowed, error: rpcError } = await supabase.rpc(
+      "track_rfq_submission",
+      {
+        p_session_id: sessionId,
+        p_window_minutes: RATE_LIMIT_WINDOW_MINUTES,
+        p_max: RATE_LIMIT_MAX_SUBMISSIONS,
+      },
+    );
+
+    if (rpcError) {
+      console.error("track_rfq_submission RPC error:", rpcError);
+    }
+
+    if (!rpcError && allowed === false) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Batas pengiriman RFQ tercapai (maks 3 per jam). Silakan coba lagi nanti.",
+        },
+        { status: 429 },
+      );
+    }
+
+    // ── Insert RFQ with retry on unique_violation (rfq_code collision) ──
+    let rfqCode: string | null = null;
+    let lastError: string | null = null;
+
+    for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
+      const code = generateRfqCode();
+      const { error: insertError } = await supabase
+        .from("quotation_requests")
+        .insert({
+          rfq_code: code,
+          product_id:
+            parsed.data.productId && parsed.data.productId !== ""
+              ? parsed.data.productId
+              : null,
+          company_name: parsed.data.companyName,
+          pic_name: parsed.data.picName,
+          email: parsed.data.email,
+          phone_number: parsed.data.phoneNumber,
+          estimated_quantity: parsed.data.estimatedQuantity,
+          target_date: parsed.data.targetDate || null,
+          notes: parsed.data.notes || null,
+        });
+
+      if (!insertError) {
+        rfqCode = code;
+        break;
+      }
+
+      // unique_violation on rfq_code → retry with new code
+      if (
+        insertError.code === "23505" &&
+        insertError.message?.includes("rfq_code")
+      ) {
+        lastError = null;
+        continue;
+      }
+
+      // other error → stop immediately
+      lastError = insertError.message;
+      break;
+    }
+
+    if (!rfqCode) {
+      console.error(
+        "[api/rfq] insert failed:",
+        lastError ?? "unique collision after max attempts",
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          message: lastError
+            ? "Gagal mengirim permintaan penawaran. " + lastError
+            : "Gagal generate kode RFQ unik. Silakan coba lagi.",
+        },
+        { status: 500 },
+      );
+    }
+
+    // ── Fetch WhatsApp number ──
+    const { data: waSetting } = await supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "whatsapp")
+      .maybeSingle();
+
+    const waValue =
+      (waSetting?.value as { number?: string } | null) ?? null;
+    const waNumber =
+      typeof waValue?.number === "string" ? waValue.number.trim() : "";
+
+    let waUrl: string | undefined;
+    if (waNumber) {
+      const msg = [
+        `Halo, saya ingin membuat permintaan penawaran (RFQ).`,
+        ``,
+        `Kode RFQ: ${rfqCode}`,
+        parsed.data.productName
+          ? `Produk: ${parsed.data.productName}`
+          : "",
+        `Perusahaan: ${parsed.data.companyName}`,
+        `PIC: ${parsed.data.picName}`,
+        `Email: ${parsed.data.email}`,
+        `HP: ${parsed.data.phoneNumber}`,
+        `Jumlah Estimasi: ${parsed.data.estimatedQuantity} unit`,
+        parsed.data.targetDate
+          ? `Target Tanggal: ${parsed.data.targetDate}`
+          : "",
+        parsed.data.notes ? `Catatan: ${parsed.data.notes}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+      waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+    }
+
+    // ── Response + set cookie ──
+    const response = NextResponse.json({
+      success: true,
+      message: "Permintaan penawaran berhasil dikirim.",
+      rfqCode,
+      waUrl,
+    });
+
+    response.cookies.set(SESSION_COOKIE, sessionId, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: SESSION_MAX_AGE_SECONDS,
+      path: "/",
+    });
+
+    return response;
+  } catch (error) {
+    console.error("RFQ API error:", error);
+    return NextResponse.json(
+      { success: false, message: "Terjadi kesalahan server" },
+      { status: 500 },
+    );
+  }
+}

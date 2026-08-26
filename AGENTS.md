@@ -100,6 +100,7 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
   - `0020_bank_account_setting.sql` — pengaturan rekening bank (site_settings).
   - `0021_b2b_rfq_and_technical_docs.sql` — tabel RFQ (Request for Quotation) B2B + dokumen teknis produk; section admin `/admin/rfq` dengan list/detail view (`RfqListClient.tsx`, `RfqDetailClient.tsx`).
   - `0022_soft_delete_and_security.sql` — soft-delete pada `orders`, `products`, `quotation_requests`, `careers`; RPC `soft_delete_order(text, uuid, text)` dan `restore_order(text, uuid)`; RLS policy updates untuk exclude `deleted_at IS NULL`; indexes pada `orders.deleted_at` dan `products.deleted_at`.
+  - `0023_rfq_rate_limit.sql` — rate-limit RFQ publik (anti-spam): tabel `rfq_rate_limits`, RPC `track_rfq_submission(text, int, int)` (SECURITY DEFINER, 3 submission per jam per sesi); diakses via `/api/rfq` (cookie httpOnly `autentik-rfq-session`, pola identik `/api/chat`).
 - **Nomor WhatsApp publik — satu sumber kebenaran**: `site_settings` key `whatsapp` dibaca server-side via `getWhatsAppNumber()` (`lib/public-data.ts`, memakai `cookies()` → halaman pemakainya dynamic) dan client-side via browser Supabase client di `components/chatbot/FaqWidget.tsx` (fetch sekali saat mount, tombol disabled sampai terisi). UI link/tombol WA memakai `components/ui/WhatsAppButton.tsx` (client dumb, props `number` + `label?`/`message?`/`variant?: "link"|"button"`/`className?`/`id?`; disabled saat `number` null). **Ganti nomor = `UPDATE site_settings` key `whatsapp`** (belum ada form admin) — jangan hardcode di komponen. `lib/whatsapp.ts` (konstanta lama) sudah dihapus; tidak ada dua sumber.
 - **Chatbot AI (Gemini)** tetap dipakai penuh: `components/chatbot/FaqWidget.tsx` hanya mode AI (`/api/chat`, rate-limit `ai_chat_sessions`), dengan tombol "Hubungi via WhatsApp" ke nomor dari `site_settings` key `whatsapp` sebagai fallback kontak. Tidak ada live chat CS/Tawk lagi.
 - Promosikan admin pertama di SQL editor Supabase:
@@ -126,7 +127,7 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 - `lib/actions/` — 12 server action files (brands, careers, checkout, compro, products, recruitment, relasi, rfq, settings, shipping, store, technicalDocuments)
 - `lib/validations/` — 12 Zod schemas (brand, career, chat, compro, contact, login, product, recruitment, relasi, rfq, shipping, store)
 - `lib/data/` — static fallback data (jangan hapus meski sudah di-wire ke Supabase)
-- `supabase/migrations/` — 22 SQL migrations (0001-0022); file baru lanjut `0023_`
+- `supabase/migrations/` — 23 SQL migrations (0001-0023); file baru lanjut `0024_`
 - `utils/supabase/` — client (browser), server (RSC), middleware (proxy)
 - `.agents/skills/` — 6 custom skills (admin-crud-pattern, no-ai-slop-design, supabase, supabase-migration-safety, supabase-postgres-best-practices, verification-before-done)
 
