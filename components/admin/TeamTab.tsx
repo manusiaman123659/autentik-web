@@ -21,7 +21,7 @@ import {
 } from "@/lib/actions/relasi";
 import { useToast } from "@/components/admin/Toast";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
-import MediaUploadField from "@/components/admin/MediaUploadField";
+import CroppedMediaUploadField from "@/components/admin/CroppedMediaUploadField";
 import { VisibleToggle, SortCell } from "@/components/admin/RelasiBits";
 import PaginationBar from "@/components/admin/PaginationBar";
 
@@ -236,13 +236,13 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
               <FieldError message={errors.bio} />
             </div>
             <div className="sm:col-span-2">
-              <MediaUploadField
-                label="Foto Profil"
-                value={form.imageUrl}
-                pathPrefix="team"
-                errorContext="Foto profil"
-                onChange={(url) => setField("imageUrl", url)}
-              />
+          <CroppedMediaUploadField
+            label="Foto Profil"
+            value={form.imageUrl}
+            pathPrefix="team"
+            errorContext="Foto profil"
+            onChange={(url) => setField("imageUrl", url)}
+          />
             </div>
             <div className="sm:col-span-2">
               <label className="flex items-center gap-3 cursor-pointer">

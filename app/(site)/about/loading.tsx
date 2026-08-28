@@ -56,13 +56,16 @@ export default function Loading() {
       <section className="py-24 px-6 lg:px-16" style={{ backgroundColor: "var(--bg-primary)" }}>
         <div className="max-w-6xl mx-auto text-center space-y-10">
           <div className="h-8 w-40 mx-auto rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl border p-6 flex flex-col items-center space-y-4" style={{ borderColor: "var(--border-subtle)" }}>
-                <div className="w-24 h-24 rounded-full animate-pulse bg-slate-200 dark:bg-slate-800" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 flex flex-col items-center space-y-4">
+                <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl animate-pulse bg-slate-200 dark:bg-slate-800" />
                 <div className="h-5 w-32 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-                <div className="h-4 w-24 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-                <div className="h-3 w-full rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
+                <div className="h-3 w-24 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
+                <div className="space-y-1.5 w-full">
+                  <div className="h-2.5 w-full rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
+                  <div className="h-2.5 w-3/4 mx-auto rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
+                </div>
               </div>
             ))}
           </div>
