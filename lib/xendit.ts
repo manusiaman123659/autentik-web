@@ -19,7 +19,7 @@ export interface XenditInvoiceResponse {
 }
 
 function getAuthHeader(): string {
-  const secretKey = process.env.XENDIT_SECRET_KEY;
+  const secretKey = (process.env.XENDIT_SECRET_KEY || "").trim();
   if (!secretKey) throw new Error("XENDIT_SECRET_KEY tidak terdefinisi");
   return `Basic ${Buffer.from(secretKey + ":").toString("base64")}`;
 }

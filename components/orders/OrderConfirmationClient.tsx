@@ -11,9 +11,11 @@ import {
   CreditCard,
   XCircle,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
 import { formatRupiah } from "@/lib/format";
+import { regenerateXenditInvoice } from "@/lib/actions/checkout";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import OptimizedImage from "@/components/ui/OptimizedImage";
 import PrintCustomerInvoice from "./PrintCustomerInvoice";
@@ -96,6 +98,10 @@ export default function OrderConfirmationClient({
 }) {
   const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
+  const [localInvoiceUrl, setLocalInvoiceUrl] = useState<string | null>(null);
+
+  const effectiveInvoiceUrl = localInvoiceUrl ?? dbOrder?.xendit_invoice_url ?? null;
 
   useEffect(() => {
     const fromStorage = readSnapshot(code);
@@ -104,6 +110,24 @@ export default function OrderConfirmationClient({
     setSnapshot(fromStorage ?? (dbOrder ? buildSnapshotFromDb(dbOrder) : null));
     setMounted(true);
   }, [code, dbOrder]);
+
+  const handleRegenerateInvoice = async () => {
+    setGeneratingInvoice(true);
+    try {
+      const result = await regenerateXenditInvoice(code);
+      if (result.success && result.redirectUrl) {
+        setLocalInvoiceUrl(result.redirectUrl);
+        window.location.href = result.redirectUrl;
+      } else {
+        alert(result.message || "Gagal membuat invoice. Silakan coba lagi.");
+      }
+    } catch (err) {
+      console.error("[REGENERATE_INVOICE_CLIENT]", err);
+      alert("Terjadi kesalahan saat membuat link pembayaran. Silakan coba lagi atau hubungi admin.");
+    } finally {
+      setGeneratingInvoice(false);
+    }
+  };
 
   const isPaid = isPaidStatus(statusParam) || isPaidStatus(dbOrder?.payment_status);
   const isFailed = statusParam === "failed";
@@ -284,9 +308,9 @@ export default function OrderConfirmationClient({
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Pembayaran tidak berhasil. Anda dapat mencoba membayar kembali atau menghubungi tim kami.
             </p>
-            {dbOrder?.xendit_invoice_url && (
+            {effectiveInvoiceUrl && (
               <a
-                href={dbOrder.xendit_invoice_url}
+                href={effectiveInvoiceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
@@ -304,17 +328,37 @@ export default function OrderConfirmationClient({
               Selesaikan pembayaran menggunakan salah satu metode di bawah.
             </p>
 
-            {dbOrder?.xendit_invoice_url && (
+            {effectiveInvoiceUrl ? (
               <a
-                href={dbOrder.xendit_invoice_url}
+                href={effectiveInvoiceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
+                className="w-full flex items-center justify-center gap-2.5 bg-[#0EA5A0] hover:bg-[#0D9E98] active:scale-[0.99] text-white font-semibold py-3.5 px-4 rounded-xl shadow-md transition-all text-sm sm:text-base leading-snug"
               >
-                <CreditCard size={18} />
-                Bayar Sekarang via Payment Gateway
-                <ExternalLink size={14} />
+                <CreditCard className="h-5 w-5 shrink-0" />
+                <span className="text-center">Bayar via Payment Gateway (QRIS, VA, CC)</span>
+                <ExternalLink className="h-4 w-4 shrink-0 opacity-80" />
               </a>
+            ) : (
+              <button
+                type="button"
+                onClick={handleRegenerateInvoice}
+                disabled={generatingInvoice}
+                className="w-full flex items-center justify-center gap-2.5 bg-[#0EA5A0] hover:bg-[#0D9E98] active:scale-[0.99] text-white font-semibold py-3.5 px-4 rounded-xl shadow-md transition-all text-sm sm:text-base leading-snug disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {generatingInvoice ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                    <span>Membuat Link Pembayaran...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-5 w-5 shrink-0" />
+                    <span className="text-center">Bayar via Payment Gateway (QRIS, VA, CC)</span>
+                    <ExternalLink className="h-4 w-4 shrink-0 opacity-80" />
+                  </>
+                )}
+              </button>
             )}
 
             {bankAccount && (
