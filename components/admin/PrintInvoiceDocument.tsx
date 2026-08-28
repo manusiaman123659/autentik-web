@@ -19,9 +19,14 @@ function fmtRp(n: number) {
 interface Props {
   order: OrderRow;
   items: OrderItemRow[];
+  bankAccount: {
+    bankName: string;
+    accountNumber: string;
+    accountHolder: string;
+  } | null;
 }
 
-export default function PrintInvoiceDocument({ order, items }: Props) {
+export default function PrintInvoiceDocument({ order, items, bankAccount }: Props) {
   const dateStr = new Date(order.created_at).toLocaleDateString("id-ID", {
     day: "numeric",
     month: "long",
@@ -32,7 +37,10 @@ export default function PrintInvoiceDocument({ order, items }: Props) {
   const addressParts = [addr.address, addr.city, addr.province, addr.postal_code].filter(Boolean);
 
   return (
-    <div className="hidden print:block text-slate-900 bg-white p-8 max-w-4xl mx-auto text-sm leading-relaxed">
+    <div
+      className="print-document text-slate-900 bg-white p-8 max-w-4xl mx-auto text-sm leading-relaxed"
+      style={{ position: "fixed", left: "-9999px", top: "-9999px" }}
+    >
       {/* Header */}
       <header className="flex items-start justify-between pb-6 mb-6 border-b-2 border-slate-900">
         <div className="flex items-center gap-4">
@@ -176,10 +184,16 @@ export default function PrintInvoiceDocument({ order, items }: Props) {
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
           Informasi Pembayaran (Transfer Bank)
         </h3>
-        <p className="text-xs text-slate-700">
-          <strong>Bank Mandiri</strong> — a/n PT Autentik Karya Analitika
-        </p>
-        <p className="text-xs text-slate-700">No. Rekening: 136-00-1234567-8</p>
+        {bankAccount ? (
+          <>
+            <p className="text-xs text-slate-700">
+              <strong>{bankAccount.bankName}</strong> — a/n {bankAccount.accountHolder}
+            </p>
+            <p className="text-xs text-slate-700">No. Rekening: {bankAccount.accountNumber}</p>
+          </>
+        ) : (
+          <p className="text-xs text-slate-400 italic">Informasi rekening belum dikonfigurasi</p>
+        )}
       </section>
 
       {/* Footer */}
@@ -194,7 +208,11 @@ export default function PrintInvoiceDocument({ order, items }: Props) {
       <style>{`
         @media print {
           body { margin: 0; }
-          .hidden.print\\:block { display: block !important; }
+          .print-document {
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+          }
         }
       `}</style>
     </div>

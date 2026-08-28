@@ -5,7 +5,8 @@ import type { CareerPosition } from "@/lib/data/careers";
 import { groups as staticGroups } from "@/lib/data/groups";
 import { partners as staticPartners } from "@/lib/data/partners";
 import { brands as staticBrands } from "@/lib/data/brands";
-import type { GroupCompany, Partner } from "@/types";
+import { teamMembers as staticTeamMembers } from "@/lib/data/team";
+import type { GroupCompany, Partner, TeamMember } from "@/types";
 
 export interface PublicBrandItem {
   name: string;
@@ -163,6 +164,37 @@ export async function listPublicPartners(): Promise<Partner[]> {
   }));
 }
 
+interface TeamMemberRow {
+  id: string;
+  name: string;
+  role: string;
+  role_color: string | null;
+  bio: string | null;
+  image_url: string | null;
+}
+
+export async function listPublicTeamMembers(): Promise<TeamMember[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("id, name, role, role_color, bio, image_url")
+    .eq("is_visible", true)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[public-data] team_members", error);
+    return staticTeamMembers;
+  }
+  if (!data || data.length === 0) return [];
+  return (data as unknown as TeamMemberRow[]).map((r) => ({
+    id: r.id,
+    name: r.name,
+    role: r.role,
+    roleColor: r.role_color ?? "teal",
+    bio: r.bio ?? "",
+    imageUrl: r.image_url ?? undefined,
+  }));
+}
+
 interface BrandRow {
   name: string;
   logo_light: string | null;
@@ -240,4 +272,34 @@ export async function getBankAccount(): Promise<{
   const accountHolder = typeof value?.accountHolder === "string" ? value.accountHolder.trim() : "";
   if (!bankName && !accountNumber && !accountHolder) return null;
   return { bankName, accountNumber, accountHolder };
+}
+
+export async function getCompanyContact(): Promise<{
+  address: string;
+  email: string;
+  phone: string;
+  mapsQuery: string;
+  mapEmbed: string;
+} | null> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "contact")
+    .maybeSingle();
+  if (error || !data) return null;
+  const value = (data as { value: unknown }).value as {
+    address?: string;
+    email?: string;
+    phone?: string;
+    mapsQuery?: string;
+    mapEmbed?: string;
+  } | null;
+  const address = typeof value?.address === "string" ? value.address.trim() : "";
+  const email = typeof value?.email === "string" ? value.email.trim() : "";
+  const phone = typeof value?.phone === "string" ? value.phone.trim() : "";
+  const mapsQuery = typeof value?.mapsQuery === "string" ? value.mapsQuery.trim() : "";
+  const mapEmbed = typeof value?.mapEmbed === "string" ? value.mapEmbed.trim() : "";
+  if (!address && !email && !phone) return null;
+  return { address, email, phone, mapsQuery, mapEmbed };
 }

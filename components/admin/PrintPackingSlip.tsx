@@ -13,14 +13,24 @@ function fmtDate(iso: string) {
 interface Props {
   order: OrderRow;
   items: OrderItemRow[];
+  companyContact: {
+    address: string;
+    email: string;
+    phone: string;
+    mapsQuery: string;
+    mapEmbed: string;
+  } | null;
 }
 
-export default function PrintPackingSlip({ order, items }: Props) {
+export default function PrintPackingSlip({ order, items, companyContact }: Props) {
   const addr = (order.shipping_address ?? {}) as Record<string, string>;
   const addressParts = [addr.address, addr.city, addr.province, addr.postal_code].filter(Boolean);
 
   return (
-    <div className="hidden print:block text-slate-900 bg-white p-8 max-w-4xl mx-auto text-sm leading-relaxed">
+    <div
+      className="print-document text-slate-900 bg-white p-8 max-w-4xl mx-auto text-sm leading-relaxed"
+      style={{ position: "fixed", left: "-9999px", top: "-9999px" }}
+    >
       {/* Header */}
       <header className="flex items-start justify-between pb-6 mb-6 border-b-2 border-slate-900">
         <div className="flex items-center gap-4">
@@ -55,9 +65,17 @@ export default function PrintPackingSlip({ order, items }: Props) {
           </h3>
           <div className="space-y-1 text-xs">
             <p className="font-semibold text-slate-900">PT Autentik Karya Analitika</p>
-            <p className="text-slate-600">Jl. Raya Teknologi No. 123</p>
-            <p className="text-slate-600">Jakarta Selatan, 12345</p>
-            <p className="text-slate-600">Telp: (021) 1234-5678</p>
+            {companyContact?.address ? (
+              <p className="text-slate-600">{companyContact.address}</p>
+            ) : (
+              <>
+                <p className="text-slate-600">Jl. Raya Teknologi No. 123</p>
+                <p className="text-slate-600">Jakarta Selatan, 12345</p>
+              </>
+            )}
+            {companyContact?.phone && (
+              <p className="text-slate-600">Telp: {companyContact.phone}</p>
+            )}
           </div>
         </div>
         <div>
@@ -171,7 +189,11 @@ export default function PrintPackingSlip({ order, items }: Props) {
       <style>{`
         @media print {
           body { margin: 0; }
-          .hidden.print\\:block { display: block !important; }
+          .print-document {
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+          }
         }
       `}</style>
     </div>

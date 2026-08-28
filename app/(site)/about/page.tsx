@@ -9,13 +9,14 @@ import {
   Sparkles,
   ArrowRight,
   FileText,
+  User,
 } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import CompanyProfileViewer, {
   type ComproManifestProp,
 } from "@/components/ui/CompanyProfileViewer";
 import { createClient } from "@/utils/supabase/server";
-import { listPublicGroups, listPublicPartners } from "@/lib/public-data";
+import { listPublicGroups, listPublicPartners, listPublicTeamMembers } from "@/lib/public-data";
 
 export const metadata: Metadata = {
   title: "About Us | PT Autentik Karya Analitika",
@@ -110,10 +111,11 @@ async function getComproManifest(): Promise<ComproManifestProp | null> {
 }
 
 export default async function AboutPage() {
-  const [comproManifest, groups, partners] = await Promise.all([
+  const [comproManifest, groups, partners, teamMembers] = await Promise.all([
     getComproManifest(),
     listPublicGroups(),
     listPublicPartners(),
+    listPublicTeamMembers(),
   ]);
   return (
     <>
@@ -267,7 +269,7 @@ export default async function AboutPage() {
         <div className="max-w-4xl mx-auto text-center">
           <AnimatedElement type="fade-up">
             <h2
-              className="text-2xl md:text-3xl font-bold mb-10 flex items-center justify-center gap-3 border-b-2 border-[#0EA5A0] inline-block pb-3"
+              className="text-2xl md:text-3xl font-bold mb-10 flex items-center justify-center gap-3 border-b-2 border-[#0EA5A0] pb-3"
               style={{ color: "var(--text-primary)" }}
             >
               <span className="text-[#0EA5A0] font-black italic text-3xl">IV. </span>
@@ -379,6 +381,64 @@ export default async function AboutPage() {
           </AnimatedElement>
         </div>
       </section>
+
+      {/* ─── Section 5: Tim Kami ─── */}
+      {teamMembers.length > 0 && (
+        <section className="py-24 px-6 lg:px-16" style={{ backgroundColor: "var(--bg-primary)" }}>
+          <div className="max-w-6xl mx-auto">
+            <AnimatedElement type="fade-up">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold tracking-tight mb-3" style={{ color: "var(--text-primary)" }}>
+                  Tim Kami
+                </h2>
+                <p className="text-sm font-light max-w-lg mx-auto" style={{ color: "var(--text-secondary)" }}>
+                  Para profesional yang berdedikasi di balik inovasi dan pelayanan PT Autentik Karya Analitika.
+                </p>
+              </div>
+            </AnimatedElement>
+
+            <AnimatedElement type="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {teamMembers.map((member) => (
+                <div
+                  key={member.id}
+                  className="rounded-2xl border p-6 flex flex-col items-center text-center transition-shadow duration-300 hover:shadow-lg"
+                  style={{
+                    backgroundColor: "var(--bg-card)",
+                    borderColor: "var(--border-subtle)",
+                  }}
+                >
+                  <div className="relative w-24 h-24 rounded-full overflow-hidden mb-4 bg-slate-100 dark:bg-slate-800 flex-shrink-0">
+                    {member.imageUrl ? (
+                      <Image
+                        src={member.imageUrl}
+                        alt={member.name}
+                        fill
+                        className="object-cover"
+                        sizes="96px"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <User size={32} className="text-slate-400" />
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="text-lg font-bold mb-1" style={{ color: "var(--text-primary)" }}>
+                    {member.name}
+                  </h3>
+                  <p className="text-sm font-medium mb-3" style={{ color: "#0EA5A0" }}>
+                    {member.role}
+                  </p>
+                  {member.bio && (
+                    <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                      {member.bio}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </AnimatedElement>
+          </div>
+        </section>
+      )}
 
       {/* Combined GRUP KAMI & PARTNER KAMI Section */}
       <section className="py-24 px-6 lg:px-16 text-white" style={{ backgroundColor: "#0B1F3A" }}>

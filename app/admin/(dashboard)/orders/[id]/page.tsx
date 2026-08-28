@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MapPin, Phone, Mail, Receipt } from "lucide-react";
 import { getOrder } from "@/lib/admin-data";
+import { getCompanyContact, getBankAccount } from "@/lib/public-data";
 import { PageHeader, Badge, Card, statusTone, formatRupiah } from "@/components/admin/ui";
 import { ORDER_STATUS_LABELS } from "@/lib/validations/storeSchema";
 import OrderStatusForm from "@/components/admin/OrderStatusForm";
@@ -20,7 +21,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AdminOrderDetailPage({ params }: Props) {
   const { id } = await params;
-  const data = await getOrder(id);
+  const [data, companyContact, bankAccount] = await Promise.all([
+    getOrder(id),
+    getCompanyContact(),
+    getBankAccount(),
+  ]);
   if (!data) notFound();
   const { order, items } = data;
   const addr = (order.shipping_address ?? {}) as Record<string, string>;
@@ -35,7 +40,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
       />
 
       <div className="mb-6 flex justify-end">
-        <OrderPrintActions order={order} items={items} />
+        <OrderPrintActions order={order} items={items} companyContact={companyContact} bankAccount={bankAccount} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">

@@ -278,7 +278,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
   };
 
   return (
-    <div className="min-h-screen flex bg-slate-100 dark:bg-slate-950">
+    <div className="min-h-screen flex bg-slate-100 dark:bg-slate-950 print:hidden">
       <aside
         className={`hidden lg:block print:hidden flex-shrink-0 bg-[#0B1F3A] sticky top-0 h-screen transition-[width] duration-300 ease-in-out ${
           collapsed ? "w-[72px]" : "w-64"

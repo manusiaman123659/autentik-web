@@ -130,7 +130,7 @@ const fulfillmentPaths = [
     icon: PackageCheck,
     title: "Stok Siap — Beli Langsung",
     description:
-      "Produk yang tersedia di gudang dapat langsung dibeli dan di-checkout di halaman Store kami, lengkap dengan harga, stok, dan proses pengiriman.",
+      "Sparepart yang tersedia di gudang dapat langsung dibeli dan di-checkout di halaman Store kami, lengkap dengan harga, stok, dan proses pengiriman.",
     points: ["Harga & stok transparan", "Checkout online cepat", "Pengiriman reguler"],
     cta: { label: "Kunjungi Store", href: "/store" },
     tone: "#0EA5A0",
