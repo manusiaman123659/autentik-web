@@ -106,6 +106,24 @@ export default async function AdminOrderDetailPage({ params }: Props) {
               <span className="font-bold text-slate-900 dark:text-white">Total</span>
               <span className="font-bold text-[#0EA5A0]">{formatRupiah(order.total)}</span>
             </div>
+            {order.paid_at && (
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Dibayar pada</span>
+                <span className="font-medium text-slate-900 dark:text-white text-xs">{new Date(order.paid_at).toLocaleString("id-ID")}</span>
+              </div>
+            )}
+            {order.xendit_invoice_url && (
+              <div className="pt-2">
+                <a
+                  href={order.xendit_invoice_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-[#0EA5A0] hover:underline"
+                >
+                  Lihat Invoice Xendit →
+                </a>
+              </div>
+            )}
           </div>
         </Card>
       </div>

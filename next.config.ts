@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["*.ngrok-free.dev", "*.ngrok-free.app"],
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400,

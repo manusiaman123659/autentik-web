@@ -6,13 +6,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, ShoppingBag, Package, AlertCircle, ChevronRight, ArrowLeft } from "lucide-react";
+import { Loader2, ShoppingBag, Package, AlertCircle, ChevronRight, ArrowLeft, Lock } from "lucide-react";
 import { useCart } from "@/components/cart/CartProvider";
 import { checkoutFormSchema, type CheckoutFormData } from "@/lib/validations/storeSchema";
 import { submitCheckout } from "@/lib/actions/checkout";
 import { formatRupiah } from "@/lib/format";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
 import { createClient as createSupabaseClient } from "@/utils/supabase/client";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 
 const supabase = createSupabaseClient();
 
@@ -20,7 +21,7 @@ const inputClass =
   "w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors";
 const labelClass = "block text-xs font-semibold mb-1.5 uppercase tracking-wide";
 
-export default function CheckoutClient() {
+export default function CheckoutClient({ waNumber }: { waNumber?: string | null }) {
   const router = useRouter();
   const { items, hydrated, subtotal, totalItems, clearCart } = useCart();
   const [submitting, setSubmitting] = useState(false);
@@ -32,6 +33,7 @@ export default function CheckoutClient() {
     register,
     handleSubmit,
     control,
+    reset,
     formState: { errors },
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutFormSchema),
@@ -67,6 +69,23 @@ export default function CheckoutClient() {
       clearTimeout(timer);
     };
   }, [city, province, items]);
+
+  // Auto-fill dari profil user yang sudah login
+  useEffect(() => {
+    let active = true;
+    const loadProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!active || !user) return;
+      const meta = user.user_metadata ?? {};
+      reset({
+        customerName: meta.full_name ?? "",
+        customerEmail: user.email ?? "",
+        customerPhone: meta.phone ?? "",
+      }, { keepDefaultValues: false });
+    };
+    loadProfile();
+    return () => { active = false; };
+  }, [reset]);
 
   const estimateShipping = async (): Promise<number> => {
     try {
@@ -155,6 +174,13 @@ export default function CheckoutClient() {
       }
 
       clearCart();
+
+      // If Xendit returned an invoice URL, redirect to payment page
+      if (result.redirectUrl) {
+        window.location.replace(result.redirectUrl);
+        return;
+      }
+
       router.replace(`/store/orders/${result.orderCode}`);
     } catch {
       setServerError("Terjadi kesalahan saat memproses pesanan. Silakan coba lagi.");
@@ -355,14 +381,22 @@ export default function CheckoutClient() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="mt-6 w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                className="mt-6 w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] shadow-lg shadow-[#0EA5A0]/20 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
               >
-                {submitting ? <Loader2 size={16} className="animate-spin" /> : <ShoppingBag size={16} />}
-                {submitting ? "Memproses..." : "Buat Pesanan"}
+                {submitting ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
+                {submitting ? "Memproses Pesanan & Invoice..." : "Bayar Sekarang"}
               </button>
               <p className="text-[11px] text-slate-400 text-center mt-2 font-light">
-                Pembayaran manual/transfer, dikonfirmasi oleh tim kami.
+                Pembayaran aman via payment gateway (Xendit).
               </p>
+              <div className="mt-4">
+                <WhatsAppButton
+                  number={waNumber ?? null}
+                  label="Butuh bantuan? Hubungi Admin"
+                  variant="button"
+                  className="w-full py-3 rounded-xl text-sm border"
+                />
+              </div>
               <Link
                 href="/store/cart"
                 className="inline-flex items-center gap-1.5 text-xs mt-3 hover:text-[#14B8A6] transition-colors"

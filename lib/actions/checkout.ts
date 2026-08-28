@@ -4,12 +4,15 @@ import { cookies } from "next/headers";
 import type { ZodError } from "zod";
 import { createClient } from "@/utils/supabase/server";
 import { checkoutOrderSchema } from "@/lib/validations/storeSchema";
+import { createXenditInvoice } from "@/lib/xendit";
+import { logError } from "@/lib/logger";
 
 export interface CheckoutResult {
   success: boolean;
   message: string;
   errors?: Record<string, string>;
   orderCode?: string;
+  redirectUrl?: string;
 }
 
 function toErrors(error: ZodError): Record<string, string> {
@@ -62,6 +65,47 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
 
   if (typeof orderCode !== "string" || !orderCode) {
     return { success: false, message: "Gagal membuat pesanan. Silakan coba lagi." };
+  }
+
+  // --- Xendit Invoice Integration ---
+  try {
+    // Fetch order total from DB (prices are validated server-side by RPC)
+    const { data: orderRow } = await supabase
+      .from("orders")
+      .select("total")
+      .eq("order_code", orderCode)
+      .single();
+
+    const totalAmount = Number(orderRow?.total ?? 0);
+
+    if (totalAmount > 0) {
+      const invoice = await createXenditInvoice({
+        orderCode,
+        amount: totalAmount,
+        customerEmail: data.customerEmail || `${orderCode}@autentik.co`,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+      });
+
+      // Persist Xendit reference to order
+      await supabase
+        .from("orders")
+        .update({
+          xendit_invoice_id: invoice.id,
+          xendit_invoice_url: invoice.invoice_url,
+        })
+        .eq("order_code", orderCode);
+
+      return {
+        success: true,
+        message: "Pesanan berhasil dibuat.",
+        orderCode,
+        redirectUrl: invoice.invoice_url,
+      };
+    }
+  } catch (err) {
+    // Xendit failure is non-fatal: order exists, customer can still pay later
+    logError("checkout.xendit_invoice", err, { orderCode });
   }
 
   return { success: true, message: "Pesanan berhasil dibuat.", orderCode };

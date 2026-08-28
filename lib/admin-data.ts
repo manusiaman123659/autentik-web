@@ -55,6 +55,9 @@ export interface OrderRow {
   cancel_reason?: string | null;
   created_at: string;
   deleted_at?: string | null;
+  paid_at?: string | null;
+  xendit_invoice_id?: string | null;
+  xendit_invoice_url?: string | null;
 }
 
 export interface OrderItemRow {

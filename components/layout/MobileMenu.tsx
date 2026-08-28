@@ -5,7 +5,7 @@ import Link from "next/link";
 import { X, Sun, Moon, ShoppingCart } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useCart } from "@/components/cart/CartProvider";
-import AdminNavButton from "@/components/auth/AdminNavButton";
+import CustomerAuthButton from "@/components/auth/CustomerAuthButton";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -144,7 +144,7 @@ export default function MobileMenu({
             Kunjungi Store
           </Link>
 
-          <AdminNavButton variant="mobile" onNavigate={onClose} />
+          <CustomerAuthButton variant="mobile" onNavigate={onClose} />
         </div>
       </div>
     </div>

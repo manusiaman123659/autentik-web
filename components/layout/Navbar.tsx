@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, Search, Sun, Moon, ShoppingCart } from "lucide-react";
 import MobileMenu from "./MobileMenu";
 import SearchModal from "./SearchModal";
-import AdminNavButton from "@/components/auth/AdminNavButton";
+import CustomerAuthButton from "@/components/auth/CustomerAuthButton";
 import { useTheme } from "@/components/ThemeProvider";
 import { useCart } from "@/components/cart/CartProvider";
 
@@ -148,8 +148,8 @@ export default function Navbar() {
                 </span>
               </button>
 
-              {/* Admin Login / Dashboard */}
-              <AdminNavButton variant="desktop" />
+              {/* Customer Auth */}
+              <CustomerAuthButton variant="desktop" />
 
               {/* Cart */}
               <Link
