@@ -31,7 +31,7 @@ export default function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/store/checkout";
+  const explicitRedirect = searchParams.get("redirect");
   const supabase = createClient();
 
   const {
@@ -54,7 +54,28 @@ export default function LoginForm() {
         setErrorMsg(translateAuthError(error));
         return;
       }
-      router.push(redirectTo);
+
+      if (explicitRedirect) {
+        router.push(explicitRedirect);
+      } else {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+          if (profile?.role === "admin" || profile?.role === "editor") {
+            router.push("/admin");
+          } else {
+            router.push("/store");
+          }
+        } else {
+          router.push("/store");
+        }
+      }
       router.refresh();
     } catch {
       setErrorMsg("Terjadi kesalahan. Silakan coba lagi.");
