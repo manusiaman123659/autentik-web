@@ -56,8 +56,8 @@ export interface OrderRow {
   created_at: string;
   deleted_at?: string | null;
   paid_at?: string | null;
-  xendit_invoice_id?: string | null;
-  xendit_invoice_url?: string | null;
+  midtrans_order_id?: string | null;
+  midtrans_redirect_url?: string | null;
 }
 
 export interface OrderItemRow {

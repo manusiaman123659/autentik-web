@@ -175,7 +175,7 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
 
       clearCart();
 
-      // If Xendit returned an invoice URL, redirect to payment page
+        // If Midtrans returned a redirect URL, redirect to payment page
       if (result.redirectUrl) {
         window.location.replace(result.redirectUrl);
         return;
@@ -387,7 +387,7 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
                 {submitting ? "Memproses Pesanan & Invoice..." : "Bayar Sekarang"}
               </button>
               <p className="text-[11px] text-slate-400 text-center mt-2 font-light">
-                Pembayaran aman via payment gateway (Xendit).
+                Pembayaran aman via Midtrans.
               </p>
               <div className="mt-4">
                 <WhatsAppButton

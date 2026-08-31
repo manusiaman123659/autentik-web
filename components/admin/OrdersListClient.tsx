@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RotateCcw, ShoppingBag } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 import type { OrderRow } from "@/lib/admin-data";
 import { Badge, TableShell, Th, Td, statusTone, formatRupiah, formatDateTime, EmptyState } from "@/components/admin/ui";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, ORDER_PAGE_SIZES, ORDER_DEFAULT_PAGE_SIZE, type OrderStatus } from "@/lib/validations/storeSchema";
@@ -28,6 +30,19 @@ function buildHref(status: OrderStatus | "all", pageSize: number, page: number) 
 
 export default function OrdersListClient({ orders, totalItems, page, pageSize, activeStatus }: OrdersListClientProps) {
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("orders_admin_realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+        router.refresh();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [router]);
 
   const filterActive = activeStatus !== "all" || pageSize !== ORDER_DEFAULT_PAGE_SIZE || page > 1;
 

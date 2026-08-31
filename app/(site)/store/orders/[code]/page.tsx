@@ -34,8 +34,8 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     shipping_cost: number;
     total: number;
     paid_at: string | null;
-    xendit_invoice_url: string | null;
-    xendit_invoice_id: string | null;
+    midtrans_redirect_url: string | null;
+    midtrans_order_id: string | null;
     created_at: string;
     order_items: {
       product_name: string;
@@ -51,7 +51,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     const supabase = createClient(cookieStore);
     const { data } = await supabase
       .from("orders")
-      .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, total, paid_at, xendit_invoice_url, xendit_invoice_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id)")
+      .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id)")
       .eq("order_code", code)
       .single();
     dbOrder = data;

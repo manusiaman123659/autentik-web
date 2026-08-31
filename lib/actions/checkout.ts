@@ -5,7 +5,7 @@ import type { ZodError } from "zod";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { checkoutOrderSchema } from "@/lib/validations/storeSchema";
-import { createXenditInvoice } from "@/lib/xendit";
+import { createMidtransTransaction } from "@/lib/midtrans";
 import { logError } from "@/lib/logger";
 
 export interface CheckoutResult {
@@ -68,7 +68,7 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     return { success: false, message: "Gagal membuat pesanan. Silakan coba lagi." };
   }
 
-  // --- Xendit Invoice Integration ---
+  // --- Midtrans Payment Integration ---
   try {
     const { data: orderRow } = await supabase
       .from("orders")
@@ -76,12 +76,12 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       .eq("order_code", orderCode)
       .single();
 
-    const totalAmount = Number(orderRow?.total ?? 0);
+    const totalAmount = Math.round(Number(orderRow?.total ?? 0));
 
     if (totalAmount > 0) {
-      console.log("[CHECKOUT] Creating Xendit Invoice for:", orderCode, "Amount:", totalAmount);
+      console.log("[CHECKOUT] Creating Midtrans transaction for:", orderCode, "Amount:", totalAmount);
 
-      const invoice = await createXenditInvoice({
+      const transaction = await createMidtransTransaction({
         orderCode,
         amount: totalAmount,
         customerEmail: data.customerEmail || `${orderCode}@autentik.co`,
@@ -89,47 +89,46 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
         customerPhone: data.customerPhone,
       });
 
-      console.log("[CHECKOUT] Invoice created successfully:", invoice.invoice_url);
+      console.log("[CHECKOUT] Transaction created successfully:", transaction.redirect_url);
 
-      // Use admin client to bypass RLS for updating order with Xendit data
       const supabaseAdmin = createAdminClient();
       const { error: updateErr } = await supabaseAdmin
         .from("orders")
         .update({
-          xendit_invoice_id: invoice.id,
-          xendit_invoice_url: invoice.invoice_url,
+          midtrans_order_id: orderCode,
+          midtrans_redirect_url: transaction.redirect_url,
         })
         .eq("order_code", orderCode);
 
       if (updateErr) {
-        console.error("[CHECKOUT] Failed to update order with invoice URL:", updateErr);
+        console.error("[CHECKOUT] Failed to update order with Midtrans data:", updateErr);
       } else {
-        console.log("[CHECKOUT] Order updated with Xendit invoice data");
+        console.log("[CHECKOUT] Order updated with Midtrans transaction data");
       }
 
       return {
         success: true,
         message: "Pesanan berhasil dibuat.",
         orderCode,
-        redirectUrl: invoice.invoice_url,
+        redirectUrl: transaction.redirect_url,
       };
     }
   } catch (err) {
-    console.error("[CHECKOUT] Xendit Invoice Creation Failed:", err);
-    logError("checkout.xendit_invoice", err, { orderCode });
+    console.error("[CHECKOUT] Midtrans Transaction Failed:", err);
+    logError("checkout.midtrans_transaction", err, { orderCode });
   }
 
   return { success: true, message: "Pesanan berhasil dibuat.", orderCode };
 }
 
-// --- Regenerate Xendit Invoice (fallback if original invoice creation failed) ---
+// --- Regenerate Midtrans Payment (fallback if original transaction creation failed) ---
 export interface RegenerateResult {
   success: boolean;
   message: string;
   redirectUrl?: string;
 }
 
-export async function regenerateXenditInvoice(orderCode: string): Promise<RegenerateResult> {
+export async function regenerateMidtransPayment(orderCode: string): Promise<RegenerateResult> {
   if (!orderCode || typeof orderCode !== "string") {
     return { success: false, message: "Kode pesanan tidak valid." };
   }
@@ -139,7 +138,7 @@ export async function regenerateXenditInvoice(orderCode: string): Promise<Regene
   try {
     const { data: order, error: fetchErr } = await supabaseAdmin
       .from("orders")
-      .select("id, total, status, customer_name, customer_email, customer_phone, xendit_invoice_url")
+      .select("id, total, status, customer_name, customer_email, customer_phone, midtrans_redirect_url")
       .eq("order_code", orderCode)
       .single();
 
@@ -151,9 +150,8 @@ export async function regenerateXenditInvoice(orderCode: string): Promise<Regene
       return { success: false, message: "Pesanan ini sudah tidak dapat dibayar." };
     }
 
-    // If invoice URL already exists, return it directly
-    if (order.xendit_invoice_url) {
-      return { success: true, message: "Invoice sudah ada.", redirectUrl: order.xendit_invoice_url };
+    if (order.midtrans_redirect_url) {
+      return { success: true, message: "Link pembayaran sudah ada.", redirectUrl: order.midtrans_redirect_url };
     }
 
     const totalAmount = Math.round(Number(order.total ?? 0));
@@ -163,9 +161,9 @@ export async function regenerateXenditInvoice(orderCode: string): Promise<Regene
 
     const customerEmail = (order.customer_email || "").trim() || `order_${orderCode}@autentik.co`;
 
-    console.log("[REGENERATE] Creating Xendit Invoice for:", orderCode, "Amount:", totalAmount, "Email:", customerEmail);
+    console.log("[REGENERATE] Creating Midtrans transaction for:", orderCode, "Amount:", totalAmount);
 
-    const invoice = await createXenditInvoice({
+    const transaction = await createMidtransTransaction({
       orderCode,
       amount: totalAmount,
       customerEmail,
@@ -173,29 +171,29 @@ export async function regenerateXenditInvoice(orderCode: string): Promise<Regene
       customerPhone: order.customer_phone,
     });
 
-    console.log("[REGENERATE] Invoice created successfully:", invoice.invoice_url);
+    console.log("[REGENERATE] Transaction created successfully:", transaction.redirect_url);
 
     const { error: updateErr } = await supabaseAdmin
       .from("orders")
       .update({
-        xendit_invoice_id: invoice.id,
-        xendit_invoice_url: invoice.invoice_url,
+        midtrans_order_id: orderCode,
+        midtrans_redirect_url: transaction.redirect_url,
       })
       .eq("order_code", orderCode);
 
     if (updateErr) {
       console.error("[REGENERATE] Failed to update order:", updateErr);
-      return { success: false, message: "Gagal menyimpan data invoice. Silakan coba lagi." };
+      return { success: false, message: "Gagal menyimpan data pembayaran. Silakan coba lagi." };
     }
 
     return {
       success: true,
-      message: "Invoice berhasil dibuat.",
-      redirectUrl: invoice.invoice_url,
+      message: "Link pembayaran berhasil dibuat.",
+      redirectUrl: transaction.redirect_url,
     };
   } catch (err) {
-    console.error("[REGENERATE_XENDIT_ERROR]", err, { orderCode });
-    logError("checkout.regenerate_invoice", err, { orderCode });
-    return { success: false, message: "Gagal membuat invoice. Silakan coba lagi." };
+    console.error("[REGENERATE_MIDTRANS_ERROR]", err, { orderCode });
+    logError("checkout.regenerate_midtrans", err, { orderCode });
+    return { success: false, message: "Gagal membuat link pembayaran. Silakan coba lagi." };
   }
 }

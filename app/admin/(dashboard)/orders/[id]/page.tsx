@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { MapPin, Phone, Mail, Receipt } from "lucide-react";
 import { getOrder } from "@/lib/admin-data";
 import { getCompanyContact, getBankAccount } from "@/lib/public-data";
-import { PageHeader, Badge, Card, statusTone, formatRupiah } from "@/components/admin/ui";
-import { ORDER_STATUS_LABELS } from "@/lib/validations/storeSchema";
+import { PageHeader, Card, formatRupiah } from "@/components/admin/ui";
 import OrderStatusForm from "@/components/admin/OrderStatusForm";
 import OrderDeleteButton from "@/components/admin/OrderDeleteButton";
 import OrderPrintActions from "@/components/admin/OrderPrintActions";
+import AdminOrderDetailClient from "@/components/admin/AdminOrderDetailClient";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -77,55 +77,18 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           </div>
         </Card>
 
-        <Card>
-          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Ringkasan Pembayaran</h2>
-          </div>
-          <div className="p-5 space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">Metode</span>
-              <span className="font-medium text-slate-900 dark:text-white uppercase">{order.payment_method ?? "—"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">Status Pembayaran</span>
-              <Badge tone={statusTone(order.payment_status)}>{order.payment_status}</Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">Status Pesanan</span>
-              <Badge tone={statusTone(order.status)}>{ORDER_STATUS_LABELS[order.status]}</Badge>
-            </div>
-            <div className="flex justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-              <span className="text-slate-500 dark:text-slate-400">Subtotal</span>
-              <span className="font-medium">{formatRupiah(order.subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">Ongkir</span>
-              <span className="font-medium">{formatRupiah(order.shipping_cost)}</span>
-            </div>
-            <div className="flex justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-              <span className="font-bold text-slate-900 dark:text-white">Total</span>
-              <span className="font-bold text-[#0EA5A0]">{formatRupiah(order.total)}</span>
-            </div>
-            {order.paid_at && (
-              <div className="flex justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Dibayar pada</span>
-                <span className="font-medium text-slate-900 dark:text-white text-xs">{new Date(order.paid_at).toLocaleString("id-ID")}</span>
-              </div>
-            )}
-            {order.xendit_invoice_url && (
-              <div className="pt-2">
-                <a
-                  href={order.xendit_invoice_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-semibold text-[#0EA5A0] hover:underline"
-                >
-                  Lihat Invoice Xendit →
-                </a>
-              </div>
-            )}
-          </div>
-        </Card>
+        <AdminOrderDetailClient
+          orderId={order.id}
+          orderCode={order.order_code}
+          initialPaymentStatus={order.payment_status ?? ""}
+          initialOrderStatus={order.status}
+          paymentMethod={order.payment_method ?? null}
+          subtotal={order.subtotal}
+          shippingCost={order.shipping_cost}
+          total={order.total}
+          paidAt={order.paid_at ?? null}
+          midtransRedirectUrl={order.midtrans_redirect_url ?? null}
+        />
       </div>
 
       <Card className="mb-6">

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
 import { formatRupiah } from "@/lib/format";
-import { regenerateXenditInvoice } from "@/lib/actions/checkout";
+import { regenerateMidtransPayment } from "@/lib/actions/checkout";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import OptimizedImage from "@/components/ui/OptimizedImage";
 import PrintCustomerInvoice from "./PrintCustomerInvoice";
@@ -38,8 +38,8 @@ type DbOrder = {
   shipping_cost: number;
   total: number;
   paid_at: string | null;
-  xendit_invoice_url: string | null;
-  xendit_invoice_id: string | null;
+  midtrans_redirect_url: string | null;
+  midtrans_order_id: string | null;
   created_at: string;
   order_items: DbOrderItem[];
 };
@@ -80,7 +80,7 @@ function buildSnapshotFromDb(db: DbOrder): OrderSnapshot {
 }
 
 function isPaidStatus(status: string | null | undefined): boolean {
-  return status === "paid" || status === "completed" || status === "shipped";
+  return status === "paid" || status === "completed" || status === "shipped" || status === "success";
 }
 
 export default function OrderConfirmationClient({
@@ -100,8 +100,10 @@ export default function OrderConfirmationClient({
   const [mounted, setMounted] = useState(false);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [localInvoiceUrl, setLocalInvoiceUrl] = useState<string | null>(null);
+  const [livePaymentStatus, setLivePaymentStatus] = useState<string | null>(null);
+  const [livePaidAt, setLivePaidAt] = useState<string | null>(null);
 
-  const effectiveInvoiceUrl = localInvoiceUrl ?? dbOrder?.xendit_invoice_url ?? null;
+  const effectiveInvoiceUrl = localInvoiceUrl ?? dbOrder?.midtrans_redirect_url ?? null;
 
   useEffect(() => {
     const fromStorage = readSnapshot(code);
@@ -111,10 +113,38 @@ export default function OrderConfirmationClient({
     setMounted(true);
   }, [code, dbOrder]);
 
+  // Real-time SSE listener — polls order status every 2s
+  useEffect(() => {
+    if (!code) return;
+    const es = new EventSource(`/api/orders/${code}/status`);
+    es.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data) as {
+          payment_status?: string;
+          status?: string;
+          paid_at?: string | null;
+        };
+        if (data.payment_status) {
+          setLivePaymentStatus(data.payment_status);
+          setSnapshot((prev) =>
+            prev ? { ...prev, paymentStatus: data.payment_status! } : prev,
+          );
+        }
+        if (data.paid_at) setLivePaidAt(data.paid_at);
+      } catch {
+        // ignore parse errors
+      }
+    };
+    es.onerror = () => {
+      // Biarkan EventSource auto-reconnect — jangan close di sini
+    };
+    return () => es.close();
+  }, [code]);
+
   const handleRegenerateInvoice = async () => {
     setGeneratingInvoice(true);
     try {
-      const result = await regenerateXenditInvoice(code);
+      const result = await regenerateMidtransPayment(code);
       if (result.success && result.redirectUrl) {
         setLocalInvoiceUrl(result.redirectUrl);
         window.location.href = result.redirectUrl;
@@ -129,8 +159,9 @@ export default function OrderConfirmationClient({
     }
   };
 
-  const isPaid = isPaidStatus(statusParam) || isPaidStatus(dbOrder?.payment_status);
-  const isFailed = statusParam === "failed";
+  const effectivePaymentStatus = livePaymentStatus ?? dbOrder?.payment_status;
+  const isPaid = isPaidStatus(statusParam) || isPaidStatus(effectivePaymentStatus);
+  const isFailed = statusParam === "failed" || effectivePaymentStatus === "failed";
 
   if (!mounted) {
     return (
@@ -293,9 +324,9 @@ export default function OrderConfirmationClient({
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Pesanan Anda telah dibayar dan akan segera diproses oleh tim kami.
             </p>
-            {dbOrder?.paid_at && (
+            {(livePaidAt ?? dbOrder?.paid_at) && (
               <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-                Dibayar pada: {new Date(dbOrder.paid_at).toLocaleString("id-ID")}
+                Dibayar pada: {new Date((livePaidAt ?? dbOrder!.paid_at)!).toLocaleString("id-ID")}
               </p>
             )}
           </div>
@@ -321,7 +352,7 @@ export default function OrderConfirmationClient({
             )}
           </div>
         ) : (
-          /* Pending payment — show Xendit link or transfer instructions */
+          /* Pending payment — show Midtrans link or transfer instructions */
           <div className="rounded-2xl border shadow-sm p-6" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
             <h2 className="text-base font-bold mb-1" style={{ color: "var(--text-primary)" }}>Instruksi Pembayaran</h2>
             <p className="text-xs mt-1 mb-5" style={{ color: "var(--text-secondary)" }}>
