@@ -1,20 +1,20 @@
 -- =============================================================================
 -- Autentik CMS - Midtrans Snap Migration (replaces Xendit integration)
 -- Apply after 0023_rfq_rate_limit.sql in the Supabase SQL editor.
--- Renames Xendit columns/RPC to Midtrans equivalents.
+-- Adds Midtrans payment columns + webhook handler RPC.
+-- Safe to re-run: uses IF NOT EXISTS / CREATE OR REPLACE.
 -- ============================================================================
 
--- Rename columns
+-- Add columns (safe: skip if already exist)
 ALTER TABLE public.orders
-  RENAME COLUMN xendit_invoice_id TO midtrans_order_id;
-ALTER TABLE public.orders
-  RENAME COLUMN xendit_invoice_url TO midtrans_redirect_url;
+  ADD COLUMN IF NOT EXISTS midtrans_order_id text,
+  ADD COLUMN IF NOT EXISTS midtrans_redirect_url text,
+  ADD COLUMN IF NOT EXISTS paid_at timestamptz;
 
--- Rename index
-ALTER INDEX IF EXISTS idx_orders_xendit_invoice
-  RENAME TO idx_orders_midtrans_order;
+CREATE INDEX IF NOT EXISTS idx_orders_midtrans_order ON public.orders (midtrans_order_id)
+  WHERE midtrans_order_id IS NOT NULL;
 
--- Drop old Xendit RPC
+-- Drop old Xendit functions if they exist
 DROP FUNCTION IF EXISTS public.handle_xendit_webhook(text, text, text, timestamptz);
 
 -- Create Midtrans notification handler
