@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ChevronRight,
   CheckCircle2,
 } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/format";
+import { createClient } from "@/utils/supabase/client";
+import { useCart } from "@/components/cart/CartProvider";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
@@ -22,6 +25,9 @@ interface StoreProductDetailProps {
 
 export default function StoreProductDetail({ product, waNumber }: StoreProductDetailProps) {
   const [activeTab, setActiveTab] = useState<Tab>("description");
+  const router = useRouter();
+  const supabase = createClient();
+  const { addItem } = useCart();
 
   const stock = product.stock ?? 0;
   const low = product.low_stock_threshold ?? 5;
@@ -40,6 +46,16 @@ export default function StoreProductDetail({ product, waNumber }: StoreProductDe
   const specs: { label: string; value: string }[] = product.specs ?? [];
   const features: string[] = (product.features ?? []).map(String);
   const variants: { name: string; options: string[] }[] = product.variants ?? [];
+
+  async function handleBuyNow(qty: number) {
+    addItem(product, qty);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push(`/auth/login?redirect=${encodeURIComponent("/store/checkout")}`);
+      return;
+    }
+    router.push("/store/checkout");
+  }
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
@@ -272,7 +288,7 @@ export default function StoreProductDetail({ product, waNumber }: StoreProductDe
 
               {/* Quantity + Add to cart */}
               {isReady ? (
-                <AddToCartButton product={product} variant="detail" />
+                <AddToCartButton product={product} variant="detail" onBuyNow={isReady ? handleBuyNow : undefined} />
               ) : (
                 <ProductFulfillmentCta
                   fulfillmentType={fulfillmentType}
@@ -290,9 +306,23 @@ export default function StoreProductDetail({ product, waNumber }: StoreProductDe
                   label="Tanya via WhatsApp"
                   message={`Halo, saya ingin menanyakan ketersediaan sparepart ${product.name}`}
                   variant="button"
-                  className="w-full py-2.5 rounded-sm text-xs"
+                  className="w-full py-2 text-white font-semibold text-xs rounded-sm flex items-center justify-center gap-1.5 shadow-none transition-opacity hover:opacity-90"
                 />
               )}
+
+              {/* Trust info — merged into purchase box */}
+              <div className="border-t pt-3 mt-3" style={{ borderColor: "var(--border-subtle)" }}>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">Garansi</p>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Resmi</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">Kondisi</p>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Baru</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Variants (in sidebar on desktop) */}
@@ -321,18 +351,6 @@ export default function StoreProductDetail({ product, waNumber }: StoreProductDe
                 </div>
               </div>
             )}
-
-            {/* Trust badges */}
-            <div className="rounded-sm border p-3 grid grid-cols-2 gap-2" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-              <div className="text-center">
-                <p className="text-[10px] font-bold text-[#0EA5A0]">Garansi</p>
-                <p className="text-[9px]" style={{ color: "var(--text-muted)" }}>Resmi</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] font-bold text-[#0EA5A0]">Kondisi</p>
-                <p className="text-[9px]" style={{ color: "var(--text-muted)" }}>Baru</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
