@@ -34,6 +34,7 @@ export interface ProductRow {
   status?: string | null;
   seo_title?: string | null;
   seo_description?: string | null;
+  related_ids?: string[] | null;
   deleted_at?: string | null;
 }
 
@@ -454,6 +455,62 @@ export async function getProductBySlug(slug: string): Promise<ProductRow | null>
     .maybeSingle();
   if (error || !data) return null;
   return data as ProductRow;
+}
+
+export async function getRelatedProducts(
+  product: ProductRow,
+  limit = 4
+): Promise<ProductRow[]> {
+  const supabase = await getSupabase();
+
+  // Priority 1: explicit related_ids
+  if (product.related_ids && product.related_ids.length > 0) {
+    const ids = product.related_ids.filter((id) => id !== product.id).slice(0, limit);
+    if (ids.length > 0) {
+      const { data } = await supabase
+        .from("products")
+        .select("*")
+        .in("id", ids)
+        .eq("product_type", "sparepart")
+        .eq("is_store_visible", true)
+        .is("deleted_at", null);
+      if (data && data.length > 0) return data as ProductRow[];
+    }
+  }
+
+  // Priority 2: same brand (exclude self)
+  const { data: byBrand } = await supabase
+    .from("products")
+    .select("*")
+    .eq("brand", product.brand)
+    .neq("id", product.id)
+    .eq("product_type", "sparepart")
+    .eq("is_store_visible", true)
+    .is("deleted_at", null)
+    .limit(limit);
+
+  const brandResults = (byBrand ?? []) as ProductRow[];
+  if (brandResults.length >= limit) return brandResults.slice(0, limit);
+
+  // Priority 3: supplement with same category
+  const { data: byCategory } = await supabase
+    .from("products")
+    .select("*")
+    .eq("category", product.category)
+    .neq("id", product.id)
+    .eq("product_type", "sparepart")
+    .eq("is_store_visible", true)
+    .is("deleted_at", null)
+    .limit(limit - brandResults.length);
+
+  const categoryResults = (byCategory ?? []) as ProductRow[];
+  const seen = new Set([...brandResults.map((p) => p.id), ...categoryResults.map((p) => p.id)]);
+  const combined = [
+    ...brandResults,
+    ...categoryResults.filter((p) => !seen.has(p.id)),
+  ];
+
+  return combined.slice(0, limit);
 }
 
 export async function listSparepartCategories(): Promise<string[]> {

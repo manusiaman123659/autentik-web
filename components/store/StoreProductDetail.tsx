@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -15,19 +15,35 @@ import AddToCartButton from "@/components/cart/AddToCartButton";
 import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import ProductImageGallery from "@/components/store/ProductImageGallery";
+import RelatedProducts from "@/components/store/RelatedProducts";
+import RecentlyViewed from "@/components/store/RecentlyViewed";
+import { useRecentlyViewed } from "@/components/store/useRecentlyViewed";
 
 type Tab = "description" | "specs";
 
 interface StoreProductDetailProps {
   product: ProductRow;
   waNumber: string | null;
+  relatedProducts?: ProductRow[];
 }
 
-export default function StoreProductDetail({ product, waNumber }: StoreProductDetailProps) {
+export default function StoreProductDetail({ product, waNumber, relatedProducts = [] }: StoreProductDetailProps) {
   const [activeTab, setActiveTab] = useState<Tab>("description");
   const router = useRouter();
   const supabase = createClient();
   const { addItem } = useCart();
+  const { add: recordView } = useRecentlyViewed();
+
+  useEffect(() => {
+    recordView({
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      brand: product.brand,
+      image_url: product.image_url ?? null,
+      price: product.price ?? null,
+    });
+  }, [product.id, product.slug, product.name, product.brand, product.image_url, product.price, recordView]);
 
   const stock = product.stock ?? 0;
   const low = product.low_stock_threshold ?? 5;
@@ -353,6 +369,15 @@ export default function StoreProductDetail({ product, waNumber }: StoreProductDe
             )}
           </div>
         </div>
+
+        {/* Related Products */}
+        {relatedProducts.length > 0 && (
+          <RelatedProducts products={relatedProducts} waNumber={waNumber} />
+        )}
+
+        {/* Recently Viewed */}
+        <RecentlyViewed />
+
       </div>
     </div>
   );
