@@ -50,33 +50,36 @@ export default function AddToCartButton({
         disabled={!canAdd}
         aria-label={canAdd ? `Tambah ${product.name} ke keranjang` : "Stok habis"}
         title={!canAdd ? (stock === 0 ? "Stok habis" : "Harga hubungi kami") : undefined}
-        className={`w-[46px] flex-shrink-0 flex items-center justify-center rounded-xl border transition-all shadow-sm ${
+        className={`w-full flex-shrink-0 flex items-center justify-center gap-1.5 py-2 rounded-sm border text-xs font-semibold transition-colors ${
           canAdd
-            ? "text-[#0EA5A0] border-[#0EA5A0]/40 hover:bg-[#0EA5A0] hover:text-white hover:shadow-md"
+            ? added
+              ? "bg-[#0EA5A0] border-[#0EA5A0] text-white"
+              : "text-[#0EA5A0] border-[#0EA5A0]/40 hover:bg-[#0EA5A0] hover:text-white"
             : "text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed"
         }`}
-        style={{ backgroundColor: "var(--bg-card)" }}
+        style={{ backgroundColor: added ? undefined : "var(--bg-card)" }}
       >
-        {added ? <Check size={18} /> : <ShoppingCart size={18} />}
+        {added ? <Check size={14} /> : <ShoppingCart size={14} />}
+        {added ? "Ditambahkan" : "Keranjang"}
       </button>
     );
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-      <div className="inline-flex items-center rounded-lg border" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
+    <div className="flex items-center gap-2">
+      <div className="inline-flex items-center rounded-sm border" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
         <button
           type="button"
           onClick={() => clampQty(qty - 1)}
           disabled={qty <= 1 || !canAdd}
           aria-label="Kurangi jumlah"
-          className="w-11 h-11 flex items-center justify-center disabled:opacity-40 transition-colors"
+          className="w-9 h-9 flex items-center justify-center disabled:opacity-40 transition-colors"
           style={{ color: "var(--text-primary)" }}
         >
-          <Minus size={16} />
+          <Minus size={14} />
         </button>
         <span
-          className="w-12 text-center text-sm font-bold tabular-nums"
+          className="w-10 text-center text-xs font-bold tabular-nums"
           style={{ color: "var(--text-primary)" }}
         >
           {qty}
@@ -86,10 +89,10 @@ export default function AddToCartButton({
           onClick={() => clampQty(qty + 1)}
           disabled={qty >= stock || !canAdd}
           aria-label="Tambah jumlah"
-          className="w-11 h-11 flex items-center justify-center disabled:opacity-40 transition-colors"
+          className="w-9 h-9 flex items-center justify-center disabled:opacity-40 transition-colors"
           style={{ color: "var(--text-primary)" }}
         >
-          <Plus size={16} />
+          <Plus size={14} />
         </button>
       </div>
 
@@ -98,13 +101,13 @@ export default function AddToCartButton({
         onClick={handleAdd}
         disabled={!canAdd}
         title={!canAdd ? (stock === 0 ? "Stok habis" : "Harga: hubungi kami") : undefined}
-        className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-sm font-semibold text-sm text-white bg-[#0EA5A0] hover:bg-[#0D9E98] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
-        {added ? <Check size={18} /> : <ShoppingCart size={18} />}
+        {added ? <Check size={16} /> : <ShoppingCart size={16} />}
         {!canAdd
           ? stock === 0
             ? "Stok Habis"
-            : "Harga Hubungi Kami"
+            : "Hubungi Kami"
           : added
             ? "Ditambahkan"
             : "Tambah ke Keranjang"}

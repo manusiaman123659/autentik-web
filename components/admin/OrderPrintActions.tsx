@@ -24,7 +24,7 @@ interface Props {
   } | null;
 }
 
-const PACKING_SLIP_STATUSES = ["processing", "paid", "shipped"];
+const PACKING_SLIP_STATUSES = ["processing", "shipped"];
 
 export default function OrderPrintActions({ order, items, companyContact, bankAccount }: Props) {
   const [mode, setMode] = useState<"invoice" | "packing" | null>(null);

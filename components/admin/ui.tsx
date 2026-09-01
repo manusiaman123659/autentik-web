@@ -95,7 +95,6 @@ export function Badge({
 export function statusTone(status?: string | null) {
   switch (status) {
     case "completed":
-    case "paid":
     case "published":
     case "read":
     case "active":

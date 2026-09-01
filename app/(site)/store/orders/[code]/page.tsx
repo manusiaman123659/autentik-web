@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import OrderConfirmationClient from "@/components/orders/OrderConfirmationClient";
 import { getWhatsAppNumber, getBankAccount } from "@/lib/public-data";
-import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 type Props = {
   params: Promise<{ code: string }>;
@@ -47,8 +46,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   } | null = null;
 
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = createAdminClient();
     const { data } = await supabase
       .from("orders")
       .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id)")
@@ -56,7 +54,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
       .single();
     dbOrder = data;
   } catch {
-    // Order may not exist yet or RLS blocks — client will handle gracefully
+    // Order may not exist yet — client will handle gracefully
   }
 
   return (

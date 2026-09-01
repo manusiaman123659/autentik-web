@@ -12,15 +12,15 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: Promise<{ compatible?: string }>;
+  searchParams: Promise<{ compatible?: string; q?: string }>;
 };
 
 export default async function StorePage({ searchParams }: Props) {
-  const { compatible } = await searchParams;
+  const { compatible, q } = await searchParams;
   const products = await listStoreProducts();
   const waNumber = await getWhatsAppNumber();
 
   return (
-    <StoreClient products={products} compatible={compatible ?? null} waNumber={waNumber} />
+    <StoreClient products={products} compatible={compatible ?? null} waNumber={waNumber} initialQuery={q ?? ""} />
   );
 }

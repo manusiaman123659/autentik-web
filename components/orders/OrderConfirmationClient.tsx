@@ -12,6 +12,8 @@ import {
   XCircle,
   ExternalLink,
   Loader2,
+  Clock,
+  Circle,
 } from "lucide-react";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
 import { formatRupiah } from "@/lib/format";
@@ -79,8 +81,10 @@ function buildSnapshotFromDb(db: DbOrder): OrderSnapshot {
   };
 }
 
-function isPaidStatus(status: string | null | undefined): boolean {
-  return status === "paid" || status === "completed" || status === "shipped" || status === "success";
+function isPaidStatus(paymentStatus?: string | null, orderStatus?: string | null): boolean {
+  const isPaid = paymentStatus === "paid" || paymentStatus === "settlement" || paymentStatus === "capture";
+  const isProgress = ["processing", "diproses", "shipped", "dikirim", "completed", "selesai"].includes(orderStatus || "");
+  return isPaid || isProgress;
 }
 
 export default function OrderConfirmationClient({
@@ -101,6 +105,7 @@ export default function OrderConfirmationClient({
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [localInvoiceUrl, setLocalInvoiceUrl] = useState<string | null>(null);
   const [livePaymentStatus, setLivePaymentStatus] = useState<string | null>(null);
+  const [liveOrderStatus, setLiveOrderStatus] = useState<string | null>(null);
   const [livePaidAt, setLivePaidAt] = useState<string | null>(null);
 
   const effectiveInvoiceUrl = localInvoiceUrl ?? dbOrder?.midtrans_redirect_url ?? null;
@@ -128,6 +133,12 @@ export default function OrderConfirmationClient({
           setLivePaymentStatus(data.payment_status);
           setSnapshot((prev) =>
             prev ? { ...prev, paymentStatus: data.payment_status! } : prev,
+          );
+        }
+        if (data.status) {
+          setLiveOrderStatus(data.status);
+          setSnapshot((prev) =>
+            prev ? { ...prev, status: data.status! } : prev,
           );
         }
         if (data.paid_at) setLivePaidAt(data.paid_at);
@@ -160,7 +171,8 @@ export default function OrderConfirmationClient({
   };
 
   const effectivePaymentStatus = livePaymentStatus ?? dbOrder?.payment_status;
-  const isPaid = isPaidStatus(statusParam) || isPaidStatus(effectivePaymentStatus);
+  const effectiveOrderStatus = liveOrderStatus ?? dbOrder?.status;
+  const isPaid = isPaidStatus(statusParam) || isPaidStatus(effectivePaymentStatus, effectiveOrderStatus);
   const isFailed = statusParam === "failed" || effectivePaymentStatus === "failed";
 
   if (!mounted) {
@@ -262,6 +274,108 @@ export default function OrderConfirmationClient({
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+        {/* Order Progress Tracker */}
+        {(() => {
+          const orderSteps = [
+            { key: "created", label: "Pesanan Dibuat", done: true },
+            { key: "payment", label: "Pembayaran Diterima", done: isPaid },
+            { key: "processing", label: "Diproses", done: ["processing", "shipped", "completed"].includes(effectiveOrderStatus || "") },
+            { key: "shipped", label: "Dikirim", done: ["shipped", "completed"].includes(effectiveOrderStatus || "") },
+            { key: "completed", label: "Selesai", done: effectiveOrderStatus === "completed" },
+          ];
+          const currentIdx = orderSteps.findIndex((s) => !s.done);
+
+          return (
+            <div className="rounded-2xl border shadow-sm p-6" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
+              <h2 className="text-base font-bold mb-6" style={{ color: "var(--text-primary)" }}>Status Pesanan</h2>
+
+              {/* Desktop: horizontal stepper */}
+              <div className="hidden sm:flex items-start justify-between">
+                {orderSteps.map((step, idx) => {
+                  const isCurrent = idx === currentIdx;
+                  return (
+                    <div key={step.key} className="flex flex-col items-center flex-1 relative">
+                      {/* Connector line */}
+                      {idx > 0 && (
+                        <div
+                          className="absolute top-4 right-1/2 w-full h-0.5 -z-0"
+                          style={{ backgroundColor: orderSteps[idx - 1].done ? "#0EA5A0" : "var(--border-subtle)" }}
+                        />
+                      )}
+                      {/* Circle */}
+                      <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors ${
+                        step.done
+                          ? "bg-[#0EA5A0] border-[#0EA5A0]"
+                          : isCurrent
+                            ? "border-[#0EA5A0] bg-white dark:bg-slate-900 animate-pulse"
+                            : "border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900"
+                      }`}>
+                        {step.done ? (
+                          <CheckCircle2 size={16} className="text-white" />
+                        ) : isCurrent ? (
+                          <Clock size={14} className="text-[#0EA5A0]" />
+                        ) : (
+                          <Circle size={10} className="text-gray-300 dark:text-gray-600" />
+                        )}
+                      </div>
+                      {/* Label */}
+                      <p className={`text-[11px] mt-2 text-center font-medium leading-tight ${
+                        step.done || isCurrent ? "text-[#0EA5A0]" : "text-gray-400 dark:text-gray-500"
+                      }`}>
+                        {step.label}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Mobile: vertical stepper */}
+              <div className="sm:hidden space-y-0">
+                {orderSteps.map((step, idx) => {
+                  const isCurrent = idx === currentIdx;
+                  const isLast = idx === orderSteps.length - 1;
+                  return (
+                    <div key={step.key} className="flex gap-3">
+                      {/* Icon + connector */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 flex-shrink-0 transition-colors ${
+                          step.done
+                            ? "bg-[#0EA5A0] border-[#0EA5A0]"
+                            : isCurrent
+                              ? "border-[#0EA5A0] bg-white dark:bg-slate-900 animate-pulse"
+                              : "border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900"
+                        }`}>
+                          {step.done ? (
+                            <CheckCircle2 size={14} className="text-white" />
+                          ) : isCurrent ? (
+                            <Clock size={12} className="text-[#0EA5A0]" />
+                          ) : (
+                            <Circle size={8} className="text-gray-300 dark:text-gray-600" />
+                          )}
+                        </div>
+                        {!isLast && (
+                          <div
+                            className="w-0.5 flex-1 min-h-[20px]"
+                            style={{ backgroundColor: step.done ? "#0EA5A0" : "var(--border-subtle)" }}
+                          />
+                        )}
+                      </div>
+                      {/* Label */}
+                      <div className="pb-5">
+                        <p className={`text-sm font-medium leading-tight ${
+                          step.done || isCurrent ? "text-[#0EA5A0]" : "text-gray-400 dark:text-gray-500"
+                        }`}>
+                          {step.label}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Daftar item */}
         <div className="rounded-2xl border shadow-sm p-6" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
           <h2 className="text-base font-bold mb-5" style={{ color: "var(--text-primary)" }}>Detail Pesanan</h2>

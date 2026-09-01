@@ -21,9 +21,12 @@ Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT
 ## Env Variables
 - `NEXT_PUBLIC_SUPABASE_URL` — URL project Supabase
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — publishable key (bukan service_role)
-- `SUPABASE_SERVICE_ROLE_KEY` — service role key (server-only, bypasses RLS; hanya dipakai di `lib/supabase/admin.ts`)
+- `SUPABASE_SERVICE_ROLE_KEY` — service role key (server-only, bypasses RLS; hanya dipakai di `utils/supabase/admin.ts`)
 - `NEXT_PUBLIC_SITE_URL` — untuk metadataBase (default: `http://localhost:3000`)
 - `GEMINI_API_KEY` — Google Gemini API key untuk chatbot AI (`/api/chat`)
+- `MIDTRANS_SERVER_KEY` — Midtrans payment gateway server key (server-only)
+- `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY` — Midtrans payment gateway client key (public)
+- `MIDTRANS_IS_PRODUCTION` — `"false"` untuk sandbox, `"true"` untuk production
 - Semua di `.env.local` (sudah di-gitignore); tidak ada key yang di-commit. Lihat `.env.example` untuk template.
 
 ## Gotcha Next.js 16 di repo ini
@@ -33,6 +36,45 @@ Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT
 - `middleware` diganti nama jadi `proxy` — **dan memang dipakai di repo ini** (lihat "Autentikasi Admin & CMS" di bawah untuk fungsinya). Jangan anggap kodnya mati.
 - **`proxy.ts`** = Supabase auth session refresh (bukan middleware biasa). Fungsi: `createClient(request)` → `supabase.auth.getUser()` → propagate cookies baru. Matcher: semua route kecuali static files (`_next/static`, `_next/image`, `favicon.ico`, `*.svg|png|jpg|jpeg|gif|webp`). Jangan modifikasi kecuali perlu ubah matcher/auth flow.
 - Default `next/image` berubah (mis. `qualities` default `[75]`, `minimumCacheTTL` 4 jam).
+
+## Status Architecture (PENTING)
+Tabel `orders` punya **dua kolom status** yang berbeda fungsi — jangan campur aduk:
+
+| Kolom | Fungsi | Nilai yang diizinkan |
+|-------|--------|---------------------|
+| `payment_status` | Status **pembayaran** (bayar belum?) | `pending`, `paid`, `failed`, `refunded` |
+| `status` | Status **proses pesanan** (diproses kirim?) | `pending`, `processing`, `shipped`, `completed`, `cancelled` |
+
+**Flow yang benar:**
+```
+Customer checkout
+  → payment_status: "pending", status: "pending"
+
+Midtrans webhook (settlement)
+  → payment_status: "paid", status: "processing"
+
+Admin kirim barang
+  → status: "shipped"
+
+Barang diterima
+  → status: "completed"
+```
+
+**Gotcha:**
+- **Jangan pernah set `status = "paid"`** — pembayaran diwakili oleh `payment_status: "paid"`. Nilai `"paid"` sudah dihapus dari CHECK constraint `orders_status_check` (migration `0028`).
+- Webhook Midtrans (`app/api/webhooks/midtrans/route.ts`) langsung `.update()` ke tabel `orders` — set `payment_status: "paid"` + `status: "processing"`, bukan memanggil RPC.
+- Dashboard queries (`lib/admin-data.ts`) memakai `payment_status` untuk filter "pending orders" dan "revenue", bukan `status`.
+- Zod schema `ORDER_STATUSES` di `lib/validations/storeSchema.ts` hanya berisi `["pending", "processing", "shipped", "completed", "cancelled"]` — tidak ada `"paid"`.
+
+## Real-Time Updates
+Dua mekanisme untuk update otomatis di admin:
+
+1. **SSE (Server-Sent Events)** — endpoint `app/api/orders/[code]/status/route.ts` polling DB setiap 2 detik. Dipakai di `components/admin/AdminOrderDetailClient.tsx` untuk halaman detail order. Auto-close saat `payment_status` mencapai terminal (`paid`/`completed`/`failed`).
+
+2. **Supabase Realtime** — subscription langsung ke tabel `orders`:
+   - `components/admin/OrdersListClient.tsx` — list orders auto-update saat ada perubahan.
+   - `components/admin/RecentOrdersWidget.tsx` — widget "Pesanan Terbaru" di dashboard auto-update.
+   - Realtime diaktifkan di migration `0026` untuk tabel `orders`.
 
 ## Konten & arsitektur
 - **Sumber kebenaran konten situs publik kini Supabase** untuk halaman yang di-wire (katalog, store, careers, about, seksi home) — lihat "Wiring halaman publik → Supabase" di bawah. `lib/data/*.ts` tetap dipakai sebagai **fallback statis** saat query Supabase error dan untuk konten yang memang statis (`solutions`, `team`, `faq`, konteks AI). Tambahkan produk/karir baru via CMS admin, bukan langsung ke file data.
@@ -44,7 +86,7 @@ Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT
 
 ### Wiring halaman publik → Supabase
 Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan baca server-only — pakai `cookies()`, jadi halaman pemakainya dynamic; **jangan import ke komponen client**):
-- `/products` & `/store` — sudah wired lebih dulu (fungsi di `lib/admin-data.ts` + `dynamic = "force-dynamic"`).
+- `/products` & `/store` — sudah wired lebih dulu (fungsi di `lib/admin-data.ts` + `dynamic = "force-dynamic"`). Store memakai sidebar filter (`components/store/StoreFilterSidebar.tsx`) + card compact (`components/store/StoreProductCard.tsx`).
 - `/careers` (route karir; **bukan `/news` lagi**) — list + detail baca tabel `careers` (status `open`), fallback ke `lib/data/careers.ts` bila query error. Tombol "Lamar Posisi Ini" memakai `getRecruitmentUrl()` (`lib/public-data.ts`) yang membaca `site_settings` key `recruitment` (value `{ url }`); bila kosong tombol jadi disabled. URL diatur admin lewat `components/admin/RecruitmentForm.tsx` di `/admin/karir` (aksi `lib/actions/recruitment.ts`).
 - `/about` — company profile manifest (`site_settings` key `compro`, fallback viewer hardcoded) + Grup Kami (`group_companies`) + Partner Kami (`partners`) + Tim Kami (`team_members`).
 - Seksi home — **Brands** (`brands`) & **HomeCareers** (`careers`), fetch server-side di `app/(site)/page.tsx` lalu di-pass sebagai props ke komponen client.
@@ -86,7 +128,7 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 - **Status section**: `BUILT_SECTION_KEYS` di `lib/admin-sections.ts` = tepat **14 section keys** yang sudah dibangun: produk, **compro**, sparepart, stok, orders, inquiry, lead, **rfq**, integrasi, akses-staff, riwayat, **karir**, **merek**, **relasi** (dashboard adalah `/admin`, bukan key section). Section compro, karir, merek, relasi, rfq punya route sendiri (`/admin/compro`, `/admin/karir`, `/admin/merek`, `/admin/relasi`, `/admin/rfq`). **Semua section sudah dibangun** — tidak ada lagi placeholder; route catch-all `app/admin/(dashboard)/[section]/` memanggil `notFound()` untuk key apa pun yang ada di `BUILT_SECTION_KEYS` (key yang sudah dibangun ada di folder route sendiri, bukan di catch-all). Cek `BUILT_SECTION_KEYS` sebelum berasumsi sebuah halaman section ada.
 - **`lib/admin.ts`** = server-only; `getAdminUser()` (react `cache`) memvalidasi sesi via `auth.getUser()` lalu memuat baris `profiles` (self-select RLS) dan membutuhkan `role in ('admin','editor')` + `is_active`. **Jangan import ke komponen client** — ia menarik `next/headers`. Data/tipe murni bersama ada di `lib/admin-sections.ts` (re-export dari `lib/admin.ts`; import dari `admin-sections` di kode client, mis. `components/admin/AdminShell.tsx`).
 - `lib/admin-sections.ts` mengekspor `ADMIN_SECTIONS` (link/meta section) dan `AdminUser`. Ikon section: `components/admin/sectionIcons.ts`.
-- Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0021_b2b_rfq_and_technical_docs.sql`** (file baru lanjut `0022_`):
+- Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0028_fix_orders_status_constraint.sql`**:
   - `0001_schema.sql` — skema dasar; trigger `profiles` awalnya membuat `role='editor'` saat signup (diubah `0015` menjadi `'viewer'`).
   - `0002_store_orders.sql` — menambah tabel `orders`, `order_items`, `whatsapp_leads`, plus kolom e-commerce (price, stock, weight, dsb.) di `products`.
   - `0007_chat_rate_limit.sql` — rate-limit chatbot AI (tabel `ai_chat_sessions`, RPC `track_chat_message`) untuk `/api/chat`.
@@ -101,6 +143,9 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
   - `0021_b2b_rfq_and_technical_docs.sql` — tabel RFQ (Request for Quotation) B2B + dokumen teknis produk; section admin `/admin/rfq` dengan list/detail view (`RfqListClient.tsx`, `RfqDetailClient.tsx`).
   - `0022_soft_delete_and_security.sql` — soft-delete pada `orders`, `products`, `quotation_requests`, `careers`; RPC `soft_delete_order(text, uuid, text)` dan `restore_order(text, uuid)`; RLS policy updates untuk exclude `deleted_at IS NULL`; indexes pada `orders.deleted_at` dan `products.deleted_at`.
   - `0023_rfq_rate_limit.sql` — rate-limit RFQ publik (anti-spam): tabel `rfq_rate_limits`, RPC `track_rfq_submission(text, int, int)` (SECURITY DEFINER, 3 submission per jam per sesi); diakses via `/api/rfq` (cookie httpOnly `autentik-rfq-session`, pola identik `/api/chat`).
+  - `0025_customer_auth.sql` — autentikasi customer (login/register). Default `role='customer'` untuk akun baru. RLS policy untuk customer melihat own orders.
+  - `0026_midtrans_migration.sql` — migrasi dari Xendit ke Midtrans: tambah kolom `midtrans_order_id`, `midtrans_redirect_url`, `paid_at` di `orders`; RPC `handle_midtrans_notification` (SECURITY DEFINER); enable Supabase Realtime untuk tabel `orders`.
+  - `0028_fix_orders_status_constraint.sql` — fix CHECK constraint `orders_status_check`: hapus `'paid'` (redundan dengan `payment_status`), tambah `'processing'` untuk flow Midtrans webhook.
 - **Nomor WhatsApp publik — satu sumber kebenaran**: `site_settings` key `whatsapp` dibaca server-side via `getWhatsAppNumber()` (`lib/public-data.ts`, memakai `cookies()` → halaman pemakainya dynamic) dan client-side via browser Supabase client di `components/chatbot/FaqWidget.tsx` (fetch sekali saat mount, tombol disabled sampai terisi). UI link/tombol WA memakai `components/ui/WhatsAppButton.tsx` (client dumb, props `number` + `label?`/`message?`/`variant?: "link"|"button"`/`className?`/`id?`; disabled saat `number` null). **Ganti nomor = `UPDATE site_settings` key `whatsapp`** (belum ada form admin) — jangan hardcode di komponen. `lib/whatsapp.ts` (konstanta lama) sudah dihapus; tidak ada dua sumber.
 - **Chatbot AI (Gemini)** tetap dipakai penuh: `components/chatbot/FaqWidget.tsx` hanya mode AI (`/api/chat`, rate-limit `ai_chat_sessions`), dengan tombol "Hubungi via WhatsApp" ke nomor dari `site_settings` key `whatsapp` sebagai fallback kontak. Tidak ada live chat CS/Tawk lagi.
 - Promosikan admin pertama di SQL editor Supabase:
@@ -119,15 +164,16 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 ## Directory structure
 - `app/(site)/` — halaman publik (products, store, careers, about, contact, services, custom-request)
 - `app/admin/(dashboard)/` — 14 admin sections (orders, sparepart, stok, produk, compro, merek, karir, relasi, inquiry, lead, rfq, akses-staff, integrasi, riwayat)
-- `components/admin/` — komponen admin UI (reuse primitives dari `ui.tsx`)
+- `components/admin/` — komponen admin UI (reuse primitives dari `ui.tsx`); termasuk `AdminOrderDetailClient.tsx` (SSE real-time), `OrdersListClient.tsx` (Supabase Realtime), `RecentOrdersWidget.tsx` (dashboard widget real-time)
 - `components/ui/` — komponen publik bersama (Button, Badge, SectionHeading, WhatsAppButton, CompanyProfileViewer, ScrollAnimations)
 - `components/product/` — komponen produk (Product3DViewer, ProductMediaTabs, RfqButton/Modal, TechnicalDocsSection, GatedDownloadModal)
+- `components/store/` — komponen store (StoreFilterSidebar, StoreProductCard)
 - `components/cart/`, `components/checkout/`, `components/orders/` — alur e-commerce
 - `components/careers/`, `components/requests/` — komponen karir & custom request
 - `lib/actions/` — 12 server action files (brands, careers, checkout, compro, products, recruitment, relasi, rfq, settings, shipping, store, technicalDocuments)
 - `lib/validations/` — 12 Zod schemas (brand, career, chat, compro, contact, login, product, recruitment, relasi, rfq, shipping, store)
 - `lib/data/` — static fallback data (jangan hapus meski sudah di-wire ke Supabase)
-- `supabase/migrations/` — 23 SQL migrations (0001-0023); file baru lanjut `0024_`
+- `supabase/migrations/` — 28 SQL migrations (0001-0028); file baru lanjut `0029_`
 - `utils/supabase/` — client (browser), server (RSC), middleware (proxy)
 - `.agents/skills/` — 6 custom skills (admin-crud-pattern, no-ai-slop-design, supabase, supabase-migration-safety, supabase-postgres-best-practices, verification-before-done)
 

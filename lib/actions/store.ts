@@ -161,7 +161,6 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
     tracking_number: data.trackingNumber || null,
     cancel_reason: data.cancelReason || null,
   };
-  if (data.status === "paid") patch.payment_status = "paid";
 
   const audit: Record<string, unknown> = { status: data.status };
   if (data.shippingCost !== undefined) {

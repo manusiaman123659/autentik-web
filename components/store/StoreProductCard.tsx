@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Package, ChevronRight } from "lucide-react";
+import { Package } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/format";
 import AddToCartButton from "@/components/cart/AddToCartButton";
@@ -19,39 +19,11 @@ export default function StoreProductCard({ product, waNumber }: StoreProductCard
   const fulfillment = product.fulfillment_type ?? "ready_stock";
   const isReady = fulfillment === "ready_stock";
   const hasDiscount = product.compare_at_price != null && product.compare_at_price > (product.price ?? 0);
-
-  function stockBadge() {
-    if (!isReady) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0EA5A0]/15 text-[#0EA5A0]">
-          {fulfillment === "custom_request" ? "Custom" : "3rd Party"}
-        </span>
-      );
-    }
-    if (stock === 0) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/15 text-red-500">
-          Habis
-        </span>
-      );
-    }
-    if (stock <= low) {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">
-          Stok Terbatas
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-        Ready Stock
-      </span>
-    );
-  }
+  const discountPct = hasDiscount ? Math.round(((product.compare_at_price! - (product.price ?? 0)) / product.compare_at_price!) * 100) : 0;
 
   return (
     <div
-      className="rounded-xl border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-250 flex flex-col overflow-hidden group"
+      className="rounded-sm border hover:border-[#0EA5A0] transition-colors flex flex-col overflow-hidden group"
       style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
     >
       {/* Image */}
@@ -61,67 +33,88 @@ export default function StoreProductCard({ product, waNumber }: StoreProductCard
             src={product.image_url}
             alt={product.name}
             fill
-            className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <Package size={40} className="text-slate-400" />
+            <Package size={28} className="text-slate-400" />
           </div>
         )}
-        {/* Badges */}
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
-          <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md text-white shadow-sm" style={{ backgroundColor: "#0B1F3A" }}>
-            {product.brand}
+
+        {/* Discount badge — top left */}
+        {hasDiscount && (
+          <span className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white rounded-sm">
+            -{discountPct}%
           </span>
-          {hasDiscount && (
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-red-500 text-white shadow-sm">
-              DISKON
+        )}
+
+        {/* Stock badge — top right */}
+        <div className="absolute top-1.5 right-1.5 z-10">
+          {!isReady ? (
+            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-[#0EA5A0] text-white">
+              {fulfillment === "custom_request" ? "Custom" : "3rd Party"}
             </span>
-          )}
+          ) : stock === 0 ? (
+            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-red-500 text-white">
+              Habis
+            </span>
+          ) : stock <= low ? (
+            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-amber-500 text-white">
+              Sisa {stock}
+            </span>
+          ) : null}
         </div>
-        <div className="absolute top-3 right-3 z-10">{stockBadge()}</div>
       </Link>
 
       {/* Info */}
-      <div className="p-4 flex flex-col flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#0EA5A0] mb-1">{product.category}</p>
+      <div className="p-2.5 flex flex-col flex-1 min-h-0">
+        {/* Category */}
+        <p className="text-[10px] font-bold uppercase tracking-wider text-[#0EA5A0] mb-0.5 truncate">
+          {product.category}
+        </p>
+
+        {/* Title */}
         <Link href={`/store/${product.slug}`}>
           <h3
-            className="text-sm font-bold group-hover:text-[#0EA5A0] transition-colors line-clamp-2 leading-snug mb-1.5 min-h-[2.5rem]"
+            className="text-xs font-medium line-clamp-2 leading-snug hover:text-[#0EA5A0] transition-colors min-h-[2rem]"
             style={{ color: "var(--text-primary)" }}
           >
             {product.name}
           </h3>
         </Link>
-        {product.sku && (
-          <p className="text-[10px] font-mono text-slate-400 mb-2">SKU: {product.sku}</p>
-        )}
+
+        {/* Brand */}
+        <p className="text-[10px] text-slate-400 mt-1 truncate">{product.brand}</p>
 
         {/* Price */}
-        <div className="mt-auto">
+        <div className="mt-auto pt-1.5">
           {product.price != null ? (
-            <div className="flex items-baseline gap-2 flex-wrap">
+            <div className="flex items-baseline gap-1.5 flex-wrap">
               {hasDiscount && (
-                <span className="text-xs line-through text-slate-400">{formatRupiah(product.compare_at_price!)}</span>
+                <span className="text-[11px] text-slate-400 line-through leading-none">
+                  {formatRupiah(product.compare_at_price!)}
+                </span>
               )}
-              <span className="text-base font-extrabold text-[#0EA5A0]">{formatRupiah(product.price)}</span>
+              <span className="text-red-600 dark:text-red-400 font-bold text-sm md:text-base leading-tight">
+                {formatRupiah(product.price)}
+              </span>
             </div>
           ) : (
-            <span className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>Harga: hubungi kami</span>
+            <span className="text-[11px] font-medium text-slate-400">Harga: hubungi kami</span>
           )}
         </div>
+
+        {/* Stock label */}
+        {isReady && stock > 0 && (
+          <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
+            {stock <= low ? "Stok Terbatas" : "Ready Stock"}
+          </p>
+        )}
       </div>
 
       {/* CTA */}
-      <div className="px-4 pb-4 flex gap-2">
-        <Link
-          href={`/store/${product.slug}`}
-          className="flex-1 py-2.5 px-3 rounded-lg text-xs font-bold text-center text-white bg-[#0B1F3A] hover:bg-[#132d52] transition-all flex items-center justify-center gap-1"
-        >
-          Detail
-          <ChevronRight size={13} />
-        </Link>
+      <div className="px-2.5 pb-2.5">
         {isReady ? (
           <AddToCartButton product={product} variant="card" />
         ) : (

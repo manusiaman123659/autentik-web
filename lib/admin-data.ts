@@ -20,6 +20,7 @@ export interface ProductRow {
   features?: unknown[];
   specs?: { label: string; value: string }[];
   image_url?: string | null;
+  gallery?: string[] | null;
   brochure_url?: string | null;
   model_3d_url?: string | null;
   price?: number | null;
@@ -212,11 +213,11 @@ export async function getDashboardStats() {
   const iso = monthStart.toISOString();
 
   const [pending, revenue, unread, lowStock] = await Promise.all([
-    supabase.from("orders").select("id", { count: "exact" }).in("status", ["pending", "paid"]).is("deleted_at", null),
+    supabase.from("orders").select("id", { count: "exact" }).in("payment_status", ["pending"]).is("deleted_at", null),
     supabase
       .from("orders")
       .select("total")
-      .in("status", ["paid", "shipped", "completed"])
+      .in("payment_status", ["paid"])
       .gte("created_at", iso)
       .is("deleted_at", null),
     supabase.from("contact_messages").select("id", { count: "exact" }).eq("is_read", false),

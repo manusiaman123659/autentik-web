@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import {
   X,
   RotateCcw,
@@ -14,6 +14,10 @@ import {
 import type { ProductRow } from "@/lib/admin-data";
 import StoreFilterSidebar, { type FilterState } from "@/components/store/StoreFilterSidebar";
 import StoreProductCard from "@/components/store/StoreProductCard";
+import StoreSearchBar from "@/components/store/StoreSearchBar";
+import CategoryToolbar from "@/components/store/CategoryToolbar";
+import StoreTrustStrip from "@/components/store/StoreTrustStrip";
+import StorePromoBanner from "@/components/store/StorePromoBanner";
 
 const ITEMS_PER_PAGE = 9;
 
@@ -30,12 +34,17 @@ export default function StoreClient({
   products,
   compatible,
   waNumber,
+  initialQuery,
 }: {
   products: ProductRow[];
   compatible: string | null;
   waNumber: string | null;
+  initialQuery?: string;
 }) {
-  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+  const [filters, setFilters] = useState<FilterState>({
+    ...INITIAL_FILTERS,
+    query: initialQuery ?? "",
+  });
   const [page, setPage] = useState(1);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
@@ -147,6 +156,26 @@ export default function StoreClient({
           )}
         </div>
       </section>
+
+      <StoreTrustStrip />
+
+      {/* Search bar + Category toolbar */}
+      <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-3 space-y-2.5">
+          <Suspense fallback={<div className="h-9" />}>
+            <StoreSearchBar products={products} onQueryChange={(q) => handleFilterChange({ query: q })} />
+          </Suspense>
+          <CategoryToolbar
+            products={products}
+            activeBrands={filters.brands}
+            onBrandToggle={(brands) => handleFilterChange({ brands })}
+          />
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-6">
+        <StorePromoBanner />
+      </div>
 
       {/* Catalog */}
       <div className="max-w-7xl mx-auto px-6 lg:px-12 py-10">

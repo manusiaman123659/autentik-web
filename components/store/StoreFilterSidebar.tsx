@@ -32,15 +32,25 @@ export default function StoreFilterSidebar({
   mobileOpen,
   onMobileClose,
 }: StoreFilterSidebarProps) {
-  const allBrands = useMemo(
-    () => Array.from(new Set(products.map((p) => p.brand).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [products],
-  );
+  const allBrands = useMemo(() => {
+    const counts: Record<string, number> = {};
+    products.forEach((p) => {
+      if (p.brand) counts[p.brand] = (counts[p.brand] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }));
+  }, [products]);
 
-  const allCategories = useMemo(
-    () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [products],
-  );
+  const allCategories = useMemo(() => {
+    const counts: Record<string, number> = {};
+    products.forEach((p) => {
+      if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }));
+  }, [products]);
 
   function toggleArrayFilter(key: "brands" | "categories", value: string) {
     const current = filters[key];
@@ -49,21 +59,18 @@ export default function StoreFilterSidebar({
   }
 
   const sidebarContent = (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal size={16} className="text-[#0EA5A0]" />
-          <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Filter</h3>
-          {activeCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-[#0EA5A0] text-white text-[10px] font-bold">{activeCount}</span>
-          )}
+        <div className="flex items-center gap-1.5">
+          <SlidersHorizontal size={14} className="text-[#0EA5A0]" />
+          <h3 className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Filter Produk</h3>
         </div>
         {activeCount > 0 && (
           <button
             type="button"
             onClick={onReset}
-            className="text-xs font-semibold text-[#0EA5A0] hover:underline"
+            className="text-[11px] font-semibold text-red-500 hover:underline"
           >
             Reset
           </button>
@@ -72,58 +79,60 @@ export default function StoreFilterSidebar({
 
       {/* Search */}
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>
-          Cari Produk
+        <label className="block text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
+          Cari
         </label>
         <input
           type="text"
           value={filters.query}
           onChange={(e) => onFilterChange({ query: e.target.value })}
           placeholder="Nama, SKU, merek..."
-          className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
+          className="w-full rounded-sm border px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
           style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
         />
       </div>
 
-      {/* Brand */}
+      {/* Category */}
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>
-          Merek
+        <label className="block text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
+          Kategori
         </label>
-        <div className="space-y-1.5 max-h-40 overflow-y-auto">
-          {allBrands.map((b) => (
-            <label key={b} className="flex items-center gap-2 cursor-pointer group">
+        <div className="space-y-0.5 max-h-32 overflow-y-auto thin-scrollbar">
+          {allCategories.map(({ name, count }) => (
+            <label key={name} className="flex items-center gap-2 cursor-pointer group py-0.5">
               <input
                 type="checkbox"
-                checked={filters.brands.includes(b)}
-                onChange={() => toggleArrayFilter("brands", b)}
-                className="rounded border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]/30"
+                checked={filters.categories.includes(name)}
+                onChange={() => toggleArrayFilter("categories", name)}
+                className="rounded-sm border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]/30 w-3 h-3"
               />
-              <span className="text-sm group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
-                {b}
+              <span className="text-[11px] flex-1 truncate group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
+                {name}
               </span>
+              <span className="text-[10px] tabular-nums text-slate-400">{count}</span>
             </label>
           ))}
         </div>
       </div>
 
-      {/* Category */}
+      {/* Brand */}
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>
-          Kategori
+        <label className="block text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
+          Merek
         </label>
-        <div className="space-y-1.5 max-h-40 overflow-y-auto">
-          {allCategories.map((c) => (
-            <label key={c} className="flex items-center gap-2 cursor-pointer group">
+        <div className="space-y-0.5 max-h-32 overflow-y-auto thin-scrollbar">
+          {allBrands.map(({ name, count }) => (
+            <label key={name} className="flex items-center gap-2 cursor-pointer group py-0.5">
               <input
                 type="checkbox"
-                checked={filters.categories.includes(c)}
-                onChange={() => toggleArrayFilter("categories", c)}
-                className="rounded border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]/30"
+                checked={filters.brands.includes(name)}
+                onChange={() => toggleArrayFilter("brands", name)}
+                className="rounded-sm border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]/30 w-3 h-3"
               />
-              <span className="text-sm group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
-                {c}
+              <span className="text-[11px] flex-1 truncate group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
+                {name}
               </span>
+              <span className="text-[10px] tabular-nums text-slate-400">{count}</span>
             </label>
           ))}
         </div>
@@ -131,27 +140,27 @@ export default function StoreFilterSidebar({
 
       {/* Price Range */}
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>
-          Rentang Harga
+        <label className="block text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
+          Harga
         </label>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <input
             type="number"
             min={0}
             value={filters.priceMin}
             onChange={(e) => onFilterChange({ priceMin: e.target.value })}
             placeholder="Min"
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
+            className="w-full rounded-sm border px-2 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
             style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
           />
-          <span className="text-xs font-bold" style={{ color: "var(--text-secondary)" }}>-</span>
+          <span className="text-[10px] font-bold text-slate-400">–</span>
           <input
             type="number"
             min={0}
             value={filters.priceMax}
             onChange={(e) => onFilterChange({ priceMax: e.target.value })}
             placeholder="Max"
-            className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
+            className="w-full rounded-sm border px-2 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
             style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
           />
         </div>
@@ -159,25 +168,25 @@ export default function StoreFilterSidebar({
 
       {/* Stock Status */}
       <div>
-        <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-secondary)" }}>
-          Status Stok
+        <label className="block text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
+          Stok
         </label>
-        <div className="space-y-1.5">
+        <div className="space-y-0.5">
           {[
             { value: "all", label: "Semua" },
             { value: "available", label: "Tersedia" },
-            { value: "low", label: "Stok Terbatas" },
+            { value: "low", label: "Terbatas" },
             { value: "out", label: "Habis" },
           ].map((opt) => (
-            <label key={opt.value} className="flex items-center gap-2 cursor-pointer group">
+            <label key={opt.value} className="flex items-center gap-2 cursor-pointer group py-0.5">
               <input
                 type="radio"
                 name="stockStatus"
                 checked={filters.stockStatus === opt.value}
                 onChange={() => onFilterChange({ stockStatus: opt.value })}
-                className="border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]/30"
+                className="border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]/30 w-3 h-3"
               />
-              <span className="text-sm group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
+              <span className="text-[11px] group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
                 {opt.label}
               </span>
             </label>
@@ -190,9 +199,9 @@ export default function StoreFilterSidebar({
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block w-[260px] shrink-0">
+      <aside className="hidden lg:block w-[220px] shrink-0">
         <div
-          className="sticky top-24 rounded-2xl border p-5 shadow-sm"
+          className="sticky top-24 rounded-sm border p-4"
           style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
         >
           {sidebarContent}
@@ -202,20 +211,20 @@ export default function StoreFilterSidebar({
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onMobileClose} />
+          <div className="absolute inset-0 bg-black/50" onClick={onMobileClose} />
           <div
-            className="absolute left-0 top-0 bottom-0 w-[300px] overflow-y-auto p-5 shadow-2xl"
+            className="absolute left-0 top-0 bottom-0 w-[280px] overflow-y-auto p-4"
             style={{ backgroundColor: "var(--bg-card)" }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Filter</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Filter</h3>
               <button
                 type="button"
                 onClick={onMobileClose}
-                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-1 rounded-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 style={{ color: "var(--text-secondary)" }}
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
             {sidebarContent}
