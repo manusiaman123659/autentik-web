@@ -120,19 +120,19 @@ export default function FaqWidget() {
       {/* Panel */}
       {open && (
         <div
-          className="fixed bottom-24 right-5 z-40 w-[calc(100vw-2.5rem)] max-w-sm sm:w-96 rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[75vh] transition-all duration-200"
+          className="fixed z-40 bottom-[130px] md:bottom-24 right-3 left-3 sm:left-auto sm:right-5 w-auto sm:w-96 max-h-[70vh] md:max-h-[550px] flex flex-col rounded-lg border shadow-2xl overflow-hidden transition-all duration-200"
           style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
           role="dialog"
           aria-label="Pusat Bantuan"
         >
           {/* Header */}
           <div
-            className="px-4 py-3 border-b flex items-center justify-between gap-3"
+            className="px-3 py-2.5 border-b flex items-center justify-between gap-3"
             style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#0EA5A0]/15">
-                <MessagesSquare size={18} className="text-[#0EA5A0]" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[#0EA5A0]/15">
+                <MessagesSquare size={16} className="text-[#0EA5A0]" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold truncate" style={{ color: "var(--text-primary)" }}>
@@ -156,7 +156,7 @@ export default function FaqWidget() {
           {/* Body */}
           <div className="overflow-y-auto flex-1" style={{ backgroundColor: "var(--bg-card)" }}>
             {chatActive ? (
-              <div className="p-4 space-y-3">
+              <div className="p-3 space-y-3">
                 <button
                   type="button"
                   onClick={() => setChatActive(false)}
@@ -198,7 +198,7 @@ export default function FaqWidget() {
                 <div ref={chatEndRef} />
               </div>
             ) : (
-              <div className="p-4 space-y-4">
+              <div className="p-3 space-y-3">
                 <div className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                   Halo 👋 Tanyakan apa saja soal produk, layanan, atau pesanan custom Autentik.
                   Bot menjawab otomatis dalam beberapa detik.
@@ -215,7 +215,7 @@ export default function FaqWidget() {
                         key={f.id}
                         type="button"
                         onClick={() => handleQuickQuestion(f.question)}
-                        className="w-full text-left px-3 py-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors group border"
+                        className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors group border"
                         style={{ borderColor: "var(--border-subtle)" }}
                       >
                         <span
@@ -233,10 +233,10 @@ export default function FaqWidget() {
           </div>
 
           {/* Chat composer */}
-          <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <div className="px-3 py-2.5 border-t" style={{ borderColor: "var(--border-subtle)" }}>
             <div className="flex items-center gap-2">
               <div
-                className="flex-1 flex items-center gap-2 rounded-xl border px-3 py-2.5"
+                className="flex-1 flex items-center gap-2 rounded-lg border px-3 py-2"
                 style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}
               >
                 <Bot size={16} className="text-[#0EA5A0] flex-shrink-0" />
@@ -258,7 +258,7 @@ export default function FaqWidget() {
                 onClick={() => handleSendChat()}
                 disabled={chatLoading || !chatInput.trim()}
                 aria-label="Kirim pesan"
-                className="p-2.5 rounded-xl text-white transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg text-white transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#0EA5A0" }}
               >
                 <Send size={16} />
@@ -270,12 +270,12 @@ export default function FaqWidget() {
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-3 border-t" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
+          <div className="px-3 py-2.5 border-t" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
             <WhatsAppButton
               number={waNumber}
               message="Halo, saya ingin bertanya tentang produk/layanan Autentik."
               variant="button"
-              className="w-full px-4 py-2.5 rounded-xl text-sm shadow-md"
+              className="w-full px-4 py-2 rounded-lg text-sm"
             />
             <p className="text-center text-[11px] mt-2" style={{ color: "var(--text-muted)" }}>
               Tim kami membalas dalam 1–2 hari kerja
@@ -289,8 +289,7 @@ export default function FaqWidget() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label={open ? "Tutup pusat bantuan" : "Buka pusat bantuan"}
-        className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-transform"
-        style={{ backgroundColor: "#0EA5A0" }}
+        className="fixed z-40 right-4 bottom-[72px] md:bottom-5 md:right-5 w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#0EA5A0] text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
       >
         {open ? <X size={22} /> : <MessageCircle size={24} />}
       </button>

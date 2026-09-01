@@ -17,6 +17,9 @@ import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import ProductImageGallery from "@/components/store/ProductImageGallery";
 import RelatedProducts from "@/components/store/RelatedProducts";
 import RecentlyViewed from "@/components/store/RecentlyViewed";
+import ShareProductButton from "@/components/store/ShareProductButton";
+import CopyLinkButton from "@/components/store/CopyLinkButton";
+import StickyMobileBar from "@/components/store/StickyMobileBar";
 import { useRecentlyViewed } from "@/components/store/useRecentlyViewed";
 
 type Tab = "description" | "specs";
@@ -74,7 +77,7 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
+    <div className="min-h-screen pb-20 lg:pb-0" style={{ backgroundColor: "var(--bg-primary)" }}>
       {/* Breadcrumb */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2">
@@ -326,6 +329,12 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
                 />
               )}
 
+              {/* Share row — desktop */}
+              <div className="hidden lg:flex items-center gap-2 border-t pt-3 mt-3" style={{ borderColor: "var(--border-subtle)" }}>
+                <CopyLinkButton slug={product.slug} />
+                <ShareProductButton slug={product.slug} name={product.name} />
+              </div>
+
               {/* Trust info — merged into purchase box */}
               <div className="border-t pt-3 mt-3" style={{ borderColor: "var(--border-subtle)" }}>
                 <div className="grid grid-cols-2 gap-2">
@@ -379,6 +388,14 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
         <RecentlyViewed />
 
       </div>
+
+      {/* Sticky Mobile Bottom Bar */}
+      <StickyMobileBar
+        product={product}
+        onAddToCart={() => addItem(product)}
+        onBuyNow={() => handleBuyNow(1)}
+        waNumber={waNumber}
+      />
     </div>
   );
 }
