@@ -20,6 +20,7 @@ import RecentlyViewed from "@/components/store/RecentlyViewed";
 import ShareProductButton from "@/components/store/ShareProductButton";
 import CopyLinkButton from "@/components/store/CopyLinkButton";
 import StickyMobileBar from "@/components/store/StickyMobileBar";
+import WishlistButton from "@/components/store/WishlistButton";
 import { useRecentlyViewed } from "@/components/store/useRecentlyViewed";
 
 type Tab = "description" | "specs";
@@ -136,9 +137,22 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#0EA5A0] mb-1">
                 {product.category}
               </p>
-              <h1 className="text-lg md:text-xl font-bold leading-snug mb-1" style={{ color: "var(--text-primary)" }}>
-                {product.name}
-              </h1>
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <h1 className="text-lg md:text-xl font-bold leading-snug flex-1" style={{ color: "var(--text-primary)" }}>
+                  {product.name}
+                </h1>
+                <WishlistButton
+                  product={{
+                    id: product.id,
+                    slug: product.slug,
+                    name: product.name,
+                    brand: product.brand,
+                    image_url: product.image_url ?? null,
+                    price: product.price ?? null,
+                  }}
+                  variant="detail"
+                />
+              </div>
               <p className="text-[11px] font-mono text-slate-400 mb-2">SKU: {product.sku || "—"}</p>
 
               {/* Price */}

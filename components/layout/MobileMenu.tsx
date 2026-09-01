@@ -2,9 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { X, Sun, Moon, ShoppingCart } from "lucide-react";
+import { X, Sun, Moon, ShoppingCart, Heart } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useCart } from "@/components/cart/CartProvider";
+import { useWishlist } from "@/components/store/useWishlist";
 import CustomerAuthButton from "@/components/auth/CustomerAuthButton";
 
 interface MobileMenuProps {
@@ -23,6 +24,7 @@ export default function MobileMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useTheme();
   const { totalItems, hydrated } = useCart();
+  const { items: wishlistItems, hydrated: wishlistHydrated } = useWishlist();
 
   useEffect(() => {
     if (isOpen) {
@@ -131,6 +133,23 @@ export default function MobileMenu({
             {hydrated && totalItems > 0 && (
               <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#0EA5A0] text-white text-[10px] font-bold flex items-center justify-center">
                 {totalItems > 99 ? "99+" : totalItems}
+              </span>
+            )}
+          </Link>
+
+          <Link
+            href="/store"
+            onClick={onClose}
+            className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            <span className="flex items-center gap-3">
+              <Heart size={16} className="text-red-500" />
+              Wishlist
+            </span>
+            {wishlistHydrated && wishlistItems.length > 0 && (
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {wishlistItems.length > 99 ? "99+" : wishlistItems.length}
               </span>
             )}
           </Link>

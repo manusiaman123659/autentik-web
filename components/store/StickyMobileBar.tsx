@@ -4,6 +4,7 @@ import { ShoppingCart, MessageCircle, Share2, Check } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 import type { ProductRow } from "@/lib/admin-data";
 import { useCallback, useState } from "react";
+import WishlistButton from "@/components/store/WishlistButton";
 
 interface StickyMobileBarProps {
   product: ProductRow;
@@ -130,6 +131,19 @@ export default function StickyMobileBar({
         >
           {shareCopied ? <Check size={16} /> : <Share2 size={16} />}
         </button>
+
+        {/* Wishlist icon */}
+        <WishlistButton
+          product={{
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            brand: product.brand,
+            image_url: product.image_url ?? null,
+            price: product.price ?? null,
+          }}
+          variant="bar"
+        />
       </div>
     </div>
   );

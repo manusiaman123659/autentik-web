@@ -7,6 +7,7 @@ import type { ProductRow } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/format";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
+import WishlistButton from "@/components/store/WishlistButton";
 
 interface StoreProductCardProps {
   product: ProductRow;
@@ -65,6 +66,19 @@ export default function StoreProductCard({ product, waNumber }: StoreProductCard
             </span>
           ) : null}
         </div>
+
+        {/* Wishlist button — bottom right */}
+        <WishlistButton
+          product={{
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            brand: product.brand,
+            image_url: product.image_url ?? null,
+            price: product.price ?? null,
+          }}
+          variant="card"
+        />
       </Link>
 
       {/* Info */}
