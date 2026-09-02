@@ -10,8 +10,10 @@ import {
   ChevronDown,
   LayoutDashboard,
   ShoppingBag,
+  Heart,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { useWishlist } from "@/components/store/useWishlist";
 
 interface CustomerAuthButtonProps {
   variant?: "desktop" | "mobile";
@@ -30,6 +32,7 @@ export default function CustomerAuthButton({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const supabase = createClient();
+  const { items: wishlistItems, hydrated: wishlistHydrated } = useWishlist();
 
   useEffect(() => {
     let active = true;
@@ -141,6 +144,22 @@ export default function CustomerAuthButton({
               <ShoppingBag size={15} />
               Riwayat Pesanan
             </Link>
+            <Link
+              href="/store"
+              onClick={() => setDropdownOpen(false)}
+              className="flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-800"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              <div className="flex items-center gap-2.5">
+                <Heart size={15} className="text-red-500" />
+                <span>Wishlist</span>
+              </div>
+              {wishlistHydrated && wishlistItems.length > 0 && (
+                <span className="min-w-[18px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {wishlistItems.length > 99 ? "99+" : wishlistItems.length}
+                </span>
+              )}
+            </Link>
             {isAdmin && (
               <Link
                 href="/admin"
@@ -191,6 +210,18 @@ export default function CustomerAuthButton({
       >
         <ShoppingBag size={16} />
         Riwayat Pesanan
+      </Link>
+      <Link
+        href="/store"
+        onClick={onNavigate}
+        className="flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold rounded-md border"
+        style={{
+          borderColor: "var(--border-subtle)",
+          color: "var(--text-secondary)",
+        }}
+      >
+        <Heart size={16} className="text-red-500" />
+        Wishlist
       </Link>
       {isAdmin && (
         <Link

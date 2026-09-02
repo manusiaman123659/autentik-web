@@ -35,7 +35,7 @@ Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT
 - `revalidateTag` butuh argumen profil `cacheLife` kedua; API caching `unstable_*` kini stabil.
 - `middleware` diganti nama jadi `proxy` — **dan memang dipakai di repo ini** (lihat "Autentikasi Admin & CMS" di bawah untuk fungsinya). Jangan anggap kodnya mati.
 - **`proxy.ts`** = Supabase auth session refresh (bukan middleware biasa). Fungsi: `createClient(request)` → `supabase.auth.getUser()` → propagate cookies baru. Matcher: semua route kecuali static files (`_next/static`, `_next/image`, `favicon.ico`, `*.svg|png|jpg|jpeg|gif|webp`). Jangan modifikasi kecuali perlu ubah matcher/auth flow.
-- Default `next/image` berubah (mis. `qualities` default `[75]`, `minimumCacheTTL` 4 jam).
+- Default `next/image` berubah (mis. `qualities` default `[75]`, `minimumCacheTTL` 86400 (24 jam), `remotePatterns` untuk Supabase storage).
 
 ## Status Architecture (PENTING)
 Tabel `orders` punya **dua kolom status** yang berbeda fungsi — jangan campur aduk:
@@ -94,6 +94,34 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 - **Sisa statis**: `solutions` (`lib/data/solutions.ts`), konteks AI (`lib/ai/*`), Hero home (sengaja hardcoded). `industries.ts` & `projects.ts` **sudah dihapus** (dead code). `lib/data/news.ts` **tetap dipertahankan** meski halaman `/news` sudah tidak ada — dipakai `scripts/build-seed.ts` untuk seed tabel `articles` (dormant); jangan hapus. `lib/data/team.ts` tetap dipertahankan sebagai fallback statis untuk Tim Kami.
 - Pola: fungsi di `lib/public-data.ts` beri fallback ke array statis `lib/data/*` bila Supabase error; katalog/karir/home memakai `export const dynamic = "force-dynamic"`.
 
+### Customer Auth & E-Commerce Flow
+Sistem autentikasi customer terpisah dari admin, mengalir dari store → auth → checkout → order:
+
+- **Auth routes**: `app/(site)/auth/login/` + `app/(site)/auth/register/` (komponen client: `LoginForm.tsx`, `RegisterForm.tsx` — react-hook-form + zod + Supabase client auth). Skema di `lib/validations/authSchema.ts`. Default `role='customer'` (migration `0025`).
+- **`CustomerAuthGuard`** (`components/auth/CustomerAuthGuard.tsx`) — client guard, cek session Supabase. Tampilkan spinner lalu redirect ke `/auth/login?redirect=...` jika belum login. Dipakai di halaman checkout, order history, dll.
+- **`CustomerAuthButton`** (`components/auth/CustomerAuthButton.tsx`) — tombol profil customer di navbar. Desktop: dropdown dengan nama user, Wishlist (dengan badge count), Riwayat Pesanan, Dashboard Admin (jika admin), Keluar. Mobile: variant button di MobileMenu.
+- **Cart system**: `CartProvider` (`components/cart/CartProvider.tsx`) — localStorage-backed (key `autentik-cart:v1`). Hanya produk `ready_stock`. Hook `useCart()` → `addItem/removeItem/updateQty/clearCart`. `AddToCartButton` punya 2 variant: `"detail"` (qty stepper + tombol + opsi buy now) dan `"card"` (tombol compact satu baris).
+- **Checkout flow**: `/store/checkout` → `CheckoutClient.tsx` (react-hook-form, alamat, estimasi ongkir via `estimate_shipping_cost` RPC, metode bayar Midtrans). Submit ke `submitCheckout()` (`lib/actions/checkout.ts`) → redirect ke Midtrans Snap. Order snapshot disimpan di sessionStorage (`lib/order-snapshot.ts`).
+- **Order confirmation**: `/store/orders/[code]` → `OrderConfirmationClient.tsx` — lookup pakai **admin client** (`createAdminClient()`) untuk reliable lookup (bypass RLS). SSE live updates. Dual CTA: "Bayar Sekarang" (jika unpaid) atau "Lihat Riwayat".
+- **Order history**: `/store/orders` → `OrderHistoryList.tsx` — fetch orders berdasarkan `user_id = auth.uid()`. Status badge, payment status, link ke detail.
+- **Wishlist**: `useWishlist` hook (`components/store/useWishlist.ts`) — localStorage-backed (key `autentik-wishlist:v1`, max 100 items). `WishlistButton` punya 3 variant: `"card"` (absolute position), `"detail"` (inline), `"bar"` (untuk StickyMobileBar). Toggle di card, detail, dan MobileMenu.
+- **Recently viewed**: `useRecentlyViewed` hook (`components/store/useRecentlyViewed.ts`) — localStorage-backed (key `autentik-recently-viewed:v1`, max 8 items). `RecentlyViewed` component: horizontal scroll strip. `RelatedProducts` component: 4-card grid berdasarkan brand/kategori.
+
+### Store UI (JakartaNotebook Style)
+Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white space, font padat.
+
+- **Design tokens**: `rounded-sm`/`rounded` (bukan `rounded-2xl`), padding `p-2`–`p-2.5`, contrast border tinggi, pricing warna merah `text-red-600`.
+- **StoreProductDetail** (`components/store/StoreProductDetail.tsx`) — komponen utama halaman detail produk. Sidebar purchase sticky, image gallery, tabs (deskripsi/spesifikasi), dual CTA (Beli Langsung solid + Keranjang outline). Handle `handleBuyNow` auth-aware: `addItem()` sebelum auth check.
+- **StoreProductCard** (`components/store/StoreProductCard.tsx`) — card dense, CTA solid teal `bg-[#0EA5E9]`, wishlist heart `absolute bottom-1.5 right-1.5`.
+- **StickyMobileBar** (`components/store/StickyMobileBar.tsx`) — fixed bottom bar (`lg:hidden`, `z-40`). Price + dominant CTA + WA icon + share icon + wishlist icon. `pb-20 lg:pb-0` content offset.
+- **ShareProductButton** (`components/store/ShareProductButton.tsx`) — Web Share API + clipboard fallback, feedback "Tersalin!".
+- **CopyLinkButton** (`components/store/CopyLinkButton.tsx`) — clipboard copy, desktop only.
+- **ProductImageGallery** (`components/store/ProductImageGallery.tsx`) — multi-image dengan thumbnail strip.
+- **StoreSearchBar** (`components/store/StoreSearchBar.tsx`) — autosuggest debounced 250ms, max 6, keyboard navigable, URL sync.
+- **CategoryToolbar** (`components/store/CategoryToolbar.tsx`) — horizontal scrollable brand pills, auto-scroll dengan chevron buttons.
+- **StoreTrustStrip** (`components/store/StoreTrustStrip.tsx`) — 4 trust badges (100% Original, Garansi Toko, Ready Stock, Pengiriman Cepat).
+- **StorePromoBanner** (`components/store/StorePromoBanner.tsx`) — 3-column promo grid.
+
 ## Styling & design system
 - Tailwind v4 CSS-first config: `@import "tailwindcss"` + token `@theme` di `app/globals.css` (palet navy/teal). **Tidak ada file `tailwind.config.*`.**
 - Dark mode adalah kelas `.dark` khusus di `<html>` lewat `components/ThemeProvider.tsx` (key localStorage `autentik-theme`), bukan varian `dark:` Tailwind. Komponen memakai variabel CSS semantik (mis. `style={{ color: "var(--text-primary)" }}`) dari blok `:root`/`.dark` di `globals.css`; warna brand dari `lib/design-tokens.ts` (kelas badge/pill).
@@ -128,7 +156,7 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 - **Status section**: `BUILT_SECTION_KEYS` di `lib/admin-sections.ts` = tepat **14 section keys** yang sudah dibangun: produk, **compro**, sparepart, stok, orders, inquiry, lead, **rfq**, integrasi, akses-staff, riwayat, **karir**, **merek**, **relasi** (dashboard adalah `/admin`, bukan key section). Section compro, karir, merek, relasi, rfq punya route sendiri (`/admin/compro`, `/admin/karir`, `/admin/merek`, `/admin/relasi`, `/admin/rfq`). **Semua section sudah dibangun** — tidak ada lagi placeholder; route catch-all `app/admin/(dashboard)/[section]/` memanggil `notFound()` untuk key apa pun yang ada di `BUILT_SECTION_KEYS` (key yang sudah dibangun ada di folder route sendiri, bukan di catch-all). Cek `BUILT_SECTION_KEYS` sebelum berasumsi sebuah halaman section ada.
 - **`lib/admin.ts`** = server-only; `getAdminUser()` (react `cache`) memvalidasi sesi via `auth.getUser()` lalu memuat baris `profiles` (self-select RLS) dan membutuhkan `role in ('admin','editor')` + `is_active`. **Jangan import ke komponen client** — ia menarik `next/headers`. Data/tipe murni bersama ada di `lib/admin-sections.ts` (re-export dari `lib/admin.ts`; import dari `admin-sections` di kode client, mis. `components/admin/AdminShell.tsx`).
 - `lib/admin-sections.ts` mengekspor `ADMIN_SECTIONS` (link/meta section) dan `AdminUser`. Ikon section: `components/admin/sectionIcons.ts`.
-- Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0028_fix_orders_status_constraint.sql`**:
+- Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0029_order_user_id.sql`**:
   - `0001_schema.sql` — skema dasar; trigger `profiles` awalnya membuat `role='editor'` saat signup (diubah `0015` menjadi `'viewer'`).
   - `0002_store_orders.sql` — menambah tabel `orders`, `order_items`, `whatsapp_leads`, plus kolom e-commerce (price, stock, weight, dsb.) di `products`.
   - `0007_chat_rate_limit.sql` — rate-limit chatbot AI (tabel `ai_chat_sessions`, RPC `track_chat_message`) untuk `/api/chat`.
@@ -146,6 +174,7 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
   - `0025_customer_auth.sql` — autentikasi customer (login/register). Default `role='customer'` untuk akun baru. RLS policy untuk customer melihat own orders.
   - `0026_midtrans_migration.sql` — migrasi dari Xendit ke Midtrans: tambah kolom `midtrans_order_id`, `midtrans_redirect_url`, `paid_at` di `orders`; RPC `handle_midtrans_notification` (SECURITY DEFINER); enable Supabase Realtime untuk tabel `orders`.
   - `0028_fix_orders_status_constraint.sql` — fix CHECK constraint `orders_status_check`: hapus `'paid'` (redundan dengan `payment_status`), tambah `'processing'` untuk flow Midtrans webhook.
+  - `0029_order_user_id.sql` — tambah kolom `user_id uuid REFERENCES auth.users(id)` ke `orders` untuk link order ke akun customer. Update `create_checkout_order` RPC untuk capture `auth.uid()`. Index `idx_orders_user_id`. Update RLS policy `orders_select_own` filter by `user_id = auth.uid()`. Drop redundant `orders_staff_select`.
 - **Nomor WhatsApp publik — satu sumber kebenaran**: `site_settings` key `whatsapp` dibaca server-side via `getWhatsAppNumber()` (`lib/public-data.ts`, memakai `cookies()` → halaman pemakainya dynamic) dan client-side via browser Supabase client di `components/chatbot/FaqWidget.tsx` (fetch sekali saat mount, tombol disabled sampai terisi). UI link/tombol WA memakai `components/ui/WhatsAppButton.tsx` (client dumb, props `number` + `label?`/`message?`/`variant?: "link"|"button"`/`className?`/`id?`; disabled saat `number` null). **Ganti nomor = `UPDATE site_settings` key `whatsapp`** (belum ada form admin) — jangan hardcode di komponen. `lib/whatsapp.ts` (konstanta lama) sudah dihapus; tidak ada dua sumber.
 - **Chatbot AI (Gemini)** tetap dipakai penuh: `components/chatbot/FaqWidget.tsx` hanya mode AI (`/api/chat`, rate-limit `ai_chat_sessions`), dengan tombol "Hubungi via WhatsApp" ke nomor dari `site_settings` key `whatsapp` sebagai fallback kontak. Tidak ada live chat CS/Tawk lagi.
 - Promosikan admin pertama di SQL editor Supabase:
@@ -162,18 +191,28 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 - **Selesai task** → load skill `verification-before-done` (tampilkan full lint output, full SQL block, jangan auto-commit)
 
 ## Directory structure
-- `app/(site)/` — halaman publik (products, store, careers, about, contact, services, custom-request)
+- `app/(site)/` — halaman publik: home, about, products, store (listing, detail, cart, checkout, orders), careers, contact, services, custom-request, auth (login, register)
 - `app/admin/(dashboard)/` — 14 admin sections (orders, sparepart, stok, produk, compro, merek, karir, relasi, inquiry, lead, rfq, akses-staff, integrasi, riwayat)
+- `app/api/` — API routes: chat (Gemini), contact, newsletter, orders SSE, rfq, webhooks midtrans
 - `components/admin/` — komponen admin UI (reuse primitives dari `ui.tsx`); termasuk `AdminOrderDetailClient.tsx` (SSE real-time), `OrdersListClient.tsx` (Supabase Realtime), `RecentOrdersWidget.tsx` (dashboard widget real-time)
+- `components/auth/` — `AdminNavButton` (admin login/logout), `CustomerAuthButton` (customer profile dropdown + wishlist badge), `CustomerAuthGuard` (session check + redirect)
+- `components/cart/` — `CartProvider` (localStorage cart context), `AddToCartButton` (2 variant: card/detail), `CartClient` (cart page UI)
+- `components/checkout/` — `CheckoutClient` (checkout form + submit + Midtrans redirect)
+- `components/orders/` — `OrderConfirmationClient` (confirmation + SSE), `PrintCustomerInvoice` (printable invoice)
+- `components/store/` — 17 komponen store: `StoreFilterSidebar`, `StoreProductCard`, `StoreProductDetail`, `StickyMobileBar`, `ShareProductButton`, `CopyLinkButton`, `WishlistButton`, `RelatedProducts`, `RecentlyViewed`, `ProductImageGallery`, `StoreSearchBar`, `CategoryToolbar`, `StoreTrustStrip`, `StorePromoBanner`, `OrderHistoryList`, `useWishlist`, `useRecentlyViewed`
 - `components/ui/` — komponen publik bersama (Button, Badge, SectionHeading, WhatsAppButton, CompanyProfileViewer, ScrollAnimations)
 - `components/product/` — komponen produk (Product3DViewer, ProductMediaTabs, RfqButton/Modal, TechnicalDocsSection, GatedDownloadModal)
-- `components/store/` — komponen store (StoreFilterSidebar, StoreProductCard)
-- `components/cart/`, `components/checkout/`, `components/orders/` — alur e-commerce
+- `components/home/` — seksi home (Hero, AboutUs, Brands, FeaturedProducts, CoreSolutions, CompanyStats, CtaBanner, HomeCareers, WhyChooseUs, ScrollAnimations)
 - `components/careers/`, `components/requests/` — komponen karir & custom request
+- `components/seo/` — `JsonLd` (structured data)
+- `components/chatbot/` — `FaqWidget` (AI chatbot + WhatsApp fallback)
 - `lib/actions/` — 12 server action files (brands, careers, checkout, compro, products, recruitment, relasi, rfq, settings, shipping, store, technicalDocuments)
-- `lib/validations/` — 12 Zod schemas (brand, career, chat, compro, contact, login, product, recruitment, relasi, rfq, shipping, store)
-- `lib/data/` — static fallback data (jangan hapus meski sudah di-wire ke Supabase)
-- `supabase/migrations/` — 28 SQL migrations (0001-0028); file baru lanjut `0029_`
+- `lib/validations/` — 13 Zod schemas (auth, brand, career, chat, compro, contact, login, product, recruitment, relasi, rfq, shipping, store)
+- `lib/data/` — static fallback data: brands, careers, faq, groups, news, partners, products, solutions, team (jangan hapus meski sudah di-wire ke Supabase)
+- `lib/format.ts` — `formatRupiah()` currency formatter
+- `lib/midtrans.ts` — Midtrans Snap client wrapper (`createMidtransTransaction`)
+- `lib/logger.ts` — structured logging (`logError`, `logAudit`)
+- `supabase/migrations/` — 27 SQL migrations (0001–0029, gaps: 0024, 0027); file baru lanjut `0030_`
 - `utils/supabase/` — client (browser), server (RSC), middleware (proxy)
 - `.agents/skills/` — 6 custom skills (admin-crud-pattern, no-ai-slop-design, supabase, supabase-migration-safety, supabase-postgres-best-practices, verification-before-done)
 

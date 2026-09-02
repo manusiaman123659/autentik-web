@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { cookies } from "next/headers";
+import { createClient } from "@/utils/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,11 +43,13 @@ export async function GET(
       const poll = async () => {
         if (destroyed) return;
         try {
-          const supabase = createAdminClient();
+          const cookieStore = await cookies();
+          const supabase = createClient(cookieStore);
           const { data } = await supabase
             .from("orders")
             .select("payment_status, status, paid_at")
             .eq("order_code", code)
+            .is("deleted_at", null)
             .single();
 
           if (data) {

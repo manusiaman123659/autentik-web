@@ -4,13 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, Search, Sun, Moon, ShoppingCart, Heart } from "lucide-react";
+import { Menu, X, Search, Sun, Moon, ShoppingCart } from "lucide-react";
 import MobileMenu from "./MobileMenu";
 import SearchModal from "./SearchModal";
 import CustomerAuthButton from "@/components/auth/CustomerAuthButton";
 import { useTheme } from "@/components/ThemeProvider";
 import { useCart } from "@/components/cart/CartProvider";
-import { useWishlist } from "@/components/store/useWishlist";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -28,7 +27,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { totalItems, hydrated } = useCart();
-  const { items: wishlistItems, hydrated: wishlistHydrated } = useWishlist();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -152,21 +150,6 @@ export default function Navbar() {
 
               {/* Customer Auth */}
               <CustomerAuthButton variant="desktop" />
-
-              {/* Wishlist */}
-              <Link
-                href="/store"
-                aria-label="Wishlist"
-                className="relative flex items-center justify-center w-9 h-9 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <Heart size={18} />
-                {wishlistHydrated && wishlistItems.length > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                    {wishlistItems.length > 99 ? "99+" : wishlistItems.length}
-                  </span>
-                )}
-              </Link>
 
               {/* Cart */}
               <Link
