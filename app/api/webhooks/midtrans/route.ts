@@ -1,4 +1,4 @@
-import { createHmac } from "crypto";
+import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 
@@ -15,24 +15,25 @@ function logError(ctx: string, meta: Record<string, unknown>) {
   console.error(JSON.stringify({ ts: new Date().toISOString(), ctx, ...meta }));
 }
 
-function verifySignature(rawBody: string, signatureHeader: string, serverKey: string): boolean {
-  const expectedSignature = createHmac("sha512", serverKey).update(rawBody).digest("hex");
-  return expectedSignature === signatureHeader;
+/**
+ * Verifikasi signature Midtrans: SHA-512(order_id + status_code + gross_amount + server_key)
+ * Ref: https://docs.midtrans.com/docs/notifications-notifying
+ */
+function verifySignature(
+  orderId: string,
+  statusCode: string,
+  grossAmount: string,
+  incomingSignature: string,
+  serverKey: string,
+): boolean {
+  const expectedSignature = createHash("sha512")
+    .update(orderId + statusCode + grossAmount + serverKey)
+    .digest("hex");
+  return expectedSignature === incomingSignature;
 }
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-
-  // --- Signature verification ---
-  const signatureHeader = request.headers.get("x-signature") ?? "";
-  const serverKey = (process.env.MIDTRANS_SERVER_KEY || "").trim();
-
-  if (serverKey && signatureHeader) {
-    if (!verifySignature(rawBody, signatureHeader, serverKey)) {
-      logError("webhook.midtrans.signature_invalid", { msg: "X-Signature tidak cocok" });
-      return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
-    }
-  }
 
   // --- Parse body ---
   let payload: Record<string, unknown>;
@@ -45,8 +46,8 @@ export async function POST(request: NextRequest) {
 
   const orderCode = payload.order_id as string | undefined;
   const transactionStatus = payload.transaction_status as string | undefined;
-  const statusCode = payload.status_code as string | undefined;
-  const grossAmount = payload.gross_amount as string | undefined;
+  const statusCode = (payload.status_code as string | undefined) ?? "";
+  const grossAmount = (payload.gross_amount as string | undefined) ?? "";
   const paymentType = (payload.payment_type as string | null) ?? null;
 
   logInfo("webhook.midtrans.incoming", {
@@ -66,6 +67,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
+  // --- Signature verification ---
+  const serverKey = (process.env.MIDTRANS_SERVER_KEY || "").trim();
+  const incomingSignature =
+    (payload.signature_key as string | undefined) ??
+    request.headers.get("x-signature") ??
+    "";
+
+  if (!serverKey) {
+    logError("webhook.midtrans.no_server_key", { msg: "MIDTRANS_SERVER_KEY tidak terdefinisi" });
+    return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+  }
+
+  if (!incomingSignature) {
+    logError("webhook.midtrans.no_signature", { msg: "Signature tidak ada" });
+    return NextResponse.json({ error: "Missing signature" }, { status: 403 });
+  }
+
+  if (!verifySignature(orderCode, statusCode, grossAmount, incomingSignature, serverKey)) {
+    logError("webhook.midtrans.signature_invalid", { msg: "Signature tidak cocok" });
+    return NextResponse.json({ error: "Invalid signature" }, { status: 403 });
+  }
+
+  // --- Early skip untuk status yang tidak relevan ---
   const isPaid = PAID_STATUSES.includes(transactionStatus);
   const isFailed = FAILED_STATUSES.includes(transactionStatus);
 
@@ -78,37 +102,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
-  // --- Direct update via supabase service_role client ---
+  // --- Proses via RPC handle_midtrans_notification ---
   const supabase = createAdminClient();
 
-  const { data: updatedRows, error: updateError } = await supabase
-    .from("orders")
-    .update({
-      payment_status: isPaid ? "paid" : "failed",
-      status: isPaid ? "processing" : "failed",
-      payment_method: "midtrans",
-      paid_at: isPaid ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("order_code", orderCode)
-    .select("id, order_code, payment_status, status");
+  const { data: rpcResult, error: rpcError } = await supabase.rpc(
+    "handle_midtrans_notification",
+    {
+      p_order_code: orderCode,
+      p_midtrans_status: transactionStatus,
+      p_payment_method: paymentType ?? "transfer",
+      p_paid_at: isPaid ? new Date().toISOString() : null,
+    },
+  );
 
-  logInfo("webhook.midtrans.update_result", {
+  logInfo("webhook.midtrans.rpc_result", {
     orderCode,
     isPaid,
     transactionStatus,
-    updatedCount: updatedRows?.length ?? 0,
-    rows: updatedRows,
-    error: updateError
-      ? { message: updateError.message, code: updateError.code, details: updateError.details }
-      : null,
+    rpcResult,
+    error: rpcError ? { message: rpcError.message, code: rpcError.code } : null,
   });
 
-  if (updateError || !updatedRows || updatedRows.length === 0) {
-    logError("webhook.midtrans.update_failed", {
+  if (rpcError) {
+    logError("webhook.midtrans.rpc_failed", {
       orderCode,
       isPaid,
-      updateError: updateError?.message ?? "no rows updated",
+      rpcError: rpcError.message,
     });
   }
 

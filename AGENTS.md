@@ -62,7 +62,7 @@ Barang diterima
 
 **Gotcha:**
 - **Jangan pernah set `status = "paid"`** — pembayaran diwakili oleh `payment_status: "paid"`. Nilai `"paid"` sudah dihapus dari CHECK constraint `orders_status_check` (migration `0028`).
-- Webhook Midtrans (`app/api/webhooks/midtrans/route.ts`) langsung `.update()` ke tabel `orders` — set `payment_status: "paid"` + `status: "processing"`, bukan memanggil RPC.
+- Webhook Midtrans (`app/api/webhooks/midtrans/route.ts`) memanggil RPC `handle_midtrans_notification` (migration `0026`) dengan verifikasi signature SHA-512. RPC menangani idempotency, row lock (`FOR UPDATE`), dan `deleted_at IS NULL` check.
 - Dashboard queries (`lib/admin-data.ts`) memakai `payment_status` untuk filter "pending orders" dan "revenue", bukan `status`.
 - Zod schema `ORDER_STATUSES` di `lib/validations/storeSchema.ts` hanya berisi `["pending", "processing", "shipped", "completed", "cancelled"]` — tidak ada `"paid"`.
 
@@ -75,6 +75,13 @@ Dua mekanisme untuk update otomatis di admin:
    - `components/admin/OrdersListClient.tsx` — list orders auto-update saat ada perubahan.
    - `components/admin/RecentOrdersWidget.tsx` — widget "Pesanan Terbaru" di dashboard auto-update.
    - Realtime diaktifkan di migration `0026` untuk tabel `orders`.
+
+## Rate Limiting (Order Endpoints)
+In-memory rate limiter di `lib/rate-limit.ts` (Map-based, auto-cleanup setiap 60 detik):
+- `/api/orders/[code]/status` (SSE): max **10 koneksi baru/menit** per IP — return 429 jika terlampaui.
+- `/store/orders/[code]` (halaman detail): max **20 lookup/menit** per IP — render fallback error jika terlampaui.
+- Key: IP dari `x-forwarded-for` atau `x-real-ip` header.
+- Catatan: rate limit in-memory di-reset saat server restart (cold start). Untuk production yang lebih robust, pertimbangkan Redis-backed rate limiting.
 
 ## Konten & arsitektur
 - **Sumber kebenaran konten situs publik kini Supabase** untuk halaman yang di-wire (katalog, store, careers, about, seksi home) — lihat "Wiring halaman publik → Supabase" di bawah. `lib/data/*.ts` tetap dipakai sebagai **fallback statis** saat query Supabase error dan untuk konten yang memang statis (`solutions`, `team`, `faq`, konteks AI). Tambahkan produk/karir baru via CMS admin, bukan langsung ke file data.

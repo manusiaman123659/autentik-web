@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { Clock } from "lucide-react";
 import OrderConfirmationClient from "@/components/orders/OrderConfirmationClient";
 import { getWhatsAppNumber, getBankAccount } from "@/lib/public-data";
 import { createClient } from "@/utils/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function OrderConfirmationPage({ params, searchParams }: Props) {
   const { code } = await params;
   const { status: statusParam } = await searchParams;
+
+  // --- Rate limit check (per IP, max 20 lookups/menit) ---
+  const hdrs = await headers();
+  const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? hdrs.get("x-real-ip")
+    ?? "unknown";
+  const rl = checkRateLimit(`order-lookup:${ip}`, 20, 60_000);
+  if (!rl.allowed) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center" style={{ backgroundColor: "var(--bg-primary)" }}>
+        <div className="text-center space-y-3 max-w-sm">
+          <div className="w-10 h-10 mx-auto rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <Clock size={20} className="text-amber-600 dark:text-amber-400" />
+          </div>
+          <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+            Terlalu banyak permintaan
+          </h3>
+          <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+            Anda telah melakukan terlalu banyak pencarian pesanan. Silakan coba lagi beberapa saat.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const waNumber = await getWhatsAppNumber();
   const bankAccount = await getBankAccount();
 
