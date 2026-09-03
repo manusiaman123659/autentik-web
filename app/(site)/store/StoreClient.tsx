@@ -18,6 +18,7 @@ import StoreSearchBar from "@/components/store/StoreSearchBar";
 import CategoryToolbar from "@/components/store/CategoryToolbar";
 import StoreTrustStrip from "@/components/store/StoreTrustStrip";
 import StorePromoBanner from "@/components/store/StorePromoBanner";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 
 const ITEMS_PER_PAGE = 9;
 
@@ -147,10 +148,18 @@ export default function StoreClient({
             Sparepart original bergaransi untuk unit Talpha, Cylab, Ullun, dan Epal.
           </p>
           {compatible && (
-            <div className="max-w-xl mt-4 p-3 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-200 text-sm font-medium flex items-center gap-2">
-              <PackageCheck size={16} className="text-[#0EA5A0]" />
+            <div className="max-w-xl mt-4 p-3 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-200 text-sm flex items-start gap-2">
+              <PackageCheck size={16} className="text-[#0EA5A0] mt-0.5 shrink-0" />
               <span>
-                Kompatibel: <strong className="text-white uppercase">{compatible.replace(/-/g, " ")}</strong>
+                Sparepart untuk <strong className="text-white uppercase">{compatible.replace(/-/g, " ")}</strong>. Sistem belum bisa filter otomatis —{" "}
+                <WhatsAppButton
+                  number={waNumber}
+                  variant="link"
+                  label="tanya via WhatsApp"
+                  message={`Halo, saya butuh sparepart yang kompatibel dengan ${compatible.replace(/-/g, " ")}. Bisa bantu rekomendasi?`}
+                  className="text-teal-200 hover:text-white"
+                />
+                {" "}untuk rekomendasi yang tepat.
               </span>
             </div>
           )}

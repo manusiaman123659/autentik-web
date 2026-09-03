@@ -110,8 +110,9 @@ export async function POST(request: NextRequest) {
     {
       p_order_code: orderCode,
       p_midtrans_status: transactionStatus,
-      p_payment_method: paymentType ?? "transfer",
+      p_payment_method: "midtrans",
       p_paid_at: isPaid ? new Date().toISOString() : null,
+      p_midtrans_payment_type: paymentType,
     },
   );
 

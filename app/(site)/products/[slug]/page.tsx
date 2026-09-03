@@ -246,7 +246,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium text-white bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 transition-colors"
                 >
                   <Wrench size={16} />
-                  Cari Sparepart Produk Ini
+                  Tanya Sparepart untuk Produk Ini
                 </Link>
 
                 {/* Fallback CTA (if fulfillment is third_party, show ProductFulfillmentCta separately) */}

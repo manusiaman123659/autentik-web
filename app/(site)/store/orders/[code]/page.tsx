@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import OrderConfirmationClient from "@/components/orders/OrderConfirmationClient";
 import { getWhatsAppNumber, getBankAccount } from "@/lib/public-data";
@@ -24,6 +25,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function OrderConfirmationPage({ params, searchParams }: Props) {
   const { code } = await params;
   const { status: statusParam } = await searchParams;
+
+  // --- Server-side auth check ---
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(`/auth/login?redirect=${encodeURIComponent(`/store/orders/${code}`)}`);
+  }
 
   // --- Rate limit check (per IP, max 20 lookups/menit) ---
   const hdrs = await headers();
@@ -52,7 +61,6 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   const waNumber = await getWhatsAppNumber();
   const bankAccount = await getBankAccount();
 
-  // Fetch order from DB as fallback (works even without sessionStorage)
   let dbOrder: {
     order_code: string;
     customer_name: string;
@@ -76,8 +84,6 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   } | null = null;
 
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
     const { data } = await supabase
       .from("orders")
       .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id)")
