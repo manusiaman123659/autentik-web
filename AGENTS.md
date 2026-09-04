@@ -61,10 +61,11 @@ Barang diterima
 ```
 
 **Gotcha:**
-- **Jangan pernah set `status = "paid"`** — pembayaran diwakili oleh `payment_status: "paid"`. Nilai `"paid"` sudah dihapus dari CHECK constraint `orders_status_check` (migration `0028`).
+- **Jangan pernah set `status = "paid"`** — pembayaran diwakili oleh `payment_status: "paid"`. Nilai `"paid"` sudah dihapus dari CHECK constraint `orders_status_check` (migration `0028`). Kolom `orders.status` sekarang hanya: `pending`, `processing`, `shipped`, `completed`, `cancelled`.
 - Webhook Midtrans (`app/api/webhooks/midtrans/route.ts`) memanggil RPC `handle_midtrans_notification` (migration `0026`) dengan verifikasi signature SHA-512. RPC menangani idempotency, row lock (`FOR UPDATE`), dan `deleted_at IS NULL` check.
 - Dashboard queries (`lib/admin-data.ts`) memakai `payment_status` untuk filter "pending orders" dan "revenue", bukan `status`.
 - Zod schema `ORDER_STATUSES` di `lib/validations/storeSchema.ts` hanya berisi `["pending", "processing", "shipped", "completed", "cancelled"]` — tidak ada `"paid"`.
+- Kolom `orders.payment_method` sekarang mengizinkan `('transfer', 'cod', 'midtrans')` (migration `0030` menambah `'midtrans'`). Kolom `orders.midtrans_payment_type` menyimpan tipe pembayaran Midtrans (misal `'qris'`, `'credit_card'`, `'bank_transfer'`).
 
 ## Real-Time Updates
 Dua mekanisme untuk update otomatis di admin:
@@ -113,6 +114,17 @@ Sistem autentikasi customer terpisah dari admin, mengalir dari store → auth �
 - **Order history**: `/store/orders` → `OrderHistoryList.tsx` — fetch orders berdasarkan `user_id = auth.uid()`. Status badge, payment status, link ke detail.
 - **Wishlist**: `useWishlist` hook (`components/store/useWishlist.ts`) — localStorage-backed (key `autentik-wishlist:v1`, max 100 items). `WishlistButton` punya 3 variant: `"card"` (absolute position), `"detail"` (inline), `"bar"` (untuk StickyMobileBar). Toggle di card, detail, dan MobileMenu.
 - **Recently viewed**: `useRecentlyViewed` hook (`components/store/useRecentlyViewed.ts`) — localStorage-backed (key `autentik-recently-viewed:v1`, max 8 items). `RecentlyViewed` component: horizontal scroll strip. `RelatedProducts` component: 4-card grid berdasarkan brand/kategori.
+
+### Sparepart Variant System
+Tabel `product_variants` mendukung varian produk (ukuran, warna, kapasitas) untuk sparepart:
+
+- **Schema**: `id` (uuid PK), `product_id` (text FK → `products.id`), `variant_group` (nullable — "Panjang", "Warna", atau NULL untuk single-axis/flattened), `label` (text — "1m", "3m"), `sku` (nullable), `price_override` (nullable — NULL = fallback ke `products.price`), `stock` (integer), `is_active`, `sort_order`, `deleted_at` (soft-delete), timestamps.
+- **RLS**: public SELECT hanya `is_active=true AND deleted_at IS NULL`; staff all.
+- **Unique constraint**: `COALESCE(variant_group, '') + label WHERE deleted_at IS NULL` — mencegah duplikat single-axis (variant_group=NULL).
+- **Checkout flow**: `create_checkout_order` RPC menerima `variant_id` opsional di setiap item JSONB. Kalau produk punya varian aktif tapi `variant_id` null → REJECT. Kalau `variant_id` ada → decrement `product_variants.stock` + ambil harga dari `COALESCE(price_override, products.price)`. Kalau tidak ada varian → decrement `products.stock` (behavior existing).
+- **`order_items`**: tambah `variant_id uuid` (FK → product_variants, ON DELETE SET NULL) + `variant_label text` (snapshot nama varian).
+- **Gotcha**: `products.id` bertipe `text` (bukan `uuid`). `product_variants.product_id` harus `text`. `order_items.variant_id` tetap `uuid` (FK ke product_variants.id yang uuid).
+- **`products.variants` (JSONB)**: column ini masih ada di tabel tapi **DEAD** — semua sparepart products punya `variants = '[]'`. Drop column dijadwalkan di Migration C (paling terakhir).
 
 ### Store UI (JakartaNotebook Style)
 Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white space, font padat.
@@ -163,7 +175,7 @@ Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white spa
 - **Status section**: `BUILT_SECTION_KEYS` di `lib/admin-sections.ts` = tepat **14 section keys** yang sudah dibangun: produk, **compro**, sparepart, stok, orders, inquiry, lead, **rfq**, integrasi, akses-staff, riwayat, **karir**, **merek**, **relasi** (dashboard adalah `/admin`, bukan key section). Section compro, karir, merek, relasi, rfq punya route sendiri (`/admin/compro`, `/admin/karir`, `/admin/merek`, `/admin/relasi`, `/admin/rfq`). **Semua section sudah dibangun** — tidak ada lagi placeholder; route catch-all `app/admin/(dashboard)/[section]/` memanggil `notFound()` untuk key apa pun yang ada di `BUILT_SECTION_KEYS` (key yang sudah dibangun ada di folder route sendiri, bukan di catch-all). Cek `BUILT_SECTION_KEYS` sebelum berasumsi sebuah halaman section ada.
 - **`lib/admin.ts`** = server-only; `getAdminUser()` (react `cache`) memvalidasi sesi via `auth.getUser()` lalu memuat baris `profiles` (self-select RLS) dan membutuhkan `role in ('admin','editor')` + `is_active`. **Jangan import ke komponen client** — ia menarik `next/headers`. Data/tipe murni bersama ada di `lib/admin-sections.ts` (re-export dari `lib/admin.ts`; import dari `admin-sections` di kode client, mis. `components/admin/AdminShell.tsx`).
 - `lib/admin-sections.ts` mengekspor `ADMIN_SECTIONS` (link/meta section) dan `AdminUser`. Ikon section: `components/admin/sectionIcons.ts`.
-- Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0029_order_user_id.sql`**:
+- Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0033_update_create_checkout_order.sql`**:
   - `0001_schema.sql` — skema dasar; trigger `profiles` awalnya membuat `role='editor'` saat signup (diubah `0015` menjadi `'viewer'`).
   - `0002_store_orders.sql` — menambah tabel `orders`, `order_items`, `whatsapp_leads`, plus kolom e-commerce (price, stock, weight, dsb.) di `products`.
   - `0007_chat_rate_limit.sql` — rate-limit chatbot AI (tabel `ai_chat_sessions`, RPC `track_chat_message`) untuk `/api/chat`.
@@ -182,6 +194,9 @@ Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white spa
   - `0026_midtrans_migration.sql` — migrasi dari Xendit ke Midtrans: tambah kolom `midtrans_order_id`, `midtrans_redirect_url`, `paid_at` di `orders`; RPC `handle_midtrans_notification` (SECURITY DEFINER); enable Supabase Realtime untuk tabel `orders`.
   - `0028_fix_orders_status_constraint.sql` — fix CHECK constraint `orders_status_check`: hapus `'paid'` (redundan dengan `payment_status`), tambah `'processing'` untuk flow Midtrans webhook.
   - `0029_order_user_id.sql` — tambah kolom `user_id uuid REFERENCES auth.users(id)` ke `orders` untuk link order ke akun customer. Update `create_checkout_order` RPC untuk capture `auth.uid()`. Index `idx_orders_user_id`. Update RLS policy `orders_select_own` filter by `user_id = auth.uid()`. Drop redundant `orders_staff_select`.
+  - `0030_add_midtrans_payment_type.sql` — tambah kolom `midtrans_payment_type text` di `orders`; DROP+CREATE `handle_midtrans_notification` (5-param signature: `p_midtrans_payment_type`); GRANT hanya 5-param version; `NOTIFY pgrst, 'reload schema'`.
+  - `0032_product_variants.sql` — buat tabel `product_variants` (id uuid PK, product_id **text** FK → products.id, variant_group, label, sku, price_override, stock, is_active, sort_order, deleted_at, timestamps); unique index `COALESCE(variant_group, '') + label WHERE deleted_at IS NULL`; partial index `WHERE is_active=true AND deleted_at IS NULL`; RLS 3 policy (public_select, staff_select, staff_all); trigger `set_updated_at`. Alter `order_items`: tambah `variant_id uuid` (FK → product_variants.id, ON DELETE SET NULL) + `variant_label text` + partial index. GRANT + NOTIFY pgrst. **Gotcha: `products.id` bertipe `text` (bukan `uuid`) — `product_variants.product_id` harus `text` untuk match FK.**
+  - `0033_update_create_checkout_order.sql` — update `create_checkout_order` RPC: parse `variant_id` dari `p_items` JSONB (text → uuid cast + regex guard); cek `v_has_active_variants` → reject jika produk punya varian aktif tapi `variant_id` null; branch variant: lock + decrement `product_variants.stock`, ambil harga dari `COALESCE(price_override, products.price)`; branch non-variant: decrement `products.stock` (behavior existing); `v_variant_label` di-extract ke variable text SEBELUM INSERT ke `tmp_checkout_items` (bukan `v_variant.label` di INSERT — PL/pgSQL record variable bind gagal saat unassigned); INSERT `order_items` sertakan `variant_id` + `variant_label`. Signature TIDAK berubah (p_items tetap jsonb) → CREATE OR REPLACE tanpa DROP. **Bug fix: `v_variant := null` di awal loop (cegah stale data dari iterasi sebelumnya) + `v_variant_label` extraction (cegah crash "record not assigned" saat INSERT).**
 - **Nomor WhatsApp publik — satu sumber kebenaran**: `site_settings` key `whatsapp` dibaca server-side via `getWhatsAppNumber()` (`lib/public-data.ts`, memakai `cookies()` → halaman pemakainya dynamic) dan client-side via browser Supabase client di `components/chatbot/FaqWidget.tsx` (fetch sekali saat mount, tombol disabled sampai terisi). UI link/tombol WA memakai `components/ui/WhatsAppButton.tsx` (client dumb, props `number` + `label?`/`message?`/`variant?: "link"|"button"`/`className?`/`id?`; disabled saat `number` null). **Ganti nomor = `UPDATE site_settings` key `whatsapp`** (belum ada form admin) — jangan hardcode di komponen. `lib/whatsapp.ts` (konstanta lama) sudah dihapus; tidak ada dua sumber.
 - **Chatbot AI (Gemini)** tetap dipakai penuh: `components/chatbot/FaqWidget.tsx` hanya mode AI (`/api/chat`, rate-limit `ai_chat_sessions`), dengan tombol "Hubungi via WhatsApp" ke nomor dari `site_settings` key `whatsapp` sebagai fallback kontak. Tidak ada live chat CS/Tawk lagi.
 - Promosikan admin pertama di SQL editor Supabase:
@@ -219,7 +234,7 @@ Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white spa
 - `lib/format.ts` — `formatRupiah()` currency formatter
 - `lib/midtrans.ts` — Midtrans Snap client wrapper (`createMidtransTransaction`)
 - `lib/logger.ts` — structured logging (`logError`, `logAudit`)
-- `supabase/migrations/` — 27 SQL migrations (0001–0029, gaps: 0024, 0027); file baru lanjut `0030_`
+- `supabase/migrations/` — 30 SQL migrations (0001–0033, gaps: 0024, 0027, 0031); file baru lanjut `0034_`
 - `utils/supabase/` — client (browser), server (RSC), middleware (proxy)
 - `.agents/skills/` — 6 custom skills (admin-crud-pattern, no-ai-slop-design, supabase, supabase-migration-safety, supabase-postgres-best-practices, verification-before-done)
 

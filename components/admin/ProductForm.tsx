@@ -41,6 +41,15 @@ interface TechDocItem {
   requiresLead: boolean;
 }
 
+interface VariantRow {
+  id?: string;
+  label: string;
+  sku: string;
+  price_override: string;
+  stock: string;
+  variant_group: string;
+}
+
 export interface ProductFormValues {
   id?: string;
   productType: ProductType;
@@ -67,7 +76,7 @@ export interface ProductFormValues {
   weightGrams?: string;
   stock?: string;
   lowStockThreshold?: string;
-  variants: { name: string; options: string }[];
+  variants: VariantRow[];
   isStoreVisible: boolean;
 }
 
@@ -102,12 +111,7 @@ function toFormValues(product: ProductRow | undefined, productType: ProductType)
     weightGrams: product?.weight_grams != null ? String(product.weight_grams) : "",
     stock: product?.stock != null ? String(product.stock) : "",
     lowStockThreshold: product?.low_stock_threshold != null ? String(product.low_stock_threshold) : "5",
-    variants: Array.isArray(product?.variants)
-      ? product.variants.map((v) => ({
-          name: v?.name ?? "",
-          options: Array.isArray(v?.options) ? v.options.join(", ") : "",
-        }))
-      : [],
+    variants: [],
     isStoreVisible: product?.is_store_visible ?? true,
   };
 }
@@ -273,14 +277,19 @@ export default function ProductForm({
   initial,
   brands = [],
   initialDocuments = [],
+  initialVariants = [],
 }: {
   productType: ProductType;
   initial?: ProductRow;
   brands?: BrandRow[];
   initialDocuments?: TechDocRow[];
+  initialVariants?: VariantRow[];
 }) {
   const router = useRouter();
-  const [form, setForm] = useState<ProductFormValues>(() => toFormValues(initial, productType));
+  const [form, setForm] = useState<ProductFormValues>(() => ({
+    ...toFormValues(initial, productType),
+    variants: initialVariants,
+  }));
   const [errors, setErrors] = useState<Record<string, string>>({});
 const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -348,7 +357,7 @@ const [saving, setSaving] = useState(false);
     }));
   };
 
-  const setVariant = (index: number, key: "name" | "options", value: string) => {
+  const setVariant = (index: number, key: keyof VariantRow, value: string) => {
     setForm((prev) => ({
       ...prev,
       variants: prev.variants.map((v, i) => (i === index ? { ...v, [key]: value } : v)),
@@ -477,15 +486,24 @@ const [saving, setSaving] = useState(false);
   const handleSubmit = async () => {
     setSaving(true);
     setErrors({});
-    const payload = {
+
+    // TODO: kirim variantsPayload ke upsert_product_variants RPC di
+    // langkah berikutnya (server action belum di-wire)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- akan dipakai untuk RPC upsert_product_variants di langkah berikutnya
+    const variantsPayload = form.variants.filter((v) => v.label.trim());
+
+    // Exclude variants dari payload upsertProduct — Zod schema lama
+    // (productSchema) masih expect struktur {name, options: string[]},
+    // sedangkan form sekarang pakai VariantRow[]. Variants akan diproses
+    // terpisah via upsert_product_variants RPC.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- sengaja di-destructure agar tidak ikut ke payload upsertProduct
+    const { variants: _excluded, ...payload } = {
       ...form,
       productType,
       specs: form.specs.filter((s) => s.label.trim() || s.value.trim()),
       features: form.features.filter((f) => f.trim()),
-      variants: form.variants
-        .map((v) => ({ name: v.name.trim(), options: v.options.split(",").map((o) => o.trim()).filter(Boolean) }))
-        .filter((v) => v.name),
     };
+
     const result = await upsertProduct(payload);
     setSaving(false);
     if (!result.success) {
@@ -1048,7 +1066,12 @@ onChange={(e) => set("description", e.target.value)}
             <h2 className="text-base font-bold text-slate-900 dark:text-white">Varian (opsional)</h2>
             <button
               type="button"
-              onClick={() => set("variants", [...form.variants, { name: "", options: "" }])}
+              onClick={() =>
+                set("variants", [
+                  ...form.variants,
+                  { id: undefined, label: "", sku: "", price_override: "", stock: "0", variant_group: "" },
+                ])
+              }
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0EA5A0] hover:underline"
             >
               <Plus size={14} />
@@ -1056,39 +1079,92 @@ onChange={(e) => set("description", e.target.value)}
             </button>
           </div>
           {form.variants.length === 0 && (
-            <p className="text-xs text-slate-400 mb-4">Misalnya varian &quot;Panjang&quot; dengan opsi &quot;1m, 3m, 5m&quot;.</p>
+            <p className="text-xs text-slate-400 mb-4">Belum ada varian. Klik &quot;Tambah&quot; untuk menambah baris varian.</p>
           )}
-          <div className="space-y-2">
-            {form.variants.map((v, i) => (
-              <div key={i} className="flex gap-2 items-start">
-                <RowDragHandle
-                  index={i}
-                  count={form.variants.length}                  onItemDrop={(source, target) => reorderAction("variants", source, target)}
-                  onMove={(source, target) => reorderAction("variants", source, target)}
-                />
-                <input
-                  className={inputClass}
-                  value={v.name}
-                  onChange={(e) => setVariant(i, "name", e.target.value)}
-                  placeholder="Nama varian (mis. Panjang)"
-                />
-                <input
-                  className={inputClass}
-                  value={v.options}
-                  onChange={(e) => setVariant(i, "options", e.target.value)}
-                  placeholder="Opsi, dipisah koma (mis. 1m, 3m, 5m)"
-                />
-                <button
-                  type="button"
-                  onClick={() => set("variants", form.variants.filter((_, x) => x !== i))}
-                  className="mt-2 text-slate-400 hover:text-red-500 transition-colors"
-                  aria-label="Hapus varian"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
+          {form.variants.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className="py-2 pr-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-8"></th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400">Label</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400">SKU</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400">Harga Override</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400">Stok</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400">Grup</th>
+                    <th className="py-2 pl-2 w-8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {form.variants.map((v, i) => (
+                    <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
+                      <td className="py-1.5 pr-2">
+                        <RowDragHandle
+                          index={i}
+                          count={form.variants.length}
+                          onItemDrop={(source, target) => reorderAction("variants", source, target)}
+                          onMove={(source, target) => reorderAction("variants", source, target)}
+                        />
+                      </td>
+                      <td className="py-1.5 px-2">
+                        <input
+                          className={inputClass}
+                          value={v.label}
+                          onChange={(e) => setVariant(i, "label", e.target.value)}
+                          placeholder="mis. 1m"
+                        />
+                      </td>
+                      <td className="py-1.5 px-2">
+                        <input
+                          className={inputClass}
+                          value={v.sku}
+                          onChange={(e) => setVariant(i, "sku", e.target.value)}
+                          placeholder="opsional"
+                        />
+                      </td>
+                      <td className="py-1.5 px-2">
+                        <input
+                          className={inputClass}
+                          type="number"
+                          min="0"
+                          value={v.price_override}
+                          onChange={(e) => setVariant(i, "price_override", e.target.value)}
+                          placeholder="kosong = harga produk"
+                        />
+                      </td>
+                      <td className="py-1.5 px-2">
+                        <input
+                          className={inputClass}
+                          type="number"
+                          min="0"
+                          value={v.stock}
+                          onChange={(e) => setVariant(i, "stock", e.target.value)}
+                        />
+                      </td>
+                      <td className="py-1.5 px-2">
+                        <input
+                          className={inputClass}
+                          value={v.variant_group}
+                          onChange={(e) => setVariant(i, "variant_group", e.target.value)}
+                          placeholder="opsional"
+                        />
+                      </td>
+                      <td className="py-1.5 pl-2">
+                        <button
+                          type="button"
+                          onClick={() => set("variants", form.variants.filter((_, x) => x !== i))}
+                          className="text-slate-400 hover:text-red-500 transition-colors"
+                          aria-label="Hapus varian"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       )}
 

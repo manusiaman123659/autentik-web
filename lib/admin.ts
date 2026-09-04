@@ -12,7 +12,18 @@ export const getAdminUser = cache(
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
 
-    const { data: authData } = await supabase.auth.getUser();
+    let authData;
+    try {
+      const result = await supabase.auth.getUser();
+      authData = result.data;
+    } catch (err) {
+      // Refresh token expired/invalid → return null
+      // Caller (layout.tsx) akan redirect ke /admin/login
+      if (err && typeof err === "object" && "code" in err && err.code !== "refresh_token_not_found") {
+        console.error("[getAdminUser] unexpected auth error:", err);
+      }
+      return null;
+    }
     const user = authData?.user;
     if (!user) return null;
 

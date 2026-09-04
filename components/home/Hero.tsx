@@ -136,6 +136,7 @@ export default function Hero() {
                       src={slide.productImage}
                       alt={slide.productName}
                       fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
                       className="object-contain p-4 group-hover:scale-105 transition-transform duration-500"
                       priority
                     />

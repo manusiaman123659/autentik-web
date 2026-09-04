@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={inter.variable} suppressHydrationWarning>
+    <html lang="id" className={inter.variable} suppressHydrationWarning data-scroll-behavior="smooth">
       <body className={`${inter.className} antialiased`}>
         <JsonLd data={organizationSchema()} />
         <ThemeProvider>{children}</ThemeProvider>
