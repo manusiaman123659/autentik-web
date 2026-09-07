@@ -9,12 +9,12 @@ import {
   Sparkles,
   ArrowRight,
   FileText,
-  User,
 } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import CompanyProfileViewer, {
   type ComproManifestProp,
 } from "@/components/ui/CompanyProfileViewer";
+import TeamCarousel from "@/components/about/TeamCarousel";
 import { createClient } from "@/utils/supabase/server";
 import { listPublicGroups, listPublicPartners, listPublicTeamMembers } from "@/lib/public-data";
 
@@ -397,41 +397,7 @@ export default async function AboutPage() {
               </div>
             </AnimatedElement>
 
-            <AnimatedElement type="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {teamMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 text-center shadow-sm hover:shadow-md transition-all duration-300"
-                >
-                  <div className="w-32 h-32 md:w-36 md:h-36 mx-auto rounded-2xl overflow-hidden ring-4 ring-slate-100 dark:ring-slate-800 shadow-inner mb-5 relative bg-slate-100 dark:bg-slate-800">
-                    {member.imageUrl ? (
-                      <Image
-                        src={member.imageUrl}
-                        alt={member.name}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 128px, 144px"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <User size={36} className="text-slate-300 dark:text-slate-600" />
-                      </div>
-                    )}
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-                    {member.name}
-                  </h3>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400 mt-1">
-                    {member.role}
-                  </p>
-                  {member.bio && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 line-clamp-3 leading-relaxed">
-                      {member.bio}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </AnimatedElement>
+            <TeamCarousel members={teamMembers} />
           </div>
         </section>
       )}
