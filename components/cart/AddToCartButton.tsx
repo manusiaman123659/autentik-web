@@ -9,6 +9,13 @@ interface AddToCartButtonProps {
   product: CartItemInput;
   variant?: "detail" | "card";
   onBuyNow?: (qty: number) => void;
+  selectedVariant?: {
+    id: string;
+    label: string;
+    price_override: number | null;
+    stock: number;
+  } | null;
+  hasVariants?: boolean;
 }
 
 const FEEDBACK_MS = 1600;
@@ -17,15 +24,19 @@ export default function AddToCartButton({
   product,
   variant = "detail",
   onBuyNow,
+  selectedVariant = null,
+  hasVariants = false,
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const stock = Math.max(0, product.stock ?? 0);
+  const effectivePrice = selectedVariant?.price_override ?? product.price;
+  const effectiveStock = selectedVariant?.stock ?? product.stock;
+  const stock = Math.max(0, effectiveStock ?? 0);
   const isReadyStock = (product.fulfillmentType ?? "ready_stock") === "ready_stock";
-  const canAdd = isReadyStock && stock > 0 && product.price != null;
+  const canAdd = isReadyStock && stock > 0 && effectivePrice != null && (!hasVariants || selectedVariant != null);
 
   useEffect(() => {
     return () => {
@@ -35,7 +46,16 @@ export default function AddToCartButton({
 
   const handleAdd = () => {
     if (!canAdd) return;
-    addItem(product, qty);
+    addItem(
+      {
+        ...product,
+        price: effectivePrice,
+        stock: effectiveStock,
+        variant_id: selectedVariant?.id ?? null,
+        variant_label: selectedVariant?.label ?? null,
+      },
+      qty
+    );
     setAdded(true);
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => setAdded(false), FEEDBACK_MS);

@@ -42,6 +42,7 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
   const items = data.items.map((i) => ({
     product_id: i.productId,
     quantity: i.quantity,
+    variant_id: i.variantId ?? null,
   }));
 
   const shippingAddress = {

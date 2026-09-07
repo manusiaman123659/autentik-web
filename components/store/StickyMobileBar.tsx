@@ -3,6 +3,7 @@
 import { ShoppingCart, MessageCircle, Share2, Check } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 import type { ProductRow } from "@/lib/admin-data";
+import type { StoreVariant } from "@/components/store/StoreProductDetail";
 import { useCallback, useState } from "react";
 import WishlistButton from "@/components/store/WishlistButton";
 
@@ -11,6 +12,10 @@ interface StickyMobileBarProps {
   onAddToCart: () => void;
   onBuyNow: () => void;
   waNumber: string | null;
+  effectivePrice: number | null;
+  effectiveStock: number;
+  selectedVariant: StoreVariant | null;
+  hasVariants: boolean;
 }
 
 export default function StickyMobileBar({
@@ -18,14 +23,18 @@ export default function StickyMobileBar({
   onAddToCart,
   onBuyNow,
   waNumber,
+  effectivePrice,
+  effectiveStock,
+  selectedVariant,
+  hasVariants,
 }: StickyMobileBarProps) {
   const [added, setAdded] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
-  const stock = product.stock ?? 0;
+  const stock = effectiveStock;
   const fulfillmentType = product.fulfillment_type ?? "ready_stock";
   const isReady = fulfillmentType === "ready_stock";
-  const canAdd = isReady && stock > 0 && product.price != null;
+  const canAdd = isReady && stock > 0 && effectivePrice != null && (!hasVariants || selectedVariant != null);
 
   const handleCart = useCallback(() => {
     if (!canAdd) return;
@@ -69,9 +78,9 @@ export default function StickyMobileBar({
       <div className="flex items-center gap-2 px-3 py-2">
         {/* Price */}
         <div className="flex-shrink-0 min-w-0">
-          {product.price != null ? (
+          {effectivePrice != null ? (
             <span className="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
-              {formatRupiah(product.price)}
+              {formatRupiah(effectivePrice)}
             </span>
           ) : (
             <span className="text-[10px] font-medium text-slate-400 whitespace-nowrap">Harga: hubungi</span>

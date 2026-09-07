@@ -137,7 +137,7 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
     try {
       const result = await submitCheckout({
         ...data,
-        items: items.map((i) => ({ productId: i.id, quantity: i.quantity })),
+        items: items.map((i) => ({ productId: i.id, quantity: i.quantity, variantId: i.variant_id ?? null })),
       });
 
       if (!result.success || !result.orderCode) {
@@ -161,6 +161,7 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
           image_url: i.image_url,
           price: i.price,
           quantity: i.quantity,
+          variant_label: i.variant_label ?? null,
         })),
         subtotal,
         shippingCost: finalShipping,

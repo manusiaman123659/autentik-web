@@ -25,18 +25,40 @@ import { useRecentlyViewed } from "@/components/store/useRecentlyViewed";
 
 type Tab = "description" | "specs";
 
+export interface StoreVariant {
+  id: string;
+  label: string;
+  sku: string | null;
+  price_override: number | null;
+  stock: number;
+  variant_group: string | null;
+}
+
 interface StoreProductDetailProps {
   product: ProductRow;
   waNumber: string | null;
   relatedProducts?: ProductRow[];
+  variants?: StoreVariant[];
 }
 
-export default function StoreProductDetail({ product, waNumber, relatedProducts = [] }: StoreProductDetailProps) {
+export default function StoreProductDetail({ product, waNumber, relatedProducts = [], variants = [] }: StoreProductDetailProps) {
   const [activeTab, setActiveTab] = useState<Tab>("description");
   const router = useRouter();
   const supabase = createClient();
   const { addItem } = useCart();
   const { add: recordView } = useRecentlyViewed();
+
+  const productVariants = variants;
+  const hasVariants = productVariants.length > 0;
+
+  const [selectedVariant, setSelectedVariant] = useState<StoreVariant | null>(() => {
+    if (productVariants.length === 0) return null;
+    const available = productVariants.filter((v) => v.stock > 0);
+    return available[0] ?? productVariants[0];
+  });
+
+  const effectivePrice = selectedVariant?.price_override ?? product.price ?? null;
+  const effectiveStock = selectedVariant?.stock ?? product.stock ?? 0;
 
   useEffect(() => {
     recordView({
@@ -58,17 +80,27 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
   const isReady = fulfillmentType === "ready_stock";
   const isThirdParty = fulfillmentType === "third_party";
 
-  const hasDiscount = product.compare_at_price != null && product.compare_at_price > (product.price ?? 0);
+  const hasDiscount = selectedVariant == null &&
+    product.compare_at_price != null &&
+    product.compare_at_price > (product.price ?? 0);
   const discountPct = hasDiscount
     ? Math.round(((product.compare_at_price! - (product.price ?? 0)) / product.compare_at_price!) * 100)
     : 0;
 
   const specs: { label: string; value: string }[] = product.specs ?? [];
   const features: string[] = (product.features ?? []).map(String);
-  const variants: { name: string; options: string[] }[] = product.variants ?? [];
 
   async function handleBuyNow(qty: number) {
-    addItem(product, qty);
+    addItem(
+      {
+        ...product,
+        price: effectivePrice,
+        stock: effectiveStock,
+        variant_id: selectedVariant?.id ?? null,
+        variant_label: selectedVariant?.label ?? null,
+      },
+      qty
+    );
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       router.push(`/auth/login?redirect=${encodeURIComponent("/store/checkout")}`);
@@ -157,12 +189,12 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
 
               {/* Price */}
               <div className="flex items-baseline gap-2 flex-wrap mb-3">
-                {product.price != null ? (
+                {effectivePrice != null ? (
                   <>
                     {hasDiscount && (
                       <span className="text-xs text-slate-400 line-through">{formatRupiah(product.compare_at_price!)}</span>
                     )}
-                    <span className="text-red-600 dark:text-red-400 font-bold text-xl">{formatRupiah(product.price)}</span>
+                    <span className="text-red-600 dark:text-red-400 font-bold text-xl">{formatRupiah(effectivePrice)}</span>
                   </>
                 ) : (
                   <span className="text-sm font-medium text-slate-400">Harga: hubungi kami</span>
@@ -171,8 +203,8 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
 
               {/* Stock label */}
               {isReady && (
-                <p className={`text-xs font-semibold mb-3 ${outOfStock ? "text-red-500" : lowStock ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"}`}>
-                  {outOfStock ? "Stok Habis" : lowStock ? `Stok Terbatas (${stock} tersisa)` : "Ready Stock"}
+                <p className={`text-xs font-semibold mb-3 ${effectiveStock === 0 ? "text-red-500" : effectiveStock <= low ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"}`}>
+                  {effectiveStock === 0 ? "Stok Habis" : effectiveStock <= low ? `Stok Terbatas (${effectiveStock} tersisa)` : "Ready Stock"}
                 </p>
               )}
             </div>
@@ -252,28 +284,31 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
               </div>
             </div>
 
-            {/* Variants (below tabs on mobile) */}
-            {variants.length > 0 && (
+            {/* Variant selector — mobile */}
+            {hasVariants && (
               <div className="lg:hidden">
                 <h3 className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                  Varian
+                  Pilih Varian
                 </h3>
-                <div className="space-y-2">
-                  {variants.map((v) => (
-                    <div key={v.name}>
-                      <p className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-primary)" }}>{v.name}</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {v.options.map((opt) => (
-                          <span
-                            key={opt}
-                            className="px-2 py-1 rounded-sm border text-[10px] font-medium"
-                            style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" }}
-                          >
-                            {opt}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {productVariants.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setSelectedVariant(v)}
+                      className={`px-2.5 py-1.5 rounded-sm border text-[10px] font-medium transition-colors ${
+                        selectedVariant?.id === v.id
+                          ? "border-[#0EA5A0] bg-[#0EA5A0]/10 text-[#0EA5A0]"
+                          : v.stock === 0
+                            ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-50"
+                            : "border-[var(--border-subtle)] hover:border-[#0EA5A0]/50"
+                      }`}
+                      disabled={v.stock === 0}
+                      style={selectedVariant?.id !== v.id ? { color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" } : undefined}
+                    >
+                      {v.label}
+                      {v.stock === 0 && " (Habis)"}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -308,12 +343,12 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
               <div className="border-t" style={{ borderColor: "var(--border-subtle)" }} />
 
               {/* Price in box */}
-              {product.price != null ? (
+              {effectivePrice != null ? (
                 <div className="flex items-baseline gap-1.5">
                   {hasDiscount && (
                     <span className="text-[11px] text-slate-400 line-through">{formatRupiah(product.compare_at_price!)}</span>
                   )}
-                  <span className="text-red-600 dark:text-red-400 font-bold text-base">{formatRupiah(product.price)}</span>
+                  <span className="text-red-600 dark:text-red-400 font-bold text-base">{formatRupiah(effectivePrice)}</span>
                 </div>
               ) : (
                 <p className="text-[11px] font-medium text-slate-400">Harga: hubungi kami</p>
@@ -321,7 +356,13 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
 
               {/* Quantity + Add to cart */}
               {isReady ? (
-                <AddToCartButton product={product} variant="detail" onBuyNow={isReady ? handleBuyNow : undefined} />
+                <AddToCartButton
+                  product={product}
+                  variant="detail"
+                  onBuyNow={isReady ? handleBuyNow : undefined}
+                  selectedVariant={selectedVariant}
+                  hasVariants={hasVariants}
+                />
               ) : (
                 <ProductFulfillmentCta
                   fulfillmentType={fulfillmentType}
@@ -364,28 +405,31 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
               </div>
             </div>
 
-            {/* Variants (in sidebar on desktop) */}
-            {variants.length > 0 && (
+            {/* Variant selector — desktop */}
+            {hasVariants && (
               <div className="hidden lg:block rounded-sm border p-4" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
                 <h3 className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                  Varian
+                  Pilih Varian
                 </h3>
-                <div className="space-y-2">
-                  {variants.map((v) => (
-                    <div key={v.name}>
-                      <p className="text-[11px] font-semibold mb-1" style={{ color: "var(--text-primary)" }}>{v.name}</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {v.options.map((opt) => (
-                          <span
-                            key={opt}
-                            className="px-2 py-1 rounded-sm border text-[10px] font-medium"
-                            style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" }}
-                          >
-                            {opt}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {productVariants.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setSelectedVariant(v)}
+                      className={`px-2.5 py-1.5 rounded-sm border text-[10px] font-medium transition-colors ${
+                        selectedVariant?.id === v.id
+                          ? "border-[#0EA5A0] bg-[#0EA5A0]/10 text-[#0EA5A0]"
+                          : v.stock === 0
+                            ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-50"
+                            : "border-[var(--border-subtle)] hover:border-[#0EA5A0]/50"
+                      }`}
+                      disabled={v.stock === 0}
+                      style={selectedVariant?.id !== v.id ? { color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" } : undefined}
+                    >
+                      {v.label}
+                      {v.stock === 0 && " (Habis)"}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -406,9 +450,19 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
       {/* Sticky Mobile Bottom Bar */}
       <StickyMobileBar
         product={product}
-        onAddToCart={() => addItem(product)}
+        onAddToCart={() => addItem({
+          ...product,
+          price: effectivePrice,
+          stock: effectiveStock,
+          variant_id: selectedVariant?.id ?? null,
+          variant_label: selectedVariant?.label ?? null,
+        })}
         onBuyNow={() => handleBuyNow(1)}
         waNumber={waNumber}
+        effectivePrice={effectivePrice}
+        effectiveStock={effectiveStock}
+        selectedVariant={selectedVariant}
+        hasVariants={hasVariants}
       />
     </div>
   );

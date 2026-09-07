@@ -24,8 +24,10 @@ import {
   FULFILLMENT_TYPE_LABELS,
   type FulfillmentType,
   type ProductType,
+  type VariantRow,
 } from "@/lib/validations/productSchema";
 import type { BrandRow, ProductRow, TechDocRow } from "@/lib/admin-data";
+import { useToast } from "@/components/admin/Toast";
 
 interface FeatureInput {
   label: string;
@@ -39,15 +41,6 @@ interface TechDocItem {
   fileUrl: string;
   fileSizeKb: number | null;
   requiresLead: boolean;
-}
-
-interface VariantRow {
-  id?: string;
-  label: string;
-  sku: string;
-  price_override: string;
-  stock: string;
-  variant_group: string;
 }
 
 export interface ProductFormValues {
@@ -286,6 +279,7 @@ export default function ProductForm({
   initialVariants?: VariantRow[];
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [form, setForm] = useState<ProductFormValues>(() => ({
     ...toFormValues(initial, productType),
     variants: initialVariants,
@@ -487,9 +481,6 @@ const [saving, setSaving] = useState(false);
     setSaving(true);
     setErrors({});
 
-    // TODO: kirim variantsPayload ke upsert_product_variants RPC di
-    // langkah berikutnya (server action belum di-wire)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- akan dipakai untuk RPC upsert_product_variants di langkah berikutnya
     const variantsPayload = form.variants.filter((v) => v.label.trim());
 
     // Exclude variants dari payload upsertProduct — Zod schema lama
@@ -504,11 +495,15 @@ const [saving, setSaving] = useState(false);
       features: form.features.filter((f) => f.trim()),
     };
 
-    const result = await upsertProduct(payload);
+    const result = await upsertProduct(payload, variantsPayload);
     setSaving(false);
     if (!result.success) {
       setErrors(result.errors ?? {});
       return;
+    }
+
+    if (result.variantWarning) {
+      toast("error", result.variantWarning);
     }
 
     const productId = form.id || (result as { productId?: string }).productId;

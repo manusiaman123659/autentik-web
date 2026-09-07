@@ -73,6 +73,7 @@ export const checkoutOrderSchema = z.object({
       z.object({
         productId: z.string().min(1, "ID produk tidak valid"),
         quantity: z.coerce.number().int().min(1).max(999, "Jumlah maksimal 999"),
+        variantId: z.string().uuid().nullable().optional(),
       })
     )
     .min(1, "Minimal 1 item pesanan"),

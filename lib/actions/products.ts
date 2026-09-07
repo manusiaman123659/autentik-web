@@ -5,13 +5,14 @@ import { cookies } from "next/headers";
 import type { ZodError } from "zod";
 import { getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
-import { productSchema } from "@/lib/validations/productSchema";
+import { productSchema, type VariantRow } from "@/lib/validations/productSchema";
 import { recordAudit } from "@/lib/audit";
 
 export interface ActionResult {
   success: boolean;
   message: string;
   errors?: Record<string, string>;
+  variantWarning?: string;
 }
 
 function toErrors(error: ZodError): Record<string, string> {
@@ -59,7 +60,10 @@ const revalidateProductRoutes = () => {
   revalidatePath("/admin/stok");
 };
 
-export async function upsertProduct(input: unknown): Promise<ActionResult> {
+export async function upsertProduct(
+  input: unknown,
+  variantsPayload?: VariantRow[]
+): Promise<ActionResult> {
   const admin = await getAdminUser();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
@@ -75,6 +79,8 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
   const id = p.id && p.id.trim() ? p.id.trim() : p.slug.replace(/[^a-z0-9-]/g, "");
 
   const isB2B = p.productType === "b2b_system";
+
+  const isSparepart = p.productType === "sparepart";
 
   const isNonReady = p.fulfillmentType !== "ready_stock";
 
@@ -188,6 +194,30 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
     { name: p.name, type: p.productType }
   );
   revalidateProductRoutes();
+
+  // Wire variants untuk sparepart via RPC
+  if (variantsPayload && isSparepart) {
+    const { error: variantError } = await supabase.rpc("upsert_product_variants", {
+      p_product_id: id,
+      p_variants: variantsPayload.map((v, i) => ({
+        id: v.id || null,
+        label: v.label,
+        sku: v.sku || null,
+        price_override: v.price_override ? Number(v.price_override) : null,
+        stock: Number(v.stock),
+        variant_group: v.variant_group || null,
+        sort_order: i,
+      })),
+    });
+    if (variantError) {
+      console.error("[action] upsert product variants", variantError);
+      return {
+        success: true,
+        message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+        variantWarning: "Gagal menyimpan varian: " + variantError.message,
+      };
+    }
+  }
 
   return { success: true, message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan." };
 }

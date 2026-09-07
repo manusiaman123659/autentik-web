@@ -120,6 +120,9 @@ export default function PrintCustomerInvoice({ snapshot, bankAccount }: Props) {
                 </td>
                 <td className="border border-slate-300 px-3 py-2 text-slate-900 font-medium">
                   {item.name}
+                  {item.variant_label && (
+                    <p className="text-[10px] text-slate-500 font-normal">Varian: {item.variant_label}</p>
+                  )}
                 </td>
                 <td className="border border-slate-300 px-3 py-2 text-slate-600">
                   {item.brand}

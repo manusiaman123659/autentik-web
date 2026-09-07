@@ -11,6 +11,8 @@ import {
 
 export interface CartItem {
   id: string;
+  variant_id: string | null;
+  variant_label: string | null;
   slug: string;
   name: string;
   brand: string;
@@ -22,6 +24,8 @@ export interface CartItem {
 
 export interface CartItemInput {
   id: string;
+  variant_id?: string | null;
+  variant_label?: string | null;
   slug: string;
   name: string;
   brand: string;
@@ -37,8 +41,8 @@ interface CartContextValue {
   totalItems: number;
   subtotal: number;
   addItem: (product: CartItemInput, quantity?: number) => void;
-  removeItem: (id: string) => void;
-  updateQty: (id: string, quantity: number) => void;
+  removeItem: (id: string, variantId?: string | null) => void;
+  updateQty: (id: string, quantity: number, variantId?: string | null) => void;
   clearCart: () => void;
 }
 
@@ -76,6 +80,10 @@ export function useCart() {
   return ctx;
 }
 
+function isSameItem(a: { id: string; variant_id: string | null }, b: { id: string; variant_id: string | null }): boolean {
+  return a.id === b.id && a.variant_id === b.variant_id;
+}
+
 export default function CartProvider({
   children,
 }: {
@@ -103,8 +111,12 @@ export default function CartProvider({
     setItems((prev) => {
       const stock = Math.max(0, product.stock ?? 0);
       if (stock < 1 || product.price == null) return prev;
+      const variantId = product.variant_id ?? null;
+      const variantLabel = product.variant_label ?? null;
       const item: CartItem = {
         id: product.id,
+        variant_id: variantId,
+        variant_label: variantLabel,
         slug: product.slug,
         name: product.name,
         brand: product.brand,
@@ -114,10 +126,10 @@ export default function CartProvider({
         quantity: 1,
       };
       const qty = Math.max(1, Math.min(stock, quantity));
-      const existing = prev.find((i) => i.id === item.id);
+      const existing = prev.find((i) => isSameItem(i, item));
       if (existing) {
         return prev.map((i) =>
-          i.id === item.id
+          isSameItem(i, item)
             ? {
                 ...i,
                 price: item.price,
@@ -131,14 +143,14 @@ export default function CartProvider({
     });
   }, []);
 
-  const removeItem = useCallback((id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const removeItem = useCallback((id: string, variantId?: string | null) => {
+    setItems((prev) => prev.filter((i) => !isSameItem(i, { id, variant_id: variantId ?? null })));
   }, []);
 
-  const updateQty = useCallback((id: string, quantity: number) => {
+  const updateQty = useCallback((id: string, quantity: number, variantId?: string | null) => {
     setItems((prev) =>
       prev.map((i) =>
-        i.id === id
+        isSameItem(i, { id, variant_id: variantId ?? null })
           ? { ...i, quantity: Math.max(1, Math.min(i.stock, quantity)) }
           : i
       )

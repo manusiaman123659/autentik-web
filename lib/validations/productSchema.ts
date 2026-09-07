@@ -9,6 +9,15 @@ export const FULFILLMENT_TYPE_LABELS: Record<FulfillmentType, string> = {
   third_party: "Pihak Ketiga (technical support)",
 };
 
+export interface VariantRow {
+  id?: string;
+  label: string;
+  sku: string;
+  price_override: string;
+  stock: string;
+  variant_group: string;
+}
+
 const baseProduct = z.object({
   id: z.string().optional(),
   slug: z

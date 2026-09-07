@@ -11,6 +11,7 @@ export interface OrderSnapshot {
     image_url: string | null;
     price: number;
     quantity: number;
+    variant_label: string | null;
   }[];
   subtotal: number;
   shippingCost?: number;

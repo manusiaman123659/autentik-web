@@ -28,6 +28,7 @@ type DbOrderItem = {
   unit_price: number;
   quantity: number;
   product_id: string | null;
+  variant_label?: string | null;
 };
 
 type DbOrder = {
@@ -74,6 +75,7 @@ function buildSnapshotFromDb(db: DbOrder): OrderSnapshot {
       image_url: null,
       price: Number(it.unit_price),
       quantity: it.quantity,
+      variant_label: it.variant_label ?? null,
     })),
     subtotal: Number(db.subtotal),
     shippingCost: Number(db.shipping_cost),
@@ -393,6 +395,11 @@ export default function OrderConfirmationClient({
                   <p className="text-sm font-bold line-clamp-2" style={{ color: "var(--text-primary)" }}>
                     {item.name}
                   </p>
+                  {item.variant_label && (
+                    <p className="text-[10px] font-medium mt-0.5" style={{ color: "var(--text-muted)" }}>
+                      Varian: {item.variant_label}
+                    </p>
+                  )}
                   <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>
                     {item.quantity} × {formatRupiah(item.price)}
                   </p>

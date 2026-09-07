@@ -191,7 +191,7 @@ export async function getRecruitmentUrlSetting(): Promise<string> {
   return typeof value.url === "string" && value.url ? value.url : "";
 }
 
-async function getSupabase() {
+export async function getSupabase() {
   const cookieStore = await cookies();
   return createClient(cookieStore);
 }
@@ -591,6 +591,17 @@ export async function listBrands(): Promise<BrandRow[]> {
     return [];
   }
   return (data ?? []) as BrandRow[];
+}
+
+export async function getProductVariants(productId: string) {
+  const supabase = await getSupabase();
+  const { data } = await supabase
+    .from("product_variants")
+    .select("id, label, sku, price_override, stock, variant_group")
+    .eq("product_id", productId)
+    .is("deleted_at", null)
+    .order("sort_order");
+  return data ?? [];
 }
 
 export async function getBrand(id: string): Promise<BrandRow | null> {
