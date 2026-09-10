@@ -13,6 +13,7 @@ export interface ActionResult {
   message: string;
   errors?: Record<string, string>;
   variantWarning?: string;
+  hotspotWarning?: string;
 }
 
 function toErrors(error: ZodError): Record<string, string> {
@@ -62,7 +63,8 @@ const revalidateProductRoutes = () => {
 
 export async function upsertProduct(
   input: unknown,
-  variantsPayload?: VariantRow[]
+  variantsPayload?: VariantRow[],
+  hotspotsPayload?: { id?: string; position_x: number; position_y: number; position_z: number; title: string; description?: string | null }[]
 ): Promise<ActionResult> {
   const admin = await getAdminUser();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
@@ -215,6 +217,30 @@ export async function upsertProduct(
         success: true,
         message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
         variantWarning: "Gagal menyimpan varian: " + variantError.message,
+      };
+    }
+  }
+
+  // Wire hotspots untuk b2b_system via RPC
+  if (hotspotsPayload && !isSparepart) {
+    const { error: hotspotError } = await supabase.rpc("upsert_product_hotspots", {
+      p_product_id: id,
+      p_hotspots: hotspotsPayload.map((h, i) => ({
+        id: h.id || null,
+        position_x: h.position_x,
+        position_y: h.position_y,
+        position_z: h.position_z,
+        title: h.title,
+        description: h.description || null,
+        sort_order: i,
+      })),
+    });
+    if (hotspotError) {
+      console.error("[action] upsert product hotspots", hotspotError);
+      return {
+        success: true,
+        message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+        hotspotWarning: "Gagal menyimpan hotspot: " + hotspotError.message,
       };
     }
   }

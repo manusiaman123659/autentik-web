@@ -79,6 +79,15 @@ export default async function ProductDetailPage({ params }: Props) {
     requires_lead: boolean;
   }> = [];
 
+  let hotspots: Array<{
+    id: string;
+    position_x: number;
+    position_y: number;
+    position_z: number;
+    title: string;
+    description: string | null;
+  }> = [];
+
   try {
     const { cookies } = await import("next/headers");
     const { createClient } = await import("@/utils/supabase/server");
@@ -90,8 +99,18 @@ export default async function ProductDetailPage({ params }: Props) {
       .eq("product_id", row.id)
       .order("created_at", { ascending: true });
     documents = docs ?? [];
+
+    const { data: hotspotRows } = await supabase
+      .from("product_hotspots")
+      .select("id, position_x, position_y, position_z, title, description")
+      .eq("product_id", row.id)
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("sort_order");
+    hotspots = hotspotRows ?? [];
   } catch {
     documents = [];
+    hotspots = [];
   }
 
   return (
@@ -136,6 +155,7 @@ export default async function ProductDetailPage({ params }: Props) {
               brand={product.brand}
               imageUrl={product.imageUrl}
               model3dUrl={product.model3dUrl}
+              hotspots={hotspots}
             />
 
             {/* Right — Details */}

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getProduct, listBrands, listTechnicalDocuments } from "@/lib/admin-data";
+import { getProduct, listBrands, listTechnicalDocuments, getProductHotspots } from "@/lib/admin-data";
 import { PageHeader } from "@/components/admin/ui";
 import ProductForm from "@/components/admin/ProductForm";
+import type { HotspotItem } from "@/components/admin/ProductForm";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -16,17 +17,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AdminProdukEditPage({ params }: Props) {
   const { id } = await params;
-  const [product, brands, techDocs] = await Promise.all([
+  const [product, brands, techDocs, hotspots] = await Promise.all([
     getProduct(id),
     listBrands(),
     listTechnicalDocuments(id),
+    getProductHotspots(id),
   ]);
   if (!product || product.product_type !== "b2b_system") notFound();
+
+  const initialHotspots: HotspotItem[] = hotspots.map((h) => ({
+    id: h.id,
+    _tempKey: h.id,
+    position_x: h.position_x,
+    position_y: h.position_y,
+    position_z: h.position_z,
+    title: h.title,
+    description: h.description,
+  }));
 
   return (
     <div>
       <PageHeader title="Edit Produk B2B" description={product.name} backHref="/admin/produk" />
-      <ProductForm productType="b2b_system" initial={product} brands={brands} initialDocuments={techDocs} />
+      <ProductForm productType="b2b_system" initial={product} brands={brands} initialDocuments={techDocs} initialHotspots={initialHotspots} />
     </div>
   );
 }

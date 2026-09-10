@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   Loader2,
   Plus,
@@ -14,6 +15,7 @@ import {
   ArrowDown,
   FileText,
   Box,
+  MapPin,
 } from "lucide-react";
 import { upsertProduct } from "@/lib/actions/products";
 import { upsertTechnicalDocument, deleteTechnicalDocument } from "@/lib/actions/technicalDocuments";
@@ -41,6 +43,16 @@ interface TechDocItem {
   fileUrl: string;
   fileSizeKb: number | null;
   requiresLead: boolean;
+}
+
+export interface HotspotItem {
+  _tempKey: string;
+  id?: string;
+  position_x: number;
+  position_y: number;
+  position_z: number;
+  title: string;
+  description: string | null;
 }
 
 export interface ProductFormValues {
@@ -271,12 +283,14 @@ export default function ProductForm({
   brands = [],
   initialDocuments = [],
   initialVariants = [],
+  initialHotspots = [],
 }: {
   productType: ProductType;
   initial?: ProductRow;
   brands?: BrandRow[];
   initialDocuments?: TechDocRow[];
   initialVariants?: VariantRow[];
+  initialHotspots?: HotspotItem[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -302,6 +316,9 @@ const [saving, setSaving] = useState(false);
       requiresLead: d.requires_lead,
     })),
   );
+  const [hotspots, setHotspots] = useState<HotspotItem[]>(initialHotspots);
+  const [editingHotspot, setEditingHotspot] = useState<HotspotItem | null>(null);
+  const [isPlacingHotspot, setIsPlacingHotspot] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const brochureInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -477,11 +494,36 @@ const [saving, setSaving] = useState(false);
     }
   };
 
+  const handleHotspotPlace = (local: { x: number; y: number; z: number }) => {
+    if (editingHotspot !== null) return;
+    setEditingHotspot({
+      _tempKey: crypto.randomUUID(),
+      position_x: local.x,
+      position_y: local.y,
+      position_z: local.z,
+      title: "",
+      description: null,
+    });
+  };
+
   const handleSubmit = async () => {
     setSaving(true);
     setErrors({});
 
     const variantsPayload = form.variants.filter((v) => v.label.trim());
+
+    const hotspotsPayload = !isSparepart
+      ? hotspots
+          .filter((h) => h.title.trim())
+          .map((h) => ({
+            id: h.id,
+            position_x: h.position_x,
+            position_y: h.position_y,
+            position_z: h.position_z,
+            title: h.title,
+            description: h.description,
+          }))
+      : undefined;
 
     // Exclude variants dari payload upsertProduct — Zod schema lama
     // (productSchema) masih expect struktur {name, options: string[]},
@@ -495,7 +537,7 @@ const [saving, setSaving] = useState(false);
       features: form.features.filter((f) => f.trim()),
     };
 
-    const result = await upsertProduct(payload, variantsPayload);
+    const result = await upsertProduct(payload, variantsPayload, hotspotsPayload);
     setSaving(false);
     if (!result.success) {
       setErrors(result.errors ?? {});
@@ -504,6 +546,9 @@ const [saving, setSaving] = useState(false);
 
     if (result.variantWarning) {
       toast("error", result.variantWarning);
+    }
+    if (result.hotspotWarning) {
+      toast("error", result.hotspotWarning);
     }
 
     const productId = form.id || (result as { productId?: string }).productId;
@@ -864,6 +909,125 @@ onChange={(e) => set("description", e.target.value)}
             </button>
           )}
           <FieldError message={modelUploadError || errors.model3dUrl} />
+        </section>
+      )}
+
+      {!isSparepart && form.id && !form.model3dUrl && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">Hotspot Produk</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Upload model 3D terlebih dahulu untuk menambahkan hotspot interaktif.
+          </p>
+        </section>
+      )}
+
+      {!isSparepart && form.id && form.model3dUrl && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Hotspot Produk</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Klik titik pada model 3D untuk menambahkan hotspot penjelasan.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (isPlacingHotspot) {
+                  setIsPlacingHotspot(false);
+                  setEditingHotspot(null);
+                } else {
+                  setIsPlacingHotspot(true);
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                isPlacingHotspot
+                  ? "border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60"
+                  : "border-[#0EA5A0] text-[#0EA5A0] bg-[#0EA5A0]/5 hover:bg-[#0EA5A0]/10"
+              }`}
+            >
+              <MapPin size={14} />
+              {isPlacingHotspot ? "Selesai Menempatkan" : "Tempatkan Hotspot"}
+            </button>
+          </div>
+
+          <div className="w-full aspect-square rounded-xl relative overflow-hidden border border-slate-200 dark:border-slate-800 mb-5">
+            <Model3DViewer
+              url={form.model3dUrl}
+              hotspots={hotspots}
+              editable={isPlacingHotspot}
+              onHotspotPlace={handleHotspotPlace}
+            />
+          </div>
+
+          {hotspots.length === 0 && (
+            <p className="text-xs text-slate-400 mb-4">Belum ada hotspot. Klik &quot;Tempatkan Hotspot&quot; lalu klik titik pada model.</p>
+          )}
+
+          {hotspots.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400">Judul</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400">Deskripsi</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-20">Koordinat</th>
+                    <th className="py-2 pl-2 w-20"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hotspots.map((h) => (
+                    <tr key={h._tempKey} className="border-b border-slate-100 dark:border-slate-800">
+                      <td className="py-1.5 px-2 font-medium text-slate-700 dark:text-slate-200">{h.title || <span className="text-slate-400 italic">Tanpa judul</span>}</td>
+                      <td className="py-1.5 px-2 text-slate-500 dark:text-slate-400 max-w-[200px] truncate">{h.description || "—"}</td>
+                      <td className="py-1.5 px-2 text-slate-400 font-mono text-[10px]">
+                        {h.position_x.toFixed(2)}, {h.position_y.toFixed(2)}, {h.position_z.toFixed(2)}
+                      </td>
+                      <td className="py-1.5 pl-2">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingHotspot(h)}
+                            className="text-slate-400 hover:text-[#0EA5A0] transition-colors"
+                            aria-label="Edit hotspot"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setHotspots((prev) => prev.filter((x) => x._tempKey !== h._tempKey))}
+                            className="text-slate-400 hover:text-red-500 transition-colors"
+                            aria-label="Hapus hotspot"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {editingHotspot && (
+            <HotspotModal
+              hotspot={editingHotspot}
+              onSave={(title, description) => {
+                setHotspots((prev) => {
+                  const exists = prev.some((x) => x._tempKey === editingHotspot._tempKey);
+                  if (exists) {
+                    return prev.map((x) =>
+                      x._tempKey === editingHotspot._tempKey ? { ...x, title, description } : x
+                    );
+                  }
+                  return [...prev, { ...editingHotspot, title, description }];
+                });
+                setEditingHotspot(null);
+              }}
+              onClose={() => setEditingHotspot(null)}
+            />
+          )}
         </section>
       )}
 
@@ -1228,6 +1392,99 @@ onChange={(e) => set("description", e.target.value)}
 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           {isSparepart ? "Simpan Sparepart" : "Simpan Produk"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+const Model3DViewer = dynamic(() => import("@/components/product/Product3DViewer"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-[#0a1628]">
+      <Loader2 size={24} className="animate-spin text-[#0EA5A0]" />
+    </div>
+  ),
+});
+
+function HotspotModal({
+  hotspot,
+  onSave,
+  onClose,
+}: {
+  hotspot: HotspotItem;
+  onSave: (title: string, description: string | null) => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(hotspot.title);
+  const [description, setDescription] = useState(hotspot.description ?? "");
+  const [error, setError] = useState("");
+
+  const handleSave = () => {
+    if (!title.trim()) {
+      setError("Judul wajib diisi.");
+      return;
+    }
+    onSave(title.trim(), description.trim() || null);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <MapPin size={18} className="text-[#0EA5A0]" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            {hotspot.id ? "Edit Hotspot" : "Hotspot Baru"}
+          </h3>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+              Judul <span className="text-red-500">*</span>
+            </label>
+            <input
+              autoFocus
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0]"
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); setError(""); }}
+              placeholder="mis. Panel Utama"
+              onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+            />
+            {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+              Deskripsi (opsional)
+            </label>
+            <textarea
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] resize-none"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="Penjelasan singkat tentang titik ini..."
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0C8C87] transition-colors"
+          >
+            <Save size={15} />
+            Simpan
+          </button>
+        </div>
       </div>
     </div>
   );

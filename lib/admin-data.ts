@@ -372,6 +372,33 @@ export async function listTechnicalDocuments(productId: string): Promise<TechDoc
   return (data ?? []) as TechDocRow[];
 }
 
+export interface HotspotRow {
+  id: string;
+  product_id: string;
+  position_x: number;
+  position_y: number;
+  position_z: number;
+  title: string;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export async function getProductHotspots(productId: string): Promise<HotspotRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("product_hotspots")
+    .select("*")
+    .eq("product_id", productId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[admin-data] product hotspots", error);
+    return [];
+  }
+  return (data ?? []) as HotspotRow[];
+}
+
 export async function listStaff(): Promise<StaffRow[]> {
   const supabase = await getSupabase();
   const { data, error } = await supabase

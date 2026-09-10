@@ -66,6 +66,9 @@ export default function CompanyProfileViewer({
   const frontCanvasRef = useRef<HTMLCanvasElement>(null);
   const backCanvasRef = useRef<HTMLCanvasElement>(null);
   const pdfCacheRef = useRef<Map<number, HTMLCanvasElement>>(new Map());
+  const renderTasksRef = useRef<
+    Map<number, { task: { cancel(): void; promise: Promise<void> }; canvas: HTMLCanvasElement }>
+  >(new Map());
   const flipContainerRef = useRef<HTMLDivElement>(null);
 
   const slideTotal = hasPdf ? numPages : TOTAL_SLIDES;
@@ -113,7 +116,12 @@ export default function CompanyProfileViewer({
   }, [hasPdf, pdfUrl]);
 
   useEffect(() => {
+    const tasks = renderTasksRef.current;
+    const cache = pdfCacheRef.current;
     return () => {
+      tasks.forEach(({ task }) => task.cancel());
+      tasks.clear();
+      cache.clear();
       void pdfDoc?.cleanup().catch(() => {});
     };
   }, [pdfDoc]);
@@ -148,8 +156,10 @@ export default function CompanyProfileViewer({
   }, [isFullscreen]);
 
   useEffect(() => {
+    renderTasksRef.current.forEach(({ task }) => task.cancel());
+    renderTasksRef.current.clear();
     pdfCacheRef.current.clear();
-  }, [stageWidth, stageHeight]);
+  }, [stageWidth, stageHeight, pageAspectRatio]);
 
   /* ─── Render PDF page to canvas (with caching) ─── */
   const renderPageToCanvas = useCallback(
@@ -157,6 +167,12 @@ export default function CompanyProfileViewer({
       if (!pdfDoc) return null;
       const cached = pdfCacheRef.current.get(pageNumber);
       if (cached) return cached;
+
+      const existing = renderTasksRef.current.get(pageNumber);
+      if (existing) {
+        existing.task.cancel();
+        renderTasksRef.current.delete(pageNumber);
+      }
 
       const page = await pdfDoc.getPage(pageNumber + 1);
       const baseVp = page.getViewport({ scale: 1 });
@@ -172,14 +188,20 @@ export default function CompanyProfileViewer({
       full.height = Math.floor(vp.height);
       const fullCtx = full.getContext("2d");
       if (!fullCtx) return null;
-      await page
-        .render({
-          canvasContext: fullCtx,
-          viewport: vp,
-          canvas: full,
-          background: "#ffffff",
-        })
-        .promise;
+
+      const renderTask = page.render({
+        canvasContext: fullCtx,
+        viewport: vp,
+        canvas: full,
+        background: "#ffffff",
+      });
+      renderTasksRef.current.set(pageNumber, { task: renderTask, canvas: full });
+
+      try {
+        await renderTask.promise;
+      } finally {
+        renderTasksRef.current.delete(pageNumber);
+      }
 
       const out = document.createElement("canvas");
       out.width = boxW;
@@ -441,6 +463,11 @@ export default function CompanyProfileViewer({
   const renderThumbPage = useCallback(
     async (canvas: HTMLCanvasElement, pageNum: number) => {
       if (!pdfDoc) return;
+      const existing = renderTasksRef.current.get(pageNum);
+      if (existing) {
+        existing.task.cancel();
+        renderTasksRef.current.delete(pageNum);
+      }
       const page = await pdfDoc.getPage(pageNum + 1);
       const baseVp = page.getViewport({ scale: 1 });
       const thumbW = 160;
@@ -450,12 +477,18 @@ export default function CompanyProfileViewer({
       canvas.height = Math.floor(vp.height);
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      await page.render({
+      const renderTask = page.render({
         canvasContext: ctx,
         viewport: vp,
         canvas,
         background: "#ffffff",
-      }).promise;
+      });
+      renderTasksRef.current.set(pageNum, { task: renderTask, canvas });
+      try {
+        await renderTask.promise;
+      } finally {
+        renderTasksRef.current.delete(pageNum);
+      }
     },
     [pdfDoc]
   );

@@ -24,6 +24,16 @@ interface ProductMediaTabsProps {
   brand?: string;
   imageUrl?: string;
   model3dUrl?: string;
+  hotspots?: Hotspot[];
+}
+
+interface Hotspot {
+  id: string;
+  position_x: number;
+  position_y: number;
+  position_z: number;
+  title: string;
+  description: string | null;
 }
 
 export default function ProductMediaTabs({
@@ -31,6 +41,7 @@ export default function ProductMediaTabs({
   brand,
   imageUrl,
   model3dUrl,
+  hotspots = [],
 }: ProductMediaTabsProps) {
   const [tab, setTab] = useState<"foto" | "3d">("foto");
   const has3d = Boolean(model3dUrl);
@@ -67,14 +78,14 @@ export default function ProductMediaTabs({
         </div>
       ) : (
         <div
-          className="w-full aspect-square rounded-2xl relative overflow-hidden border"
+          className="w-full aspect-square rounded-2xl relative border"
           style={{
             backgroundColor: "var(--bg-secondary)",
             borderColor: "var(--border-subtle)",
           }}
         >
           {model3dUrl ? (
-            <Model3DViewer url={model3dUrl} />
+            <Model3DViewer url={model3dUrl} hotspots={hotspots} />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">
               Model 3D tidak tersedia.
