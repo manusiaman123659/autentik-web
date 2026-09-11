@@ -1,63 +1,99 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import {
-  Lightbulb,
-  Globe,
-  Users,
-  Briefcase,
-  MapPin,
-  ArrowRight,
-  Search,
-  CheckCircle2,
-  X,
-  Building2,
   Sparkles,
+  Lightbulb,
+  Users,
+  Search,
+  TrendingUp,
+  HeartHandshake,
+  Send,
 } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
-import ApplyRecruitmentButton from "@/components/careers/ApplyRecruitmentButton";
-import type { CareerPosition } from "@/lib/data/careers";
+import MikaJobCard from "@/components/careers/MikaJobCard";
+import MikaJobFilter from "@/components/careers/MikaJobFilter";
+import MikaPagination from "@/components/careers/MikaPagination";
+import { getMikaJobs } from "@/lib/api/mika-career";
+import type { MikaJob, MikaDepartment, MikaPaginationMeta } from "@/types/mika-career";
 
-function typeBadgeClass(color: CareerPosition["typeBadgeColor"]): string {
-  return color === "green"
-    ? "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300"
-    : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300";
+interface CareersClientProps {
+  initialJobs: MikaJob[];
+  initialMeta: MikaPaginationMeta;
+  departments: MikaDepartment[];
+  recruitmentUrl: string | null;
+  apiMessage?: string;
 }
 
 export default function CareersClient({
-  jobs,
+  initialJobs,
+  initialMeta,
+  departments,
   recruitmentUrl,
-}: {
-  jobs: CareerPosition[];
-  recruitmentUrl: string | null;
-}) {
+  apiMessage,
+}: CareersClientProps) {
+  const [jobs, setJobs] = useState<MikaJob[]>(initialJobs);
+  const [meta, setMeta] = useState<MikaPaginationMeta>(initialMeta);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDept, setSelectedDept] = useState("Semua");
-  const [selectedJob, setSelectedJob] = useState<CareerPosition | null>(null);
+  const [selectedDept, setSelectedDept] = useState("all");
+  const [selectedEmploymentType, setSelectedEmploymentType] = useState("all");
+  const [selectedLocation, setSelectedLocation] = useState("all");
+  const [isPending, startTransition] = useTransition();
 
-  const departments = useMemo(
-    () => ["Semua", ...Array.from(new Set(jobs.map((j) => j.department)))],
-    [jobs]
+  // Fetch jobs dynamically when filters or page change
+  const fetchFilteredJobs = useCallback(
+    (pageNumber: number = 1) => {
+      startTransition(async () => {
+        const res = await getMikaJobs({
+          page: pageNumber,
+          per_page: 10,
+          search: searchQuery,
+          department_id: selectedDept,
+          employment_type: selectedEmploymentType,
+          location: selectedLocation,
+        });
+
+        if (res && res.data) {
+          setJobs(res.data);
+          setMeta(res.meta);
+        }
+      });
+    },
+    [searchQuery, selectedDept, selectedEmploymentType, selectedLocation]
   );
 
-  const filteredJobs = jobs.filter((job) => {
-    const matchesDept =
-      selectedDept === "Semua" || job.department.toLowerCase() === selectedDept.toLowerCase();
-    const matchesSearch =
-      job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.department.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesDept && matchesSearch;
-  });
+  // Debounced search trigger
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchFilteredJobs(1);
+    }, 280);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedDept, selectedEmploymentType, selectedLocation, fetchFilteredJobs]);
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setSelectedDept("all");
+    setSelectedEmploymentType("all");
+    setSelectedLocation("all");
+  };
+
+  const handlePageChange = (newPage: number) => {
+    fetchFilteredJobs(newPage);
+    // Smooth scroll to top of job list
+    const el = document.getElementById("jobs-list-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   return (
     <>
-      {/* Hero Section */}
+      {/* ─── Hero Section ────────────────────────────────────────────────────────── */}
       <section
         className="pt-32 pb-20 relative overflow-hidden"
         style={{
-          background:
-            "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
+          background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
         }}
       >
         <div
@@ -78,330 +114,300 @@ export default function CareersClient({
           <AnimatedElement type="fade-up" className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0EA5A0]/15 border border-[#0EA5A0]/30 text-[#14B8A6] text-xs font-semibold uppercase tracking-wider mb-6">
               <Sparkles size={14} />
-              Bergabung Bersama Tim Autentik
+              Mika Career - Portal Rekrutmen & Karir
             </div>
+
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-6 leading-tight">
-              Karir
+              Wujudkan Potensi Terbaik Anda Bersama Kami
             </h1>
-            <p className="text-lg sm:text-xl text-slate-300 leading-relaxed font-light">
-              Kami mencari talenta-talenta terbaik untuk bergabung bersama kami dalam menghadirkan solusi teknologi pintar bagi kehidupan yang lebih baik.
+
+            <p className="text-lg sm:text-xl text-slate-300 leading-relaxed font-light mb-8">
+              Jelajahi berbagai peluang karir menarik di bidang teknologi instrumentasi, IoT, software engineering, dan technical sales. Kami mengundang talenta berdedikasi untuk bertumbuh bersama.
             </p>
+
+            {/* Quick Stats Strip */}
+            <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-slate-700/60">
+              <div>
+                <span className="block text-2xl font-bold text-white">
+                  {meta.total_items}
+                </span>
+                <span className="text-xs text-slate-400">Posisi Lowongan Aktif</span>
+              </div>
+              <div className="w-px h-8 bg-slate-700" />
+              <div>
+                <span className="block text-2xl font-bold text-teal-400">
+                  {departments.length}
+                </span>
+                <span className="text-xs text-slate-400">Departemen Kerja</span>
+              </div>
+              <div className="w-px h-8 bg-slate-700" />
+              <div>
+                <span className="block text-2xl font-bold text-white">100%</span>
+                <span className="text-xs text-slate-400">Peluang Pertumbuhan Karir</span>
+              </div>
+            </div>
           </AnimatedElement>
         </div>
       </section>
 
-      {/* Mengapa Autentik Section */}
-      <section className="py-24 px-6 lg:px-12" style={{ backgroundColor: "var(--bg-secondary)" }}>
-        <div className="max-w-7xl mx-auto text-center mb-16">
-          <AnimatedElement type="fade-up">
-            <h2
-              className="text-3xl md:text-4xl font-bold tracking-tight mb-4"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Mengapa Autentik?
-            </h2>
-            <p
-              className="text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              Budaya kami dibangun atas inovasi, transparansi, dan komitmen untuk menyelesaikan tantangan teknologi terberat.
-            </p>
-          </AnimatedElement>
-        </div>
-
-        <AnimatedElement type="stagger" className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Card 1 */}
-          <div
-            className="rounded-3xl p-10 shadow-sm border text-center flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-            style={{
-              backgroundColor: "var(--bg-card)",
-              borderColor: "var(--border-subtle)",
-            }}
-          >
-            <div className="w-14 h-14 bg-[#0EA5A0]/10 rounded-2xl flex items-center justify-center mb-6 text-[#0EA5A0]">
-              <Lightbulb className="w-7 h-7" />
-            </div>
-            <h3
-              className="text-xl font-bold mb-4"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Inovasi Tanpa Batas
-            </h3>
-            <p
-              className="font-light leading-relaxed text-sm"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              Kami mendorong setiap anggota tim untuk berinovasi dan memberikan solusi terbaik bagi pelanggan.
-            </p>
-          </div>
-
-          {/* Card 2 */}
-          <div
-            className="rounded-3xl p-10 shadow-sm border text-center flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-            style={{
-              backgroundColor: "var(--bg-card)",
-              borderColor: "var(--border-subtle)",
-            }}
-          >
-            <div className="w-14 h-14 bg-[#0EA5A0]/10 rounded-2xl flex items-center justify-center mb-6 text-[#0EA5A0]">
-              <Globe className="w-7 h-7" />
-            </div>
-            <h3
-              className="text-xl font-bold mb-4"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Dampak Nyata
-            </h3>
-            <p
-              className="font-light leading-relaxed text-sm"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              Solusi kami digunakan oleh berbagai industri untuk meningkatkan kualitas dan efisiensi.
-            </p>
-          </div>
-
-          {/* Card 3 */}
-          <div
-            className="rounded-3xl p-10 shadow-sm border text-center flex flex-col items-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-            style={{
-              backgroundColor: "var(--bg-card)",
-              borderColor: "var(--border-subtle)",
-            }}
-          >
-            <div className="w-14 h-14 bg-[#0EA5A0]/10 rounded-2xl flex items-center justify-center mb-6 text-[#0EA5A0]">
-              <Users className="w-7 h-7" />
-            </div>
-            <h3
-              className="text-xl font-bold mb-4"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Kolaborasi Tim
-            </h3>
-            <p
-              className="font-light leading-relaxed text-sm"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              Tim yang solid dan saling mendukung untuk mencapai tujuan bersama.
-            </p>
-          </div>
-        </AnimatedElement>
-      </section>
-
-      {/* Open Positions Section */}
-      <section className="py-24 px-6 lg:px-12" style={{ backgroundColor: "var(--bg-primary)" }}>
-        <div className="max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="w-full flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-            <div>
+      {/* ─── Mengapa Bergabung Section ───────────────────────────────────────────── */}
+      <section className="py-20 px-6 lg:px-12" style={{ backgroundColor: "var(--bg-secondary)" }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <AnimatedElement type="fade-up">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#0EA5A0] mb-2 block">
+                Budaya & Nilai
+              </span>
               <h2
-                className="text-3xl sm:text-4xl font-bold tracking-tight mb-2"
+                className="text-3xl sm:text-4xl font-bold tracking-tight mb-4"
                 style={{ color: "var(--text-primary)" }}
               >
-                Posisi Terbuka
+                Mengapa Membangun Karir di Sini?
               </h2>
-              <p
-                className="font-light text-sm sm:text-base"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Temukan tantangan berikutnya di tim kami yang terus berkembang.
+              <p className="text-sm sm:text-base leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                Kami percaya inovasi lahir dari kolaborasi yang sehat, apresiasi terhadap kontribusi, dan ruang bertumbuh yang terbuka lebar bagi setiap individu.
               </p>
-            </div>
-
-            {/* Department Filter Pills */}
-            <div className="flex flex-wrap gap-2">
-              {departments.map((dept) => (
-                <button
-                  key={dept}
-                  onClick={() => setSelectedDept(dept)}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                    selectedDept === dept
-                      ? "bg-[#0EA5A0] text-white shadow-md shadow-cyan-500/20"
-                      : "hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-                  }`}
-                  style={
-                    selectedDept !== dept
-                      ? { backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }
-                      : {}
-                  }
-                >
-                  {dept}
-                </button>
-              ))}
-            </div>
+            </AnimatedElement>
           </div>
 
-          {/* Search Filter Bar */}
-          <div className="mb-8 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama posisi atau departemen..."
-              className="w-full pl-11 pr-4 py-3 rounded-2xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0] transition-all"
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <AnimatedElement type="fade-up" delay={0.1}>
+              <div
+                className="p-6 rounded-2xl border transition-all hover:shadow-md h-full flex flex-col justify-between"
+                style={{
+                  backgroundColor: "var(--bg-card)",
+                  borderColor: "var(--border-subtle)",
+                }}
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-[#0EA5A0] flex items-center justify-center mb-5">
+                    <Lightbulb size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+                    Inovasi Tanpa Batas
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                    Bekerja langsung dengan teknologi modern: IoT, Next.js, sensor industri, dan analitika data presisi tinggi.
+                  </p>
+                </div>
+              </div>
+            </AnimatedElement>
+
+            <AnimatedElement type="fade-up" delay={0.2}>
+              <div
+                className="p-6 rounded-2xl border transition-all hover:shadow-md h-full flex flex-col justify-between"
+                style={{
+                  backgroundColor: "var(--bg-card)",
+                  borderColor: "var(--border-subtle)",
+                }}
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-[#0EA5A0] flex items-center justify-center mb-5">
+                    <Users size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+                    Tim Kolaboratif
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                    Lingkungan kerja suportif, komunikasi terbuka tanpa sekat birokrasi kaku, serta saling mendorong kemajuan.
+                  </p>
+                </div>
+              </div>
+            </AnimatedElement>
+
+            <AnimatedElement type="fade-up" delay={0.3}>
+              <div
+                className="p-6 rounded-2xl border transition-all hover:shadow-md h-full flex flex-col justify-between"
+                style={{
+                  backgroundColor: "var(--bg-card)",
+                  borderColor: "var(--border-subtle)",
+                }}
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-[#0EA5A0] flex items-center justify-center mb-5">
+                    <TrendingUp size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+                    Jenjang Karir Terarah
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                    Evaluasi kinerja transparan, program mentoring, serta dukungan anggaran sertifikasi dan pelatihan profesional.
+                  </p>
+                </div>
+              </div>
+            </AnimatedElement>
+
+            <AnimatedElement type="fade-up" delay={0.4}>
+              <div
+                className="p-6 rounded-2xl border transition-all hover:shadow-md h-full flex flex-col justify-between"
+                style={{
+                  backgroundColor: "var(--bg-card)",
+                  borderColor: "var(--border-subtle)",
+                }}
+              >
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-[#0EA5A0] flex items-center justify-center mb-5">
+                    <HeartHandshake size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+                    Kesejahteraan Karyawan
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                    Kompensasi kompetitif, asuransi BPJS lengkap, waktu kerja fleksibel/hybrid, dan penghargaan apresiasi berkala.
+                  </p>
+                </div>
+              </div>
+            </AnimatedElement>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Jobs Listing Section ─────────────────────────────────────────────────── */}
+      <section
+        id="jobs-list-section"
+        className="py-20 px-6 lg:px-12 scroll-mt-20"
+        style={{ backgroundColor: "var(--bg-primary)" }}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#0EA5A0] mb-2 block">
+                Peluang Tersedia
+              </span>
+              <h2
+                className="text-3xl font-bold tracking-tight"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Daftar Lowongan Pekerjaan
+              </h2>
+            </div>
+
+            {apiMessage && (
+              <div
+                className="text-xs px-3 py-1.5 rounded-md border flex items-center gap-1.5"
+                style={{
+                  backgroundColor: "var(--bg-secondary)",
+                  borderColor: "var(--border-subtle)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>{apiMessage}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Filter Bar */}
+          <MikaJobFilter
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedDepartment={selectedDept}
+            onDepartmentChange={setSelectedDept}
+            selectedEmploymentType={selectedEmploymentType}
+            onEmploymentTypeChange={setSelectedEmploymentType}
+            selectedLocation={selectedLocation}
+            onLocationChange={setSelectedLocation}
+            departments={departments}
+            onReset={handleResetFilters}
+            totalResults={meta.total_items}
+          />
+
+          {/* Loading Indicator */}
+          {isPending && (
+            <div className="text-center py-8">
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-[#0EA5A0]">
+                <div className="w-4 h-4 rounded-full border-2 border-[#0EA5A0] border-t-transparent animate-spin" />
+                Memperbarui lowongan...
+              </div>
+            </div>
+          )}
+
+          {/* Jobs Grid or Empty State */}
+          {jobs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {jobs.map((job) => (
+                <MikaJobCard key={job.id} job={job} />
+              ))}
+            </div>
+          ) : (
+            <div
+              className="text-center py-16 px-6 rounded-2xl border"
               style={{
                 backgroundColor: "var(--bg-card)",
                 borderColor: "var(--border-subtle)",
-                color: "var(--text-primary)",
               }}
-            />
-          </div>
-
-          {/* Job Openings List */}
-          <AnimatedElement type="fade-up" className="space-y-4">
-            {jobs.length === 0 ? (
-              <div
-                className="text-center py-16 rounded-2xl border text-slate-400"
-                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
-              >
-                <p className="text-base font-semibold">Belum ada posisi terbuka saat ini.</p>
-                <p className="text-xs mt-1">Pantau terus halaman ini atau hubungi kami melalui WhatsApp.</p>
+            >
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                <Search size={28} />
               </div>
-            ) : filteredJobs.length > 0 ? (
-              filteredJobs.map((job) => (
-                <div
-                  key={job.slug}
-                  onClick={() => setSelectedJob(job)}
-                  className="rounded-2xl p-6 md:p-8 border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group"
-                  style={{
-                    backgroundColor: "var(--bg-card)",
-                    borderColor: "var(--border-subtle)",
-                  }}
-                >
-                  <div>
-                    <h3
-                      className="text-xl font-bold mb-2 group-hover:text-[#0EA5A0] transition-colors"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {job.title}
-                    </h3>
-                    <p className="text-xs text-slate-400 mb-3 line-clamp-1 max-w-xl">
-                      {job.summary}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-500">
-                      <div className="flex items-center gap-1.5">
-                        <Briefcase className="w-3.5 h-3.5 text-[#0EA5A0]" />
-                        <span>{job.department}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#0EA5A0]" />
-                        <span>{job.location}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between w-full md:w-auto gap-6 md:gap-8 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
-                    <span
-                      className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${typeBadgeClass(job.typeBadgeColor)}`}
-                    >
-                      {job.type}
-                    </span>
-                    <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-[#0EA5A0] group-hover:translate-x-1 transition-all" />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div
-                className="text-center py-16 rounded-2xl border text-slate-400"
-                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
+              <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+                Tidak ada lowongan yang sesuai
+              </h3>
+              <p
+                className="text-sm max-w-md mx-auto mb-6"
+                style={{ color: "var(--text-secondary)" }}
               >
-                <p className="text-base font-semibold">Tidak ada posisi yang cocok dengan kata kunci &quot;{searchQuery}&quot;</p>
-                <p className="text-xs mt-1">Coba gunakan istilah pencarian lain atau pilih kategori Semua.</p>
-              </div>
-            )}
-          </AnimatedElement>
+                Kami tidak menemukan lowongan dengan kriteria filter yang Anda pilih. Coba sesuaikan kata kunci atau reset filter pencarian.
+              </p>
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0EA5A0] text-white text-xs font-semibold hover:bg-[#0c8e8a] transition-colors"
+              >
+                Reset Semua Filter
+              </button>
+            </div>
+          )}
+
+          {/* Pagination */}
+          <MikaPagination meta={meta} onPageChange={handlePageChange} />
         </div>
       </section>
 
-      {/* Job Details Modal */}
-      {selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div
-            className="w-full max-w-3xl rounded-3xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
-            style={{
-              backgroundColor: "var(--bg-card)",
-              borderColor: "var(--border-subtle)",
-            }}
-          >
-            {/* Header */}
-            <div className="p-6 md:p-8 border-b flex items-start justify-between relative" style={{ borderColor: "var(--border-subtle)" }}>
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <span
-                    className={`px-3 py-0.5 text-xs font-bold uppercase tracking-wider rounded-full ${typeBadgeClass(selectedJob.typeBadgeColor)}`}
-                  >
-                    {selectedJob.type}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-400">{selectedJob.department}</span>
-                </div>
-                <h3 className="text-2xl md:text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-                  {selectedJob.title}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedJob(null)}
-                className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
+      {/* ─── Spontaneous Application / CTA ───────────────────────────────────────── */}
+      <section className="py-20 px-6 lg:px-12 border-t" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+        <div className="max-w-4xl mx-auto text-center">
+          <AnimatedElement type="fade-up">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#0EA5A0] mb-2 block">
+              Inisiatif Karir
+            </span>
+            <h2
+              className="text-2xl sm:text-3xl font-bold tracking-tight mb-4"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Belum Menemukan Posisi yang Sesuai?
+            </h2>
+            <p
+              className="text-sm sm:text-base leading-relaxed max-w-2xl mx-auto mb-8"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Kami selalu terbuka bagi talenta-talenta luar biasa. Kirimkan CV dan portofolio Anda ke basis data rekrutmen kami untuk dihubungi saat posisi yang relevan dibuka.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              {recruitmentUrl ? (
+                <a
+                  href={recruitmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0c8e8a] transition-all shadow-md shadow-teal-600/10 hover:shadow-teal-600/20"
+                >
+                  <Send size={16} />
+                  Kirim Lamaran Terbuka
+                </a>
+              ) : (
+                <a
+                  href="/contact"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0c8e8a] transition-all shadow-md shadow-teal-600/10 hover:shadow-teal-600/20"
+                >
+                  <Send size={16} />
+                  Hubungi Tim Rekrutmen
+                </a>
+              )}
             </div>
-
-            {/* Content Body */}
-            <div className="overflow-y-auto p-6 md:p-8 space-y-6 flex-1 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-              <div>
-                <h4 className="font-bold text-base mb-2" style={{ color: "var(--text-primary)" }}>Deskripsi Pekerjaan:</h4>
-                <p className="whitespace-pre-line">{selectedJob.description.trim()}</p>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-base mb-3" style={{ color: "var(--text-primary)" }}>Tanggung Jawab Utama:</h4>
-                <ul className="space-y-2">
-                  {selectedJob.responsibilities.map((resp, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <CheckCircle2 size={16} className="text-[#0EA5A0] flex-shrink-0 mt-0.5" />
-                      <span>{resp}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-base mb-3" style={{ color: "var(--text-primary)" }}>Kualifikasi & Persyaratan:</h4>
-                <ul className="space-y-2">
-                  {selectedJob.requirements.map((req, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <CheckCircle2 size={16} className="text-[#0EA5A0] flex-shrink-0 mt-0.5" />
-                      <span>{req}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="font-bold text-base mb-3" style={{ color: "var(--text-primary)" }}>Fasilitas & Benefit:</h4>
-                <ul className="space-y-2">
-                  {selectedJob.benefits.map((ben, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <CheckCircle2 size={16} className="text-[#0EA5A0] flex-shrink-0 mt-0.5" />
-                      <span>{ben}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="p-6 border-t flex items-center justify-between gap-4" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Building2 size={14} />
-                <span>PT Autentik Karya Analitika (Semarang)</span>
-              </div>
-              <ApplyRecruitmentButton url={recruitmentUrl} className="px-6 py-3" />
-            </div>
-          </div>
+          </AnimatedElement>
         </div>
-      )}
+      </section>
     </>
   );
 }
