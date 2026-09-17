@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { Phone, ShoppingBag } from "lucide-react";
+import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
+import HomeRfqButton from "./HomeRfqButton";
 
-export default function CtaBanner() {
+export default function CtaBanner({ salesNumber }: { salesNumber: string | null }) {
   return (
     <section
       className="py-20 relative overflow-hidden"
@@ -28,30 +28,25 @@ export default function CtaBanner() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
         <AnimatedElement type="fade-up">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-5">
-            Siap Mengintegrasikan Teknologi IoT Industri?
+            Diskusikan Kebutuhan Produk Anda
           </h2>
           <p className="text-slate-300 text-lg mb-10 max-w-2xl mx-auto">
-            Hubungi tim teknis PT Autentik Karya Analitika untuk konsultasi perangkat IoT Quality Monitoring Devices dan solusi produk industri Anda.
+            Sampaikan kebutuhan produk, integrasi sistem, atau pengadaan Anda melalui RFQ resmi AKA. Tim komersial MIKA dapat membantu komunikasi lanjutan.
           </p>
 
           <div className="flex flex-wrap gap-4 justify-center">
-            <Link
-              href="/contact"
+            <HomeRfqButton
+              id="cta-request-quotation"
+              label="Request Quotation"
+              className="rounded-md bg-[#0EA5A0] px-7 py-3.5 text-white hover:bg-[#0D9E98] hover:shadow-lg"
+            />
+            <WhatsAppButton
+              number={salesNumber}
+              label="Hubungi Sales MIKA"
+              message="Halo Admin MIKA, saya ingin mendiskusikan kebutuhan produk atau sistem dari PT Autentik Karya Analitika."
               id="cta-contact-sales"
-              className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-md font-semibold text-white transition-all duration-200 hover:opacity-90 hover:shadow-lg hover:-translate-y-0.5"
-              style={{ backgroundColor: "#0EA5A0" }}
-            >
-              <Phone size={18} />
-              Hubungi Sales
-            </Link>
-            <Link
-              href="/store"
-              id="cta-open-marketplace"
-              className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-md font-semibold text-white border-2 border-white/30 hover:border-white/70 hover:bg-white/10 transition-all duration-200"
-            >
-              <ShoppingBag size={18} />
-              Buka Marketplace
-            </Link>
+              className="rounded-md border-2 border-white/30 bg-transparent px-7 py-3.5 hover:border-white/70 hover:bg-white/10"
+            />
           </div>
         </AnimatedElement>
       </div>

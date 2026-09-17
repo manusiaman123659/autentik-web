@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { listTeamMembers, listGroupCompanies, listPartners } from "@/lib/admin-data";
+import {
+  listDistributionEntities,
+  listGroupCompanies,
+  listPartners,
+  listTeamMembers,
+} from "@/lib/admin-data";
 import { PageHeader } from "@/components/admin/ui";
 import RelasiTabs from "@/components/admin/RelasiTabs";
 
@@ -8,19 +13,20 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminRelasiPage() {
-  const [team, groups, partners] = await Promise.all([
+  const [team, groups, partners, distribution] = await Promise.all([
     listTeamMembers(),
     listGroupCompanies(),
     listPartners(),
+    listDistributionEntities(),
   ]);
 
   return (
     <div className="max-w-6xl">
       <PageHeader
         title="Tim, Mitra & Grup"
-        description="Kelola anggota tim internal, grup perusahaan afiliasi, dan partner — Grup & Partner tampil di halaman /about."
+        description="Kelola tim internal, grup perusahaan, partner, dan jaringan distribusi publik."
       />
-      <RelasiTabs team={team} groups={groups} partners={partners} />
+      <RelasiTabs team={team} groups={groups} partners={partners} distribution={distribution} />
     </div>
   );
 }

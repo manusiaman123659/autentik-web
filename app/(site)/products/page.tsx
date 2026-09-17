@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { listProductsByType } from "@/lib/admin-data";
-import type { ProductRow } from "@/lib/admin-data";
+import { listPublicProductsByType } from "@/lib/public-data";
+import type { ProductRow } from "@/lib/public-data";
 import type { Product } from "@/types";
 import KatalogClient from "./KatalogClient";
 
@@ -34,7 +34,7 @@ function toPublicProduct(row: ProductRow): Product {
 }
 
 export default async function KatalogProdukPage() {
-  const rows = await listProductsByType("b2b_system");
+  const rows = await listPublicProductsByType();
   const products = rows.map(toPublicProduct);
 
   return <KatalogClient products={products} />;

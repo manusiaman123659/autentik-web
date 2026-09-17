@@ -12,7 +12,7 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const product = await getProduct(id);
-  return { title: `${product?.name ?? "Sparepart"} | Autentik CMS` };
+  return { title: `${product?.name ?? "Komponen"} | Autentik CMS` };
 }
 
 export default async function AdminSparepartEditPage({ params }: Props) {
@@ -35,7 +35,7 @@ export default async function AdminSparepartEditPage({ params }: Props) {
 
   return (
     <div>
-      <PageHeader title="Edit Sparepart" description={product.name} backHref="/admin/sparepart" />
+      <PageHeader title="Edit Komponen" description={product.name} backHref="/admin/sparepart" />
       <ProductForm productType="sparepart" initial={product} brands={brands} initialVariants={initialVariants} />
     </div>
   );

@@ -600,7 +600,7 @@ const [saving, setSaving] = useState(false);
         <h2 className="text-base font-bold text-slate-900 dark:text-white mb-5">Informasi Dasar</h2>
         <div className="grid sm:grid-cols-2 gap-5">
 <div>
-            <label className={labelClass}>{isSparepart ? "Nama Sparepart" : "Nama Produk"}</label>
+            <label className={labelClass}>{isSparepart ? "Nama Komponen" : "Nama Produk"}</label>
             <input
               className={inputClass}
               value={form.name}
@@ -622,7 +622,7 @@ const [saving, setSaving] = useState(false);
                 type="button"
                 onClick={() => set("slug", slugify(form.name))}
                 disabled={!form.name.trim()}
-                title={`Generate slug otomatis dari nama ${isSparepart ? "sparepart" : "produk"}`}
+                title={`Generate slug otomatis dari nama ${isSparepart ? "komponen" : "produk"}`}
                 className="inline-flex items-center justify-center gap-1.5 px-3.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 <Wand2 size={15} />
@@ -668,7 +668,7 @@ const [saving, setSaving] = useState(false);
             <FieldError message={errors.brand} />
             {isSparepart && (
               <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                Merek unit yang kompatibel dengan sparepart ini (mis. Talpha, Cylab, Ullun, Epal).
+                Merek unit yang kompatibel dengan komponen ini (mis. Talpha, Cylab, Ullun, Epal).
               </p>
             )}
           </div>
@@ -771,7 +771,7 @@ const [saving, setSaving] = useState(false);
               className={`${inputClass} min-h-[110px]`}
               value={form.description}
 onChange={(e) => set("description", e.target.value)}
-              placeholder={isSparepart ? "Deskripsi sparepart" : "Deskripsi produk"}
+              placeholder={isSparepart ? "Deskripsi komponen" : "Deskripsi produk"}
             />
             <FieldError message={errors.description} />
           </div>
@@ -1118,7 +1118,7 @@ onChange={(e) => set("description", e.target.value)}
 
           {isNonReady && (
             <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-              Produk custom / pihak ketiga tidak dicatat stok dan tidak dapat langsung dibeli di halaman Store —
+              Produk custom / pihak ketiga tidak dicatat stok dan tidak dapat langsung dibeli di Marketplace Komponen —
               pelanggan diarahkan ke formulir kebutuhan custom atau WhatsApp technical support.
             </p>
           )}
@@ -1156,7 +1156,7 @@ onChange={(e) => set("description", e.target.value)}
                 className={inputClass}
                 value={f}
                 onChange={(e) => setFeature(i, e.target.value)}
-                placeholder={isSparepart ? "Poin keunggulan sparepart" : "Poin keunggulan produk"}
+                placeholder={isSparepart ? "Poin keunggulan komponen" : "Poin keunggulan produk"}
               />
               <button
                 type="button"
@@ -1369,7 +1369,7 @@ onChange={(e) => set("description", e.target.value)}
                 onChange={(e) => set("isStoreVisible", e.target.checked)}
                 className="w-4 h-4 rounded accent-[#0EA5A0]"
               />
-              <span className="text-sm text-slate-700 dark:text-slate-300">Tampil di halaman Store</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300">Tampil di Marketplace Komponen</span>
             </label>
           )}
         </div>
@@ -1390,7 +1390,7 @@ onChange={(e) => set("description", e.target.value)}
           className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0C8C87] transition-colors disabled:opacity-60"
         >
 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {isSparepart ? "Simpan Sparepart" : "Simpan Produk"}
+          {isSparepart ? "Simpan Komponen" : "Simpan Produk"}
         </button>
       </div>
     </div>

@@ -21,11 +21,11 @@ export interface AdminNavGroup {
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     key: "store",
-    label: "Toko Sparepart",
+    label: "Marketplace Komponen",
     items: [
-      { key: "orders", href: "/admin/orders", label: "Pesanan", description: "Proses pesanan sparepart: status bayar & kirim" },
-      { key: "sparepart", href: "/admin/sparepart", label: "Katalog Sparepart", description: "Sparepart yang tampil di /store" },
-      { key: "stok", href: "/admin/stok", label: "Stok & Varian", description: "Kelola jumlah stok, varian, dan berat sparepart" },
+      { key: "orders", href: "/admin/orders", label: "Pesanan", description: "Proses pesanan komponen: status pembayaran dan pengiriman" },
+      { key: "sparepart", href: "/admin/sparepart", label: "Katalog Komponen", description: "Komponen yang tampil di /store" },
+      { key: "stok", href: "/admin/stok", label: "Stok & Varian", description: "Kelola jumlah stok, varian, dan berat komponen" },
     ],
   },
   {

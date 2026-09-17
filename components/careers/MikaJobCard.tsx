@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
-  Building2,
   MapPin,
-  Clock,
   Banknote,
   Users,
-  ArrowRight,
+  Send,
   Briefcase,
+  CalendarDays,
 } from "lucide-react";
 import type { MikaJob } from "@/types/mika-career";
 
@@ -19,154 +19,213 @@ interface MikaJobCardProps {
 function getEmploymentBadgeStyle(type: string) {
   const t = type.toLowerCase();
   if (t.includes("full-time") || t.includes("tetap")) {
-    return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+    return {
+      bg: "rgba(14, 165, 160, 0.12)",
+      color: "#14B8A6",
+      border: "rgba(14, 165, 160, 0.35)",
+    };
   }
   if (t.includes("intern") || t.includes("magang")) {
-    return "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30";
+    return {
+      bg: "rgba(6, 182, 212, 0.12)",
+      color: "#22D3EE",
+      border: "rgba(6, 182, 212, 0.35)",
+    };
   }
   if (t.includes("contract") || t.includes("kontrak")) {
-    return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30";
+    return {
+      bg: "rgba(245, 158, 11, 0.12)",
+      color: "#FBBF24",
+      border: "rgba(245, 158, 11, 0.35)",
+    };
   }
-  return "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30";
+  return {
+    bg: "rgba(14, 165, 160, 0.12)",
+    color: "#14B8A6",
+    border: "rgba(14, 165, 160, 0.35)",
+  };
 }
 
 export default function MikaJobCard({ job }: MikaJobCardProps) {
   const isExpiringSoon = job.deadline_info.days_remaining <= 7 && !job.deadline_info.is_expired;
+  const badgeStyle = getEmploymentBadgeStyle(job.employment_type);
+
+  // Format deadline date
+  const deadlineText = job.deadline_info.days_remaining > 0
+    ? `Batas: ${new Date(job.deadline).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}`
+    : job.deadline_info.badge.label;
 
   return (
     <div
-      className="group relative flex flex-col justify-between rounded-xl border p-6 transition-all duration-300 hover:shadow-lg hover:shadow-teal-950/5 dark:hover:shadow-teal-900/10 hover:-translate-y-0.5"
+      className="group relative flex flex-col justify-between rounded-2xl border p-0 overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
       style={{
         backgroundColor: "var(--bg-card)",
         borderColor: "var(--border-subtle)",
       }}
     >
-      <div>
-        {/* Header Tags: Employment Type & Department */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${getEmploymentBadgeStyle(
-                job.employment_type
-              )}`}
-            >
-              <Briefcase size={12} />
-              {job.employment_type}
-            </span>
-            <span
-              className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border"
-              style={{
-                backgroundColor: "var(--bg-secondary)",
-                borderColor: "var(--border-subtle)",
-                color: "var(--text-secondary)",
-              }}
-            >
-              {job.department.name}
-            </span>
+      {/* ── Top Section: Company Info + Employment Badge ── */}
+      <div className="px-5 pt-5 pb-4">
+        <div className="flex items-start gap-3.5 mb-4">
+          {/* Company Logo */}
+          <div
+            className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center overflow-hidden"
+            style={{
+              backgroundColor: "var(--bg-secondary)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            {job.company.logo ? (
+              <Image
+                src={job.company.logo}
+                alt={job.company.name}
+                width={48}
+                height={48}
+                className="w-full h-full object-contain p-1"
+              />
+            ) : (
+              <span
+                className="text-base font-bold uppercase"
+                style={{ color: "#0EA5A0" }}
+              >
+                {job.company.name.charAt(0)}
+              </span>
+            )}
           </div>
 
-          {/* Quota */}
-          {job.quota > 0 && (
-            <span
-              className="inline-flex items-center gap-1 text-xs"
-              style={{ color: "var(--text-muted)" }}
-            >
-              <Users size={12} />
-              Kuota: <strong style={{ color: "var(--text-primary)" }}>{job.quota}</strong>
-            </span>
-          )}
+          {/* Company Name + Department + Job Tag */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p
+                  className="text-sm font-semibold uppercase tracking-wide truncate"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {job.company.name}
+                </p>
+                <p
+                  className="text-xs font-medium mt-0.5"
+                  style={{ color: "#0EA5A0" }}
+                >
+                  {job.department.name}
+                </p>
+              </div>
+
+              {/* Employment Type Badge */}
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide whitespace-nowrap shrink-0"
+                style={{
+                  backgroundColor: badgeStyle.bg,
+                  color: badgeStyle.color,
+                  border: `1px solid ${badgeStyle.border}`,
+                }}
+              >
+                <Briefcase size={11} />
+                {job.employment_type}
+              </span>
+            </div>
+
+            {/* Position Tag */}
+            <div className="mt-2">
+              <span
+                className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border"
+                style={{
+                  backgroundColor: "rgba(14, 165, 160, 0.08)",
+                  borderColor: "rgba(14, 165, 160, 0.25)",
+                  color: "#0EA5A0",
+                }}
+              >
+                {job.title}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Job Title */}
-        <h3 className="text-xl font-bold tracking-tight mb-2 group-hover:text-[#0EA5A0] transition-colors">
-          <Link href={`/careers/${job.id}`} className="focus:outline-none">
-            <span className="absolute inset-0" aria-hidden="true" />
-            <span style={{ color: "var(--text-primary)" }}>{job.title}</span>
+        {/* ── Job Title (Large) ── */}
+        <h3 className="text-lg font-bold tracking-tight mb-2">
+          <Link
+            href={`/careers/${job.id}`}
+            className="transition-colors hover:underline decoration-[#0EA5A0]/40 underline-offset-2"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {job.title}
           </Link>
         </h3>
 
-        {/* Company & Location */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mb-4" style={{ color: "var(--text-secondary)" }}>
-          <span className="inline-flex items-center gap-1.5">
-            <Building2 size={14} className="text-[#0EA5A0]" />
-            {job.company.name}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <MapPin size={14} className="text-[#0EA5A0]" />
-            {job.location}
-          </span>
-        </div>
-
-        {/* Description snippet */}
+        {/* ── Description Snippet ── */}
         {job.description && (
           <p
-            className="text-sm line-clamp-2 mb-4 leading-relaxed"
+            className="text-sm line-clamp-2 leading-relaxed mb-5"
             style={{ color: "var(--text-secondary)" }}
           >
             {job.description.replace(/<[^>]*>?/gm, " ").replace(/\s+/g, " ").trim()}
           </p>
         )}
 
-        {/* Skills Pills */}
-        {job.skills && job.skills.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {job.skills.slice(0, 4).map((skill) => (
-              <span
-                key={skill}
-                className="px-2 py-0.5 rounded text-[11px] font-medium"
-                style={{
-                  backgroundColor: "var(--bg-secondary)",
-                  color: "var(--text-muted)",
-                }}
-              >
-                {skill}
-              </span>
-            ))}
-            {job.skills.length > 4 && (
-              <span
-                className="px-1.5 py-0.5 rounded text-[11px]"
-                style={{ color: "var(--text-muted)" }}
-              >
-                +{job.skills.length - 4}
-              </span>
-            )}
+        {/* ── Details List (Vertical) ── */}
+        <div
+          className="space-y-2.5 pt-4 border-t"
+          style={{ borderColor: "var(--border-subtle)" }}
+        >
+          {/* Location */}
+          <div className="flex items-center gap-2.5">
+            <MapPin size={15} style={{ color: "var(--text-muted)" }} className="shrink-0" />
+            <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              {job.location}
+            </span>
           </div>
-        )}
+
+          {/* Salary */}
+          <div className="flex items-center gap-2.5">
+            <Banknote size={15} className="shrink-0" style={{ color: "#0EA5A0" }} />
+            <span className="text-sm font-semibold" style={{ color: "#0EA5A0" }}>
+              {job.salary.formatted || "Gaji Dinegosiasikan"}
+            </span>
+          </div>
+
+          {/* Deadline */}
+          <div className="flex items-center gap-2.5">
+            <CalendarDays
+              size={15}
+              className="shrink-0"
+              style={{ color: isExpiringSoon ? "#EF4444" : "var(--text-muted)" }}
+            />
+            <span
+              className={`text-sm ${isExpiringSoon ? "font-semibold text-red-500 dark:text-red-400" : ""}`}
+              style={isExpiringSoon ? {} : { color: "var(--text-secondary)" }}
+            >
+              {deadlineText}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Footer Details: Salary & Deadline */}
+      {/* ── Footer: Quota + CTA Button ── */}
       <div
-        className="pt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-2"
-        style={{ borderColor: "var(--border-subtle)" }}
+        className="px-5 py-4 flex items-center justify-between border-t mt-1"
+        style={{
+          borderColor: "var(--border-subtle)",
+          backgroundColor: "rgba(14, 165, 160, 0.03)",
+        }}
       >
-        {/* Salary */}
+        {/* Quota */}
         <div className="flex items-center gap-1.5">
-          <Banknote size={16} className="text-emerald-500 shrink-0" />
-          <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-            {job.salary.formatted || "Gaji Dinegosiasikan"}
+          <Users size={14} style={{ color: "var(--text-muted)" }} />
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            Kuota:{" "}
+            <strong style={{ color: "var(--text-primary)" }}>
+              {job.quota > 0 ? job.quota : "—"}
+            </strong>
           </span>
         </div>
 
-        {/* Deadline & CTA */}
-        <div className="flex items-center justify-between sm:justify-end gap-3 relative z-10">
-          <span
-            className={`inline-flex items-center gap-1 text-xs font-medium ${
-              isExpiringSoon
-                ? "text-red-500 dark:text-red-400 font-semibold"
-                : "text-slate-500 dark:text-slate-400"
-            }`}
-          >
-            <Clock size={13} />
-            {job.deadline_info.days_remaining > 0
-              ? `${job.deadline_info.days_remaining} hari lagi`
-              : job.deadline_info.badge.label}
-          </span>
-
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#0EA5A0] group-hover:translate-x-0.5 transition-transform">
-            Detail
-            <ArrowRight size={14} />
-          </span>
-        </div>
+        {/* Detail & Lamar Button */}
+        <Link
+          href={`/careers/${job.id}`}
+          className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-[#0EA5A0] text-white hover:bg-[#0c8e8a] active:scale-95 transition-all"
+        >
+          <Send size={12} />
+          Detail & Lamar
+        </Link>
       </div>
     </div>
   );

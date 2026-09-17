@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, Suspense, useEffect, useRef, useState } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
@@ -25,18 +25,19 @@ function ModelView({
   hotspots,
   editable,
   onHotspotPlace,
+  activeKey,
   onActiveHotspotChange,
 }: {
   url: string;
   hotspots: Hotspot[];
   editable?: boolean;
   onHotspotPlace?: (local: { x: number; y: number; z: number }) => void;
+  activeKey: string | null;
   onActiveHotspotChange?: (key: string | null) => void;
 }) {
   const { scene } = useGLTF(url);
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
-  const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     pointerDownRef.current = {
@@ -57,17 +58,10 @@ function ModelView({
     e.stopPropagation();
     const local = scene.worldToLocal(e.point.clone());
 
-    setActiveKey(null);
     onActiveHotspotChange?.(null);
 
     if (editable && onHotspotPlace) {
       onHotspotPlace({ x: local.x, y: local.y, z: local.z });
-    } else {
-      console.log("[Hotspot] Local coords:", {
-        x: local.x,
-        y: local.y,
-        z: local.z,
-      });
     }
   };
 
@@ -75,7 +69,6 @@ function ModelView({
     if (editable) return;
     const key = h.id ?? `${h.position_x},${h.position_y},${h.position_z}`;
     const next = activeKey === key ? null : key;
-    setActiveKey(next);
     onActiveHotspotChange?.(next);
   };
 
@@ -112,6 +105,13 @@ function ModelView({
     controls.update();
   }, [scene]);
 
+  const modelRadius = useMemo(() => {
+    if (!scene) return 0.001;
+    const box = new THREE.Box3().setFromObject(scene);
+    if (box.isEmpty()) return 0.001;
+    return Math.max(box.getBoundingSphere(new THREE.Sphere()).radius, 0.001);
+  }, [scene]);
+
   return (
     <>
       <primitive
@@ -122,6 +122,7 @@ function ModelView({
       {hotspots.map((h) => {
         const key = h.id ?? `${h.position_x},${h.position_y},${h.position_z}`;
         const isActive = key === activeKey;
+        const base = modelRadius * 0.02;
         return (
           <group key={key} position={[h.position_x, h.position_y, h.position_z]}>
             <Billboard>
@@ -137,13 +138,18 @@ function ModelView({
                   document.body.style.cursor = "auto";
                 }}
               >
-                <circleGeometry args={[isActive ? 0.0045 : 0.003, 16]} />
+                <circleGeometry args={[isActive ? base * 1.5 : base, 16]} />
                 <meshBasicMaterial color={isActive ? "orange" : "red"} />
               </mesh>
             </Billboard>
           </group>
         );
       })}
+      {/* Catatan: rotasi vertikal dibiarkan bebas penuh (tanpa
+          minPolarAngle/maxPolarAngle) sesuai keputusan produk. Efek samping
+          yang diketahui dan diterima: marker Billboard bisa terlihat sedikit
+          distorsi saat kamera di sudut ekstrem (hampir persis dari atas/bawah)
+          — known limitation, bukan bug. */}
       <OrbitControls
         ref={controlsRef}
         enableDamping
@@ -233,6 +239,7 @@ export default function Product3DViewer({
               hotspots={hotspots}
               editable={editable}
               onHotspotPlace={onHotspotPlace}
+              activeKey={activeKey}
               onActiveHotspotChange={setActiveKey}
             />
           </Suspense>

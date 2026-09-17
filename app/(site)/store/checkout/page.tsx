@@ -1,22 +1,22 @@
 import type { Metadata } from "next";
 import CheckoutClient from "@/components/checkout/CheckoutClient";
 import CustomerAuthGuard from "@/components/auth/CustomerAuthGuard";
-import { getWhatsAppNumber } from "@/lib/public-data";
+import { getWhatsAppContact } from "@/lib/public-data";
 
 export const metadata: Metadata = {
   title: "Checkout | PT Autentik Karya Analitika",
   description:
-    "Selesaikan pesanan sparepart original bergaransi resmi untuk unit Talpha, Cylab, Ullun, dan Epal.",
+    "Selesaikan pesanan komponen original bergaransi resmi untuk unit Talpha, Cylab, Ullun, dan Epal.",
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function CheckoutPage() {
-  const waNumber = await getWhatsAppNumber();
+  const ppicContact = await getWhatsAppContact("aka_commerce_support");
 
   return (
     <CustomerAuthGuard>
-      <CheckoutClient waNumber={waNumber} />
+      <CheckoutClient waNumber={ppicContact?.number ?? null} />
     </CustomerAuthGuard>
   );
 }

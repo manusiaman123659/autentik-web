@@ -12,6 +12,7 @@ import {
 import { faqItems } from "@/lib/data/faq";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import { createClient } from "@/utils/supabase/client";
+import { resolveWhatsAppContacts, type ResolvedWhatsAppContacts } from "@/lib/communication";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -26,7 +27,10 @@ export default function FaqWidget() {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
-  const [waNumber, setWaNumber] = useState<string | null>(null);
+  const [waContacts, setWaContacts] = useState<ResolvedWhatsAppContacts>({
+    ppicAka: null,
+    mikaSales: null,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -38,12 +42,10 @@ export default function FaqWidget() {
         .eq("key", "whatsapp")
         .maybeSingle();
       if (cancelled) return;
-      const value = (data as { value?: unknown } | null)?.value as
-        | { number?: string }
-        | null;
-      setWaNumber(typeof value?.number === "string" ? value.number.trim() : null);
+      const value = (data as { value?: unknown } | null)?.value;
+      setWaContacts(resolveWhatsAppContacts(value));
     })().catch(() => {
-      if (!cancelled) setWaNumber(null);
+      if (!cancelled) setWaContacts({ ppicAka: null, mikaSales: null });
     });
     return () => {
       cancelled = true;
@@ -271,12 +273,22 @@ export default function FaqWidget() {
 
           {/* Footer */}
           <div className="px-3 py-2.5 border-t" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
-            <WhatsAppButton
-              number={waNumber}
-              message="Halo, saya ingin bertanya tentang produk/layanan Autentik."
-              variant="button"
-              className="w-full px-4 py-2 rounded-lg text-sm"
-            />
+            <div className="grid grid-cols-2 gap-2">
+              <WhatsAppButton
+                number={waContacts.ppicAka?.number ?? null}
+                label="Tanya Komponen"
+                message="Halo PPIC AKA, saya ingin bertanya mengenai komponen atau pesanan Marketplace Komponen."
+                variant="button"
+                className="w-full px-2 py-2 rounded-lg text-xs"
+              />
+              <WhatsAppButton
+                number={waContacts.mikaSales?.number ?? null}
+                label="Sales & Custom"
+                message="Halo Admin MIKA, saya ingin bertanya mengenai produk, sparepart, custom, atau distribusi."
+                variant="button"
+                className="w-full px-2 py-2 rounded-lg text-xs"
+              />
+            </div>
             <p className="text-center text-[11px] mt-2" style={{ color: "var(--text-muted)" }}>
               Tim kami membalas dalam 1–2 hari kerja
             </p>

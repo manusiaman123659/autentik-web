@@ -15,16 +15,16 @@ export default async function AdminStokPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Stok & Varian"
-        description="Atur jumlah stok sparepart. Gunakan tombol +/- untuk penyesuaian cepat."
+        description="Atur jumlah stok komponen. Gunakan tombol +/- untuk penyesuaian cepat."
       />
 
       {products.length === 0 ? (
         <EmptyState
           icon={<Boxes size={26} />}
-          title="Belum ada sparepart"
-          description="Tambahkan sparepart terlebih dahulu untuk mengelola stok."
+          title="Belum ada komponen"
+          description="Tambahkan komponen terlebih dahulu untuk mengelola stok."
           actionHref="/admin/sparepart/new"
-          actionLabel="Tambah Sparepart"
+          actionLabel="Tambah Komponen"
         />
       ) : (
         <StockListClient products={products} />

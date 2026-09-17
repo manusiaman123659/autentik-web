@@ -29,9 +29,11 @@ const industryOptions = [
 ];
 
 export default function ContactClient({
-  waNumber,
+  ppicAkaNumber,
+  mikaSalesNumber,
 }: {
-  waNumber: string | null;
+  ppicAkaNumber: string | null;
+  mikaSalesNumber: string | null;
 }) {
   const [submitStatus, setSubmitStatus] = useState<
     "idle" | "loading" | "success" | "error"
@@ -288,9 +290,22 @@ export default function ContactClient({
                 </div>
                 <div className="space-y-4">
                   <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                    Tim CS & Sales Autentik siap membantu pertanyaan produk, custom, dan pesanan Anda.
+                    Pilih kanal sesuai kebutuhan agar pertanyaan Anda ditangani oleh tim yang tepat.
                   </p>
-                  <WhatsAppButton number={waNumber} variant="link" />
+                  <div className="flex flex-col items-start gap-2">
+                    <WhatsAppButton
+                      number={ppicAkaNumber}
+                      label="Komponen & Pesanan - PPIC AKA"
+                      message="Halo PPIC AKA, saya membutuhkan bantuan terkait komponen atau pesanan Marketplace Komponen."
+                      variant="link"
+                    />
+                    <WhatsAppButton
+                      number={mikaSalesNumber}
+                      label="Produk, Sparepart & Custom - MIKA"
+                      message="Halo Admin MIKA, saya ingin berkonsultasi mengenai produk, sparepart, custom, atau distribusi."
+                      variant="link"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

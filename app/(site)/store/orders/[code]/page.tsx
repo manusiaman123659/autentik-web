@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import OrderConfirmationClient from "@/components/orders/OrderConfirmationClient";
-import { getWhatsAppNumber, getBankAccount } from "@/lib/public-data";
+import { getWhatsAppContact, getBankAccount } from "@/lib/public-data";
 import { createClient } from "@/utils/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -58,10 +58,10 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     );
   }
 
-  const waNumber = await getWhatsAppNumber();
+  const ppicContact = await getWhatsAppContact("aka_order_support");
   const bankAccount = await getBankAccount();
 
-  let dbOrder: {
+  type RawOrder = {
     order_code: string;
     customer_name: string;
     status: string;
@@ -74,6 +74,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     midtrans_redirect_url: string | null;
     midtrans_order_id: string | null;
     created_at: string;
+    created_by: string | null;
     order_items: {
       product_name: string;
       sku: string | null;
@@ -81,27 +82,57 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
       quantity: number;
       product_id: string | null;
     }[];
-  } | null = null;
+  };
+
+  let rawOrder: RawOrder | null = null;
 
   try {
     const { data } = await supabase
       .from("orders")
-      .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id)")
+      .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, created_by, order_items(product_name, sku, unit_price, quantity, product_id)")
       .eq("order_code", code)
       .is("deleted_at", null)
       .single();
-    dbOrder = data;
+    rawOrder = data;
   } catch {
     // Order may not exist yet or user not authorized — client will handle gracefully
   }
 
+  const isManualOrder = rawOrder?.created_by != null;
+  const paymentFlow =
+    isManualOrder && rawOrder?.payment_method === "transfer"
+      ? "manual_transfer"
+      : isManualOrder && rawOrder?.payment_method === "cod"
+        ? "manual_cod"
+        : "midtrans";
+
+  // created_by tidak diteruskan ke client — hanya dipakai untuk menentukan paymentFlow
+  const dbOrderSafe = rawOrder
+    ? {
+        order_code: rawOrder.order_code,
+        customer_name: rawOrder.customer_name,
+        status: rawOrder.status,
+        payment_status: rawOrder.payment_status,
+        payment_method: rawOrder.payment_method,
+        subtotal: rawOrder.subtotal,
+        shipping_cost: rawOrder.shipping_cost,
+        total: rawOrder.total,
+        paid_at: rawOrder.paid_at,
+        midtrans_redirect_url: rawOrder.midtrans_redirect_url,
+        midtrans_order_id: rawOrder.midtrans_order_id,
+        created_at: rawOrder.created_at,
+        order_items: rawOrder.order_items,
+      }
+    : null;
+
   return (
     <OrderConfirmationClient
       code={code}
-      waNumber={waNumber}
+      waNumber={ppicContact?.number ?? null}
       bankAccount={bankAccount}
-      dbOrder={dbOrder}
+      dbOrder={dbOrderSafe}
       statusParam={statusParam ?? null}
+      paymentFlow={paymentFlow}
     />
   );
 }

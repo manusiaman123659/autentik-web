@@ -26,6 +26,16 @@ function toErrors(error: ZodError): Record<string, string> {
 }
 
 export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { success: false, message: "Anda harus masuk sebelum membuat pesanan." };
+  }
+
   const parsed = checkoutOrderSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -35,9 +45,6 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     };
   }
   const data = parsed.data;
-
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
 
   const items = data.items.map((i) => ({
     product_id: i.productId,
@@ -71,11 +78,16 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
 
   // --- Midtrans Payment Integration ---
   try {
-    const { data: orderRow } = await supabase
+    const { data: orderRow, error: orderError } = await supabase
       .from("orders")
       .select("total")
       .eq("order_code", orderCode)
+      .eq("user_id", user.id)
       .single();
+
+    if (orderError || !orderRow) {
+      throw orderError ?? new Error("Pesanan tidak dapat dibaca setelah checkout.");
+    }
 
     const totalAmount = Math.round(Number(orderRow?.total ?? 0));
 
@@ -93,15 +105,21 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       console.log("[CHECKOUT] Transaction created successfully:", transaction.redirect_url);
 
       const supabaseAdmin = createAdminClient();
-      const { error: updateErr } = await supabaseAdmin
+      const { data: updatedOrder, error: updateErr } = await supabaseAdmin
         .from("orders")
         .update({
           midtrans_order_id: orderCode,
           midtrans_redirect_url: transaction.redirect_url,
         })
-        .eq("order_code", orderCode);
+        .eq("order_code", orderCode)
+        .eq("user_id", user.id)
+        .eq("payment_method", "midtrans")
+        .eq("payment_status", "pending")
+        .is("deleted_at", null)
+        .select("id")
+        .maybeSingle();
 
-      if (updateErr) {
+      if (updateErr || !updatedOrder) {
         console.error("[CHECKOUT] Failed to update order with Midtrans data:", updateErr);
       } else {
         console.log("[CHECKOUT] Order updated with Midtrans transaction data");
@@ -134,17 +152,35 @@ export async function regenerateMidtransPayment(orderCode: string): Promise<Rege
     return { success: false, message: "Kode pesanan tidak valid." };
   }
 
-  const supabaseAdmin = createAdminClient();
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { success: false, message: "Anda harus masuk untuk melanjutkan pembayaran." };
+  }
 
   try {
-    const { data: order, error: fetchErr } = await supabaseAdmin
+    const { data: order, error: fetchErr } = await supabase
       .from("orders")
-      .select("id, total, status, customer_name, customer_email, customer_phone, midtrans_redirect_url")
+      .select("id, total, status, payment_status, payment_method, customer_name, customer_email, customer_phone, midtrans_redirect_url")
       .eq("order_code", orderCode)
-      .single();
+      .eq("user_id", user.id)
+      .is("deleted_at", null)
+      .maybeSingle();
 
     if (fetchErr || !order) {
       return { success: false, message: "Pesanan tidak ditemukan." };
+    }
+
+    if (order.payment_method !== "midtrans") {
+      return { success: false, message: "Pesanan ini tidak menggunakan pembayaran Midtrans." };
+    }
+
+    if (order.payment_status !== "pending") {
+      return { success: false, message: "Status pembayaran pesanan ini sudah tidak dapat diproses ulang." };
     }
 
     if (order.status === "cancelled" || order.status === "completed" || order.status === "shipped") {
@@ -174,15 +210,22 @@ export async function regenerateMidtransPayment(orderCode: string): Promise<Rege
 
     console.log("[REGENERATE] Transaction created successfully:", transaction.redirect_url);
 
-    const { error: updateErr } = await supabaseAdmin
+    const supabaseAdmin = createAdminClient();
+    const { data: updatedOrder, error: updateErr } = await supabaseAdmin
       .from("orders")
       .update({
         midtrans_order_id: orderCode,
         midtrans_redirect_url: transaction.redirect_url,
       })
-      .eq("order_code", orderCode);
+      .eq("id", order.id)
+      .eq("user_id", user.id)
+      .eq("payment_method", "midtrans")
+      .eq("payment_status", "pending")
+      .is("deleted_at", null)
+      .select("id")
+      .maybeSingle();
 
-    if (updateErr) {
+    if (updateErr || !updatedOrder) {
       console.error("[REGENERATE] Failed to update order:", updateErr);
       return { success: false, message: "Gagal menyimpan data pembayaran. Silakan coba lagi." };
     }

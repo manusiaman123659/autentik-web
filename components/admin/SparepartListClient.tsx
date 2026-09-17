@@ -130,7 +130,7 @@ export default function SparepartListClient({
             <Package size={26} />
           </div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-            Tidak ada sparepart yang cocok
+            Tidak ada komponen yang cocok
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
             Coba ubah kata kunci pencarian atau atur ulang filter.
@@ -148,7 +148,7 @@ export default function SparepartListClient({
         <TableShell>
           <thead>
             <tr>
-              <Th>Sparepart</Th>
+              <Th>Komponen</Th>
               <Th>SKU</Th>
               <Th>Harga</Th>
               <Th>Stok</Th>
@@ -216,7 +216,7 @@ export default function SparepartListClient({
         itemsPerPage={ITEMS_PER_PAGE}
         page={safePage}
         onPageChange={setPage}
-        noun="sparepart"
+        noun="komponen"
       />
     </div>
   );

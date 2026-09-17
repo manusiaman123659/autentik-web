@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowLeft,
   Briefcase,
@@ -8,15 +9,18 @@ import {
   CheckCircle2,
   Building2,
   Banknote,
-  Clock,
   Users,
   GraduationCap,
   Send,
+  Globe,
+  CalendarDays,
+  ChevronRight,
 } from "lucide-react";
 import { getMikaJobDetail } from "@/lib/api/mika-career";
 import { getPublicCareerBySlug, getRecruitmentUrl } from "@/lib/public-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import MikaJobCard from "@/components/careers/MikaJobCard";
+import ShareJobButton from "@/components/careers/ShareJobButton";
 import JsonLd from "@/components/seo/JsonLd";
 import type { MikaJobDetail } from "@/types/mika-career";
 
@@ -106,7 +110,7 @@ export default async function JobDetailPage({ params }: Props) {
         <section className="py-16" style={{ backgroundColor: "var(--bg-primary)" }}>
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             <div
-              className="p-8 rounded-2xl border shadow-sm"
+              className="p-8 rounded-2xl border"
               style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
             >
               <h3 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -176,83 +180,232 @@ export default async function JobDetailPage({ params }: Props) {
   const applyUrl = mikaJob.apply_url || recruitmentUrl || "/contact";
   const isExpiringSoon = mikaJob.deadline_info.days_remaining <= 7 && !mikaJob.deadline_info.is_expired;
 
+  const deadlineFormatted = new Date(mikaJob.deadline).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
   return (
     <>
       <JsonLd data={jsonLdData} />
 
-      {/* ─── Hero Header ───────────────────────────────────────────────────────── */}
+      {/* ─── Breadcrumb ─────────────────────────────────────────────────────── */}
       <section
-        className="pt-32 pb-16 relative overflow-hidden"
+        className="pt-28 pb-0"
         style={{
           background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
         }}
       >
-        <div
-          className="absolute inset-0 opacity-5 pointer-events-none"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-            backgroundSize: "40px 40px",
-          }}
-        />
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <AnimatedElement type="fade-up">
-            <Link
-              href="/careers"
-              className="inline-flex items-center gap-2 text-slate-300 hover:text-white text-sm mb-6 transition-colors"
-            >
-              <ArrowLeft size={16} />
-              Kembali ke Daftar Mika Career
-            </Link>
-
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
-                <Briefcase size={12} />
-                {mikaJob.employment_type}
-              </span>
-              <span className="text-slate-300 text-xs font-medium px-2.5 py-1 rounded-md bg-white/5 border border-white/10">
-                {mikaJob.department.name}
-              </span>
-              {mikaJob.quota > 0 && (
-                <span className="text-slate-300 text-xs font-medium px-2.5 py-1 rounded-md bg-white/5 border border-white/10 flex items-center gap-1">
-                  <Users size={12} />
-                  Kuota: {mikaJob.quota} Orang
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mb-4">
-              {mikaJob.title}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-300">
-              <span className="inline-flex items-center gap-1.5">
-                <Building2 size={16} className="text-[#14B8A6]" />
-                {mikaJob.company.name}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin size={16} className="text-[#14B8A6]" />
-                {mikaJob.location}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Banknote size={16} className="text-emerald-400" />
-                {mikaJob.salary.formatted}
-              </span>
-            </div>
-          </AnimatedElement>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+            <Link href="/" className="hover:text-[#0EA5A0] transition-colors">Beranda</Link>
+            <ChevronRight size={12} />
+            <Link href="/careers" className="hover:text-[#0EA5A0] transition-colors">Lowongan</Link>
+            <ChevronRight size={12} />
+            <span style={{ color: "#0EA5A0" }}>{mikaJob.title}</span>
+          </nav>
         </div>
       </section>
 
-      {/* ─── Main Content & Sticky Sidebar ─────────────────────────────────────── */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--bg-primary)" }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
-            {/* Left Content (2 Cols) */}
-            <div className="lg:col-span-2 space-y-8">
+      {/* ─── Main Content ─────────────────────────────────────────────────────── */}
+      <section
+        className="pb-16 pt-6 px-4 sm:px-6 lg:px-8"
+        style={{
+          background: "linear-gradient(180deg, #0B1F3A 0%, var(--bg-primary) 300px)",
+        }}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+            {/* ── Left Column (2/3) ── */}
+            <div className="lg:col-span-2 space-y-6">
+
+              {/* Hero Card: Company Info + Title + Info Grid */}
+              <div
+                className="rounded-2xl border overflow-hidden"
+                style={{
+                  backgroundColor: "var(--bg-card)",
+                  borderColor: "var(--border-subtle)",
+                }}
+              >
+                <div className="p-6 sm:p-8">
+                  {/* Top Row: Logo + Company Info + Buttons */}
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-6">
+                    {/* Company Logo */}
+                    <div
+                      className="w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: "var(--bg-secondary)",
+                        border: "1px solid var(--border-subtle)",
+                      }}
+                    >
+                      {mikaJob.company.logo ? (
+                        <Image
+                          src={mikaJob.company.logo}
+                          alt={mikaJob.company.name}
+                          width={64}
+                          height={64}
+                          className="w-full h-full object-contain p-1.5"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold" style={{ color: "#0EA5A0" }}>
+                          {mikaJob.company.name.charAt(0)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      {/* Employment Badge */}
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide rounded-md bg-[#0EA5A0]/10 text-[#14B8A6] border border-[#0EA5A0]/25">
+                          {mikaJob.employment_type}
+                        </span>
+                      </div>
+
+                      {/* Title */}
+                      <h1
+                        className="text-2xl sm:text-3xl font-bold tracking-tight mb-2"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {mikaJob.title}
+                      </h1>
+
+                      {/* Company + Department */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm" style={{ color: "var(--text-secondary)" }}>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Building2 size={14} className="text-[#0EA5A0]" />
+                          {mikaJob.company.name}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Briefcase size={14} className="text-[#0EA5A0]" />
+                          {mikaJob.department.name}
+                        </span>
+                      </div>
+
+                      {/* Position Tag */}
+                      <div className="mt-3">
+                        <span
+                          className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border"
+                          style={{
+                            backgroundColor: "rgba(14, 165, 160, 0.08)",
+                            borderColor: "rgba(14, 165, 160, 0.25)",
+                            color: "#0EA5A0",
+                          }}
+                        >
+                          Posisi: {mikaJob.title}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <a
+                        href={applyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0EA5A0] text-white font-bold text-sm hover:bg-[#0c8e8a] active:scale-95 transition-all"
+                      >
+                        <Send size={14} />
+                        Masuk & Lamar
+                      </a>
+                      <ShareJobButton title={mikaJob.title} />
+                    </div>
+                  </div>
+
+                  {/* Info Grid: 4 columns */}
+                  <div
+                    className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+                  >
+                    {/* Lokasi */}
+                    <div
+                      className="p-4 rounded-xl border"
+                      style={{
+                        backgroundColor: "var(--bg-secondary)",
+                        borderColor: "var(--border-subtle)",
+                      }}
+                    >
+                      <span className="text-[11px] uppercase tracking-wider font-medium block mb-1.5" style={{ color: "var(--text-muted)" }}>
+                        Lokasi
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <MapPin size={14} className="text-[#0EA5A0] shrink-0" />
+                        <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                          {mikaJob.location}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Gaji */}
+                    <div
+                      className="p-4 rounded-xl border"
+                      style={{
+                        backgroundColor: "var(--bg-secondary)",
+                        borderColor: "var(--border-subtle)",
+                      }}
+                    >
+                      <span className="text-[11px] uppercase tracking-wider font-medium block mb-1.5" style={{ color: "var(--text-muted)" }}>
+                        Estimasi Gaji
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Banknote size={14} className="text-[#0EA5A0] shrink-0" />
+                        <span className="text-sm font-semibold" style={{ color: "#0EA5A0" }}>
+                          {mikaJob.salary.formatted || "Negosiasi"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Kuota */}
+                    <div
+                      className="p-4 rounded-xl border"
+                      style={{
+                        backgroundColor: "var(--bg-secondary)",
+                        borderColor: "var(--border-subtle)",
+                      }}
+                    >
+                      <span className="text-[11px] uppercase tracking-wider font-medium block mb-1.5" style={{ color: "var(--text-muted)" }}>
+                        Kuota Diterima
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Users size={14} className="text-[#0EA5A0] shrink-0" />
+                        <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                          {mikaJob.quota > 0 ? `${mikaJob.quota} Orang` : "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Batas Lamaran */}
+                    <div
+                      className="p-4 rounded-xl border"
+                      style={{
+                        backgroundColor: "var(--bg-secondary)",
+                        borderColor: "var(--border-subtle)",
+                      }}
+                    >
+                      <span className="text-[11px] uppercase tracking-wider font-medium block mb-1.5" style={{ color: "var(--text-muted)" }}>
+                        Batas Lamaran
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <CalendarDays
+                          size={14}
+                          className={`shrink-0 ${isExpiringSoon ? "text-red-500" : "text-[#0EA5A0]"}`}
+                        />
+                        <span
+                          className={`text-sm font-semibold ${isExpiringSoon ? "text-red-500" : ""}`}
+                          style={isExpiringSoon ? {} : { color: "var(--text-primary)" }}
+                        >
+                          {deadlineFormatted}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Description */}
               {mikaJob.description && (
                 <div
-                  className="p-8 rounded-2xl border shadow-sm"
+                  className="p-6 sm:p-8 rounded-2xl border"
                   style={{
                     backgroundColor: "var(--bg-card)",
                     borderColor: "var(--border-subtle)",
@@ -261,7 +414,7 @@ export default async function JobDetailPage({ params }: Props) {
                   <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
                     Deskripsi Pekerjaan
                   </h2>
-                  {/<[a-z][\s\S]*>/i.test(mikaJob.description) ? (
+                  {/\<[a-z][\s\S]*\>/i.test(mikaJob.description) ? (
                     <div
                       className="text-sm leading-relaxed space-y-3 prose prose-slate dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_p]:mb-3 [&_h3]:text-base [&_h3]:font-bold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-[#0EA5A0]"
                       style={{ color: "var(--text-secondary)" }}
@@ -281,7 +434,7 @@ export default async function JobDetailPage({ params }: Props) {
               {/* Responsibilities */}
               {mikaJob.responsibilities && (
                 <div
-                  className="p-8 rounded-2xl border shadow-sm"
+                  className="p-6 sm:p-8 rounded-2xl border"
                   style={{
                     backgroundColor: "var(--bg-card)",
                     borderColor: "var(--border-subtle)",
@@ -294,10 +447,7 @@ export default async function JobDetailPage({ params }: Props) {
                     {Array.isArray(mikaJob.responsibilities) ? (
                       mikaJob.responsibilities.map((resp, i) => (
                         <li key={i} className="flex items-start gap-3">
-                          <CheckCircle2
-                            size={18}
-                            className="text-[#0EA5A0] shrink-0 mt-0.5"
-                          />
+                          <CheckCircle2 size={18} className="text-[#0EA5A0] shrink-0 mt-0.5" />
                           <span>{resp}</span>
                         </li>
                       ))
@@ -311,7 +461,7 @@ export default async function JobDetailPage({ params }: Props) {
               {/* Requirements */}
               {mikaJob.requirements && (
                 <div
-                  className="p-8 rounded-2xl border shadow-sm"
+                  className="p-6 sm:p-8 rounded-2xl border"
                   style={{
                     backgroundColor: "var(--bg-card)",
                     borderColor: "var(--border-subtle)",
@@ -324,10 +474,7 @@ export default async function JobDetailPage({ params }: Props) {
                     {Array.isArray(mikaJob.requirements) ? (
                       mikaJob.requirements.map((req, i) => (
                         <li key={i} className="flex items-start gap-3">
-                          <CheckCircle2
-                            size={18}
-                            className="text-[#0EA5A0] shrink-0 mt-0.5"
-                          />
+                          <CheckCircle2 size={18} className="text-[#0EA5A0] shrink-0 mt-0.5" />
                           <span>{req}</span>
                         </li>
                       ))
@@ -339,11 +486,11 @@ export default async function JobDetailPage({ params }: Props) {
               )}
 
               {/* Education Requirements */}
-              {mikaJob.education_requirements && (
+              {mikaJob.education_requirements &&
                 (mikaJob.education_requirements.degrees?.length > 0 ||
                   mikaJob.education_requirements.majors?.length > 0) && (
                   <div
-                    className="p-8 rounded-2xl border shadow-sm"
+                    className="p-6 sm:p-8 rounded-2xl border"
                     style={{
                       backgroundColor: "var(--bg-card)",
                       borderColor: "var(--border-subtle)",
@@ -410,13 +557,12 @@ export default async function JobDetailPage({ params }: Props) {
                       )}
                     </div>
                   </div>
-                )
-              )}
+                )}
 
               {/* Benefits */}
               {mikaJob.benefits && (
                 <div
-                  className="p-8 rounded-2xl border shadow-sm"
+                  className="p-6 sm:p-8 rounded-2xl border"
                   style={{
                     backgroundColor: "var(--bg-card)",
                     borderColor: "var(--border-subtle)",
@@ -429,10 +575,7 @@ export default async function JobDetailPage({ params }: Props) {
                     {Array.isArray(mikaJob.benefits) ? (
                       mikaJob.benefits.map((ben, i) => (
                         <li key={i} className="flex items-start gap-3">
-                          <CheckCircle2
-                            size={18}
-                            className="text-[#0EA5A0] shrink-0 mt-0.5"
-                          />
+                          <CheckCircle2 size={18} className="text-[#0EA5A0] shrink-0 mt-0.5" />
                           <span>{ben}</span>
                         </li>
                       ))
@@ -446,7 +589,7 @@ export default async function JobDetailPage({ params }: Props) {
               {/* Skills */}
               {mikaJob.skills && mikaJob.skills.length > 0 && (
                 <div
-                  className="p-8 rounded-2xl border shadow-sm"
+                  className="p-6 sm:p-8 rounded-2xl border"
                   style={{
                     backgroundColor: "var(--bg-card)",
                     borderColor: "var(--border-subtle)",
@@ -469,119 +612,143 @@ export default async function JobDetailPage({ params }: Props) {
               )}
             </div>
 
-            {/* Right Sidebar (1 Col, Sticky) */}
+            {/* ── Right Sidebar (1/3, Sticky) ── */}
             <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-28">
+
+              {/* Tentang Perusahaan */}
               <div
-                className="p-6 rounded-2xl border shadow-md"
+                className="rounded-2xl border overflow-hidden"
+                style={{
+                  backgroundColor: "var(--bg-card)",
+                  borderColor: "var(--border-subtle)",
+                }}
+              >
+                <div className="px-6 pt-5 pb-4">
+                  <h3
+                    className="text-base font-bold mb-4"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Tentang Perusahaan
+                  </h3>
+
+                  {/* Company Info */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div
+                      className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center overflow-hidden"
+                      style={{
+                        backgroundColor: "var(--bg-secondary)",
+                        border: "1px solid var(--border-subtle)",
+                      }}
+                    >
+                      {mikaJob.company.logo ? (
+                        <Image
+                          src={mikaJob.company.logo}
+                          alt={mikaJob.company.name}
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-contain p-1"
+                        />
+                      ) : (
+                        <span className="text-lg font-bold" style={{ color: "#0EA5A0" }}>
+                          {mikaJob.company.name.charAt(0)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                        {mikaJob.company.name}
+                      </h4>
+                      <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                        {mikaJob.company.city}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Address (if location is available) */}
+                  <div
+                    className="flex items-start gap-2.5 p-3 rounded-xl mb-4"
+                    style={{
+                      backgroundColor: "var(--bg-secondary)",
+                    }}
+                  >
+                    <MapPin size={15} className="text-[#0EA5A0] shrink-0 mt-0.5" />
+                    <span className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                      {mikaJob.location}, {mikaJob.company.city}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div
+                  className="px-6 pb-5 space-y-2.5"
+                >
+                  {/* Lihat Profil Perusahaan */}
+                  <Link
+                    href="/about"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors hover:bg-[#0EA5A0]/5"
+                    style={{
+                      borderColor: "var(--border-subtle)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    <Building2 size={14} />
+                    Lihat Profil Perusahaan
+                    <ChevronRight size={14} />
+                  </Link>
+
+                  {/* Website */}
+                  <a
+                    href={applyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[#0EA5A0]/10 text-[#0EA5A0] border border-[#0EA5A0]/20 hover:bg-[#0EA5A0]/15 transition-colors"
+                  >
+                    <Globe size={14} />
+                    mikacares.co.id
+                  </a>
+                </div>
+              </div>
+
+              {/* Sticky Apply CTA */}
+              <div
+                className="rounded-2xl border p-6"
                 style={{
                   backgroundColor: "var(--bg-card)",
                   borderColor: "var(--border-subtle)",
                 }}
               >
                 <h3
-                  className="text-base font-bold pb-4 border-b mb-5"
-                  style={{ color: "var(--text-primary)", borderColor: "var(--border-subtle)" }}
+                  className="text-base font-bold mb-3"
+                  style={{ color: "var(--text-primary)" }}
                 >
-                  Ringkasan Lowongan
+                  Tertarik dengan posisi ini?
                 </h3>
+                <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                  Kirim lamaran Anda langsung ke tim rekrutmen {mikaJob.company.name}.
+                </p>
 
-                <div className="space-y-4 text-sm mb-6">
-                  <div>
-                    <span className="text-xs block mb-1" style={{ color: "var(--text-muted)" }}>
-                      Estimasi Gaji
-                    </span>
-                    <div className="flex items-center gap-2 font-bold text-base" style={{ color: "var(--text-primary)" }}>
-                      <Banknote size={18} className="text-emerald-500" />
-                      {mikaJob.salary.formatted}
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-xs block mb-1" style={{ color: "var(--text-muted)" }}>
-                      Batas Waktu Lamaran
-                    </span>
-                    <div
-                      className={`flex items-center gap-2 font-semibold ${
-                        isExpiringSoon ? "text-red-500" : ""
-                      }`}
-                      style={!isExpiringSoon ? { color: "var(--text-primary)" } : undefined}
-                    >
-                      <Clock size={16} className={isExpiringSoon ? "text-red-500" : "text-[#0EA5A0]"} />
-                      <span>{mikaJob.deadline_info.badge.label}</span>
-                    </div>
-                    {mikaJob.deadline_info.days_remaining > 0 && (
-                      <span className="text-xs text-slate-400 ml-6 block">
-                        ({mikaJob.deadline_info.days_remaining} hari tersisa)
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <span className="text-xs block mb-1" style={{ color: "var(--text-muted)" }}>
-                      Tipe Pekerjaan & Departemen
-                    </span>
-                    <span className="font-medium" style={{ color: "var(--text-secondary)" }}>
-                      {mikaJob.employment_type} • {mikaJob.department.name}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-xs block mb-1" style={{ color: "var(--text-muted)" }}>
-                      Lokasi Penempatan
-                    </span>
-                    <span className="font-medium" style={{ color: "var(--text-secondary)" }}>
-                      {mikaJob.location} ({mikaJob.company.city})
-                    </span>
-                  </div>
-                </div>
-
-                {/* Primary CTA Button */}
                 <a
                   href={applyUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#0EA5A0] text-white font-bold text-sm shadow-md shadow-teal-500/20 hover:bg-[#0c8e8a] hover:shadow-lg transition-all mb-3 text-center"
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#0EA5A0] text-white font-bold text-sm hover:bg-[#0c8e8a] active:scale-95 transition-all"
                 >
                   <Send size={16} />
                   Lamar Posisi Ini
                 </a>
 
-                <p className="text-[11px] text-center" style={{ color: "var(--text-muted)" }}>
-                  Lamaran akan diproses langsung oleh tim rekrutmen {mikaJob.company.name}.
-                </p>
-              </div>
-
-              {/* Company Info Box */}
-              <div
-                className="p-6 rounded-2xl border"
-                style={{
-                  backgroundColor: "var(--bg-secondary)",
-                  borderColor: "var(--border-subtle)",
-                }}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-[#0EA5A0] flex items-center justify-center font-bold text-lg">
-                    {mikaJob.company.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>
-                      {mikaJob.company.name}
-                    </h4>
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {mikaJob.company.city}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                  Perusahaan teknologi yang berkomitmen menghadirkan inovasi instrumen presisi dan sistem monitoring berkualitas tinggi.
-                </p>
+                {mikaJob.deadline_info.days_remaining > 0 && (
+                  <p className="text-[11px] text-center mt-3" style={{ color: "var(--text-muted)" }}>
+                    {mikaJob.deadline_info.days_remaining} hari tersisa untuk melamar
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
           {/* ─── Related Jobs Section ────────────────────────────────────────────── */}
           {mikaJob.related_jobs && mikaJob.related_jobs.length > 0 && (
-            <div className="mt-24 pt-12 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+            <div className="mt-20 pt-10 border-t" style={{ borderColor: "var(--border-subtle)" }}>
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <span className="text-xs font-semibold uppercase tracking-wider text-[#0EA5A0] mb-1 block">

@@ -1,18 +1,28 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { X, Sun, Moon, ShoppingCart, Heart } from "lucide-react";
+import { ChevronDown, X, Sun, Moon, ShoppingCart, Heart } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useCart } from "@/components/cart/CartProvider";
 import { useWishlist } from "@/components/store/useWishlist";
 import CustomerAuthButton from "@/components/auth/CustomerAuthButton";
 
+export interface NavItem {
+  label: string;
+  href?: string;
+  children?: { href: string; label: string }[];
+}
+
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  navLinks: { href: string; label: string }[];
+  navLinks: NavItem[];
   pathname: string;
+}
+
+function isPathActive(pathname: string, href: string) {
+  return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
 export default function MobileMenu({
@@ -25,22 +35,31 @@ export default function MobileMenu({
   const { theme, toggleTheme } = useTheme();
   const { totalItems, hydrated } = useCart();
   const { items: wishlistItems, hydrated: wishlistHydrated } = useWishlist();
+  const companyItem = navLinks.find((item) => item.children);
+  const companyActive =
+    companyItem?.children?.some((child) => isPathActive(pathname, child.href)) ?? false;
+  const [companyOpen, setCompanyOpen] = useState(companyActive);
+  const companyExpanded = companyOpen;
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    if (!isOpen) return;
+
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
     return () => {
       document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-40 lg:hidden">
+    <div className="fixed inset-0 z-[60] lg:hidden">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50"
@@ -49,7 +68,11 @@ export default function MobileMenu({
 
       {/* Drawer */}
       <div
+        id="mobile-navigation-drawer"
         ref={menuRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mobile-navigation-title"
         className="absolute top-0 right-0 bottom-0 w-72 shadow-xl flex flex-col"
         style={{ backgroundColor: "var(--bg-card)" }}
       >
@@ -58,12 +81,14 @@ export default function MobileMenu({
           style={{ borderColor: "var(--border-subtle)" }}
         >
           <span
+            id="mobile-navigation-title"
             className="text-lg font-bold"
             style={{ color: "var(--text-primary)" }}
           >
             Menu
           </span>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Tutup menu"
             className="w-9 h-9 flex items-center justify-center rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -75,14 +100,72 @@ export default function MobileMenu({
 
         <nav className="flex-1 overflow-y-auto py-4">
           {navLinks.map((link) => {
-            const isActive =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href);
+            const isActive = link.href
+              ? isPathActive(pathname, link.href)
+              : link.children?.some((child) => isPathActive(pathname, child.href)) ?? false;
+
+            if (link.children) {
+              return (
+                <div key={link.label}>
+                  <button
+                    type="button"
+                    aria-expanded={companyExpanded}
+                    aria-controls="mobile-company-navigation"
+                    onClick={() => setCompanyOpen((open) => !open)}
+                    className={`flex w-full items-center justify-between px-6 py-3 text-base font-medium transition-colors ${
+                      isActive
+                        ? "text-[#0EA5A0] bg-teal-50 dark:bg-teal-950/20"
+                        : "hover:text-[#0EA5A0] hover:bg-slate-50 dark:hover:bg-slate-800"
+                    }`}
+                    style={!isActive ? { color: "var(--text-secondary)" } : {}}
+                  >
+                    {link.label}
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${companyExpanded ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {companyExpanded && (
+                    <div
+                      id="mobile-company-navigation"
+                      className="border-y py-1"
+                      style={{
+                        backgroundColor: "var(--bg-secondary)",
+                        borderColor: "var(--border-subtle)",
+                      }}
+                    >
+                      {link.children.map((child) => {
+                        const childActive = isPathActive(pathname, child.href);
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            aria-current={childActive ? "page" : undefined}
+                            onClick={onClose}
+                            className={`block py-2.5 pl-10 pr-6 text-sm font-medium transition-colors ${
+                              childActive
+                                ? "text-[#0EA5A0]"
+                                : "hover:text-[#0EA5A0]"
+                            }`}
+                            style={
+                              !childActive ? { color: "var(--text-secondary)" } : {}
+                            }
+                          >
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <Link
-                key={link.href}
-                href={link.href}
+                key={link.href!}
+                href={link.href!}
+                aria-current={isActive ? "page" : undefined}
                 onClick={onClose}
                 className={`block px-6 py-3 text-base font-medium transition-colors ${
                   isActive
@@ -157,10 +240,11 @@ export default function MobileMenu({
           <Link
             href="/store"
             onClick={onClose}
-            className="flex items-center justify-center w-full py-3 text-sm font-semibold text-white rounded-md"
+            aria-label="Marketplace Komponen"
+            className="flex items-center justify-center w-full py-3 text-sm font-semibold text-white rounded-sm"
             style={{ backgroundColor: "#0B1F3A" }}
           >
-            Kunjungi Store
+            Marketplace Komponen
           </Link>
 
           <CustomerAuthButton variant="mobile" onNavigate={onClose} />

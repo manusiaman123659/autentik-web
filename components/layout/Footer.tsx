@@ -45,7 +45,9 @@ const footerLinks = {
   quickLinks: [
     { label: "Privacy Policy", href: "/privacy-policy" },
     { label: "Terms of Service", href: "/terms-of-service" },
-    { label: "ISO Certification", href: "/about" },
+    { label: "Company Profile", href: "/about" },
+    { label: "Research & Partnership", href: "/research-partnership" },
+    { label: "Jaringan Distributor", href: "/distributors" },
     { label: "Careers", href: "/careers" },
     { label: "Customer Support", href: "/contact" },
   ],

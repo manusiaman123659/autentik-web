@@ -243,7 +243,7 @@ export default async function AboutPage() {
                   borderColor: "var(--border-subtle)",
                 }}
               >
-                <div className="text-6xl font-black text-slate-300 dark:text-slate-700 group-hover:text-[#0EA5A0] transition-colors mb-6">
+                <div className="text-6xl font-black text-slate-300 dark:text-slate-700 group-hover:text-[#0EA5A0] dark:group-hover:text-[#0EA5A0] transition-colors mb-6">
                   {val.letter}
                 </div>
                 <h3
@@ -375,9 +375,18 @@ export default async function AboutPage() {
           </AnimatedElement>
 
           <AnimatedElement type="fade-up">
-            <p className="mt-6 text-center text-xs font-light" style={{ color: "var(--text-secondary)" }}>
-              Format Dokumen Interaktif &bull; {comproManifest?.pdfUrl ? "Tersedia dalam PDF" : "40 Halaman"}
-            </p>
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 text-center sm:flex-row sm:gap-5">
+              <p className="text-xs font-light" style={{ color: "var(--text-secondary)" }}>
+                Format Dokumen Interaktif &bull; {comproManifest?.pdfUrl ? "Tersedia dalam PDF" : "40 Halaman"}
+              </p>
+              <Link
+                href="/research-partnership"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0EA5A0] hover:underline"
+              >
+                Research &amp; Partnership
+                <ArrowRight size={14} />
+              </Link>
+            </div>
           </AnimatedElement>
         </div>
       </section>

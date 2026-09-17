@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { getMikaJobs, getMikaDepartments } from "@/lib/api/mika-career";
-import { getRecruitmentUrl } from "@/lib/public-data";
+import {
+  getCompaniesFromJobs,
+  getDepartmentsFromJobs,
+} from "@/lib/api/mika-career";
+import { getPublicCareerListings, getRecruitmentUrl } from "@/lib/public-data";
 import CareersClient from "./CareersClient";
 
 export const dynamic = "force-dynamic";
@@ -8,23 +11,29 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Mika Career — Lowongan Kerja & Karir | PT Autentik Karya Analitika",
   description:
-    "Jelajahi lowongan kerja terbaru di Mika Career. Kami mencari talenta unggul di bidang Fullstack Development, Hardware & IoT, Sales, dan Cloud Infrastructure.",
+    "Jelajahi lowongan kerja terbaru di Mika Career dan temukan peluang untuk berkarya bersama perusahaan dalam grup kami.",
 };
 
 export default async function CareersPage() {
-  const [jobsResponse, departments, recruitmentUrl] = await Promise.all([
-    getMikaJobs({ page: 1, per_page: 10 }),
-    getMikaDepartments(),
+  const [careerListings, recruitmentUrl] = await Promise.all([
+    getPublicCareerListings({ page: 1, per_page: 10 }),
     getRecruitmentUrl(),
   ]);
+  const sourceJobs =
+    careerListings.source === "mika"
+      ? careerListings.response.data
+      : careerListings.fallbackJobs;
+  const departments = getDepartmentsFromJobs(sourceJobs);
+  const companies = getCompaniesFromJobs(sourceJobs);
 
   return (
     <CareersClient
-      initialJobs={jobsResponse.data}
-      initialMeta={jobsResponse.meta}
+      initialJobs={careerListings.response.data}
+      initialMeta={careerListings.response.meta}
       departments={departments}
+      companies={companies}
       recruitmentUrl={recruitmentUrl}
-      apiMessage={jobsResponse.message}
+      apiMessage={careerListings.response.message}
     />
   );
 }

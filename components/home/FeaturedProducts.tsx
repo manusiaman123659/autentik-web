@@ -1,23 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
-import { products } from "@/lib/data/products";
+import { ArrowUpRight, Boxes } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
 import AnimatedElement from "./ScrollAnimations";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
+import type { ProductRow } from "@/lib/public-data";
 
-// Pilih 4 produk unggulan yang representatif dari tiap brand
-const FEATURED_SLUGS = [
-  "ullun-laminar-air-flow",
-  "ullun-biosafety-cabinet",
-  "autentik-adc-80",
-  "cylab-wps-ls1012",
-];
-
-export default function FeaturedProducts() {
-  const featuredProducts = FEATURED_SLUGS.map((slug) =>
-    products.find((p) => p.slug === slug)
-  ).filter(Boolean) as (typeof products)[0][];
+export default function FeaturedProducts({ products }: { products: ProductRow[] }) {
+  if (products.length === 0) return null;
 
   return (
     <section className="py-20" style={{ backgroundColor: "var(--bg-primary)" }}>
@@ -26,8 +16,8 @@ export default function FeaturedProducts() {
         <AnimatedElement type="fade-up">
           <div className="flex items-end justify-between mb-12">
             <SectionHeading
-              title="Produk Unggulan"
-              subtitle="Peralatan kelas atas dari brand-brand terpercaya Autentik."
+              title="Produk Manufaktur Unggulan"
+              subtitle="Pilihan produk AKA untuk kebutuhan monitoring, laboratorium, dan pengolahan air."
               align="left"
             />
             <Link
@@ -35,13 +25,13 @@ export default function FeaturedProducts() {
               className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#14B8A6] hover:text-[#0D9E98] transition-colors whitespace-nowrap mb-1"
             >
               Lihat Semua
-              <ArrowRight size={16} />
+              <ArrowUpRight size={16} />
             </Link>
           </div>
         </AnimatedElement>
 
         <AnimatedElement type="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {featuredProducts.map((product) => (
+          {products.map((product) => (
             <div
               key={product.id}
               className="border rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group hover:border-[#14B8A6]/40"
@@ -52,17 +42,17 @@ export default function FeaturedProducts() {
                 className="relative h-44 overflow-hidden"
                 style={{ backgroundColor: "var(--bg-secondary)" }}
               >
-                {product.imageUrl ? (
+                {product.image_url ? (
                   <Image
-                    src={product.imageUrl}
+                    src={product.image_url}
                     alt={product.name}
                     fill
                     className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   />
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-20">
-                    🔬
+                  <div className="absolute inset-0 flex items-center justify-center text-[#0EA5A0]/30">
+                    <Boxes size={46} />
                   </div>
                 )}
                 {/* Brand badge */}
@@ -89,8 +79,8 @@ export default function FeaturedProducts() {
                   href={`/products/${product.slug}`}
                   className="inline-flex items-center gap-1 text-sm font-semibold text-[#14B8A6] hover:text-[#0D9E98] transition-colors group/link"
                 >
-                  Detail Produk
-                  <ArrowRight
+                  Lihat Detail
+                  <ArrowUpRight
                     size={13}
                     className="transition-transform group-hover/link:translate-x-1"
                   />
@@ -108,7 +98,7 @@ export default function FeaturedProducts() {
             style={{ backgroundColor: "#0B1F3A" }}
           >
             Lihat Semua Produk
-            <ArrowRight size={16} />
+            <ArrowUpRight size={16} />
           </Link>
         </div>
       </div>

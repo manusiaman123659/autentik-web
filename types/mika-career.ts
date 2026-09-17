@@ -19,14 +19,14 @@ export interface MikaDeadlineInfo {
 }
 
 export interface MikaCompany {
-  id: number;
+  id: number | string;
   name: string;
   logo: string | null;
   city: string;
 }
 
 export interface MikaDepartment {
-  id: number;
+  id: number | string;
   name: string;
   code?: string;
   jobs_count?: number;
@@ -38,7 +38,7 @@ export interface MikaEducationRequirements {
 }
 
 export interface MikaJob {
-  id: number;
+  id: number | string;
   title: string;
   employment_type: string; // "Full-time" | "Internship" | "Part-time" | "Contract" | string
   location: string;
@@ -96,6 +96,7 @@ export interface MikaJobQueryParams {
   search?: string;
   q?: string;
   department_id?: number | string;
+  company_id?: number | string;
   location?: string;
   employment_type?: string;
 }

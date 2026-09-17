@@ -131,7 +131,7 @@ export default function StoreSearchBar({
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => input.trim().length >= 2 && setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Cari sparepart, merek, atau SKU..."
+          placeholder="Cari komponen, merek, atau SKU..."
           className="w-full rounded-sm border pl-8 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
           style={{
             backgroundColor: "var(--bg-primary)",

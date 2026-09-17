@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
 import { createClient } from "@/utils/supabase/server";
 import { rfqSchema } from "@/lib/validations/rfqSchema";
+import { parseWhatsAppContacts, resolveWhatsAppContact } from "@/lib/communication";
 
 export const runtime = "nodejs";
 
@@ -131,15 +132,15 @@ export async function POST(request: NextRequest) {
       .eq("key", "whatsapp")
       .maybeSingle();
 
-    const waValue =
-      (waSetting?.value as { number?: string } | null) ?? null;
-    const waNumber =
-      typeof waValue?.number === "string" ? waValue.number.trim() : "";
+    const mikaContact = resolveWhatsAppContact(
+      parseWhatsAppContacts(waSetting?.value),
+      "mika_rfq_followup",
+    );
 
     let waUrl: string | undefined;
-    if (waNumber) {
+    if (mikaContact) {
       const msg = [
-        `Halo, saya ingin membuat permintaan penawaran (RFQ).`,
+        `Halo Admin MIKA, saya ingin melanjutkan komunikasi mengenai permintaan penawaran (RFQ) yang telah saya kirim melalui website AKA.`,
         ``,
         `Kode RFQ: ${rfqCode}`,
         parsed.data.productName
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
       ]
         .filter(Boolean)
         .join("\n");
-      waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+      waUrl = `https://wa.me/${mikaContact.number}?text=${encodeURIComponent(msg)}`;
     }
 
     // ── Response + set cookie ──

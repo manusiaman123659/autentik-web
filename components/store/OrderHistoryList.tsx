@@ -86,7 +86,7 @@ export default function OrderHistoryList() {
             className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0EA5A0] hover:underline mb-3"
           >
             <ArrowLeft size={13} />
-            Kembali ke Store
+            Kembali ke Marketplace Komponen
           </Link>
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white" style={{ backgroundColor: "#0B1F3A" }}>
@@ -114,13 +114,13 @@ export default function OrderHistoryList() {
               Belum ada pesanan
             </h3>
             <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
-              Mulai berbelanja sparepart original bergaransi resmi untuk unit Anda.
+              Mulai berbelanja komponen original bergaransi resmi untuk unit Anda.
             </p>
             <Link
               href="/store"
               className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-sm text-xs font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-colors"
             >
-              Jelajahi Store
+              Jelajahi Marketplace Komponen
               <ChevronRight size={14} />
             </Link>
           </div>

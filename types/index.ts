@@ -74,6 +74,29 @@ export interface Partner {
   url?: string;
 }
 
+export type DistributionType = "group_distribution" | "distributor" | "sub_distributor";
+
+export interface DistributionEntity {
+  id: string;
+  name: string;
+  legalName: string | null;
+  shortName: string | null;
+  distributionType: DistributionType;
+  parentId: string | null;
+  marketSegment: string | null;
+  regionLabel: string | null;
+  city: string | null;
+  province: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  websiteUrl: string | null;
+  contactName: string | null;
+  logoUrl: string | null;
+  description: string | null;
+  sortOrder: number;
+}
+
 export interface ContactFormData {
   fullName: string;
   email: string;

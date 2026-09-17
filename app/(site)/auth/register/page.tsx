@@ -1,12 +1,25 @@
 import Link from "next/link";
 import RegisterForm from "./RegisterForm";
+import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
 
 export const metadata = {
   title: "Daftar — Autentik Store",
   description: "Buat akun Autentik Store baru.",
 };
 
-export default function CustomerRegisterPage() {
+export default async function CustomerRegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string | string[] }>;
+}) {
+  const rawRedirect = (await searchParams).redirect;
+  const redirect = typeof rawRedirect === "string"
+    ? getSafeCustomerRedirect(rawRedirect)
+    : undefined;
+  const loginHref = redirect
+    ? `/auth/login?redirect=${encodeURIComponent(redirect)}`
+    : "/auth/login";
+
   return (
     <div className="rounded-2xl shadow-2xl overflow-hidden bg-white dark:bg-slate-900 border border-white/10">
       <div className="px-8 pt-8 pb-6 text-center">
@@ -16,7 +29,7 @@ export default function CustomerRegisterPage() {
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Sudah punya akun?{" "}
           <Link
-            href="/auth/login"
+            href={loginHref}
             className="font-semibold text-[#0EA5A0] hover:underline"
           >
             Masuk

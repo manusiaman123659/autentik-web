@@ -4,10 +4,10 @@ import StoreProductCard from "@/components/store/StoreProductCard";
 
 interface RelatedProductsProps {
   products: ProductRow[];
-  waNumber: string | null;
+  mikaSalesNumber: string | null;
 }
 
-export default function RelatedProducts({ products, waNumber }: RelatedProductsProps) {
+export default function RelatedProducts({ products, mikaSalesNumber }: RelatedProductsProps) {
   if (products.length === 0) return null;
 
   return (
@@ -25,7 +25,7 @@ export default function RelatedProducts({ products, waNumber }: RelatedProductsP
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {products.map((p) => (
-          <StoreProductCard key={p.id} product={p} waNumber={waNumber} />
+          <StoreProductCard key={p.id} product={p} mikaSalesNumber={mikaSalesNumber} />
         ))}
       </div>
     </div>

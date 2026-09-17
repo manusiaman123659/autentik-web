@@ -8,9 +8,11 @@ const baseUrl =
 const STATIC_ROUTES: { path: string; priority: number }[] = [
   { path: "/", priority: 1 },
   { path: "/products", priority: 0.9 },
+  { path: "/distributors", priority: 0.8 },
   { path: "/store", priority: 0.9 },
   { path: "/careers", priority: 0.9 },
   { path: "/about", priority: 0.8 },
+  { path: "/research-partnership", priority: 0.8 },
   { path: "/services", priority: 0.8 },
   { path: "/contact", priority: 0.8 },
   { path: "/custom-request", priority: 0.7 },
@@ -27,7 +29,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       supabase
         .from("products")
         .select("slug, updated_at")
-        .eq("product_type", "b2b_system"),
+        .eq("product_type", "b2b_system")
+        .eq("status", "published")
+        .is("deleted_at", null),
       supabase
         .from("products")
         .select("slug, updated_at")

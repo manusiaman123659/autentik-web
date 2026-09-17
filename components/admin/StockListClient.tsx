@@ -30,7 +30,7 @@ export default function StockListClient({ products }: { products: ProductRow[] }
       <TableShell>
         <thead>
           <tr>
-            <Th>Sparepart</Th>
+            <Th>Komponen</Th>
             <Th>Kategori</Th>
             <Th>Varian</Th>
             <Th className="text-center">Stok</Th>
@@ -80,7 +80,7 @@ export default function StockListClient({ products }: { products: ProductRow[] }
         itemsPerPage={ITEMS_PER_PAGE}
         page={safePage}
         onPageChange={setPage}
-        noun="sparepart"
+        noun="komponen"
       />
     </div>
   );

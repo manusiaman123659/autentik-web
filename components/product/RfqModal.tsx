@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2, Send, CheckCircle, Phone } from "lucide-react";
 import { type RfqFormData } from "@/lib/validations/rfqSchema";
 
@@ -38,7 +39,41 @@ export default function RfqModal({
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [result, setResult] = useState<{ rfqCode: string; waUrl?: string } | null>(null);
 
-  if (!isOpen) return null;
+  const handleClose = useCallback(() => {
+    setForm({
+      productId: productId || "",
+      productName: productName || "",
+      companyName: "",
+      picName: "",
+      email: "",
+      phoneNumber: "",
+      estimatedQuantity: 1,
+      targetDate: "",
+      notes: "",
+    });
+    setErrors({});
+    setGeneralError(null);
+    setResult(null);
+    onClose();
+  }, [onClose, productId, productName]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") handleClose();
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleClose, isOpen]);
+
+  if (!isOpen || typeof document === "undefined") return null;
 
   function set<K extends keyof RfqFormData>(key: K, value: RfqFormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -82,33 +117,21 @@ export default function RfqModal({
     }
   }
 
-  function handleClose() {
-    setForm({
-      productId: productId || "",
-      productName: productName || "",
-      companyName: "",
-      picName: "",
-      email: "",
-      phoneNumber: "",
-      estimatedQuantity: 1,
-      targetDate: "",
-      notes: "",
-    });
-    setErrors({});
-    setGeneralError(null);
-    setResult(null);
-    onClose();
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
 
-      <div className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+      <div className="relative mx-auto flex min-h-full w-full max-w-lg items-center justify-center pointer-events-none">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rfq-dialog-title"
+        className="relative pointer-events-auto w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden rounded-2xl border shadow-2xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h3 id="rfq-dialog-title" className="text-lg font-bold text-slate-900 dark:text-white">
               Minta Penawaran Resmi (RFQ)
             </h3>
             {productName && (
@@ -118,7 +141,9 @@ export default function RfqModal({
             )}
           </div>
           <button
+            type="button"
             onClick={handleClose}
+            aria-label="Tutup formulir RFQ"
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
           >
             <X size={18} />
@@ -127,7 +152,7 @@ export default function RfqModal({
 
         {result ? (
           /* Success State */
-          <div className="px-6 py-8 text-center">
+          <div className="overflow-y-auto px-6 py-8 text-center">
             <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-4">
               <CheckCircle size={24} className="text-emerald-600 dark:text-emerald-400" />
             </div>
@@ -141,7 +166,7 @@ export default function RfqModal({
               {result.rfqCode}
             </p>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              Tim PT Autentik Karya Analitika akan segera memproses penawaran Anda. Anda juga bisa langsung menghubungi kami via WhatsApp.
+              RFQ Anda telah tercatat di sistem PT Autentik Karya Analitika. Untuk tindak lanjut komersial, Anda dapat melanjutkan komunikasi dengan Admin MIKA via WhatsApp.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               {result.waUrl && (
@@ -153,7 +178,7 @@ export default function RfqModal({
                   style={{ backgroundColor: "#25D366" }}
                 >
                   <Phone size={16} />
-                  Lanjut Konfirmasi via WhatsApp
+                  Lanjutkan ke Admin MIKA
                 </a>
               )}
               <button
@@ -293,6 +318,8 @@ export default function RfqModal({
           </form>
         )}
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

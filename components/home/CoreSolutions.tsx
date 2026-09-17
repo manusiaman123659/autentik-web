@@ -1,16 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Cpu,
-  FlaskConical,
-  BarChart2,
-  LayoutDashboard,
-  Settings,
-  Droplets,
-  Headset,
-  ArrowRight,
-} from "lucide-react";
+import { Cpu, FlaskConical, BarChart2, Droplets, ArrowRight } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
 import AnimatedElement from "./ScrollAnimations";
 
@@ -18,48 +9,33 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
   Cpu,
   FlaskConical,
   BarChart2,
-  LayoutDashboard,
-  Settings,
   Droplets,
-  Headset,
 };
 
 const coreSolutions = [
   {
     icon: "Cpu",
-    title: "Pemantauan & Telemetri IoT",
-    description: "Pemantauan kualitas air & emisi otomatis realtime.",
+    title: "Pengembangan IoT & Monitoring",
+    description: "Pengembangan perangkat dan sistem untuk pemantauan parameter operasional secara terhubung.",
     href: "/services#iot-monitoring",
   },
   {
-    icon: "LayoutDashboard",
-    title: "Rekayasa & Furnitur Lab",
-    description: "Desain kustom tata letak lab, Fume Hood & Workbench.",
+    icon: "FlaskConical",
+    title: "Produk & Sistem Laboratorium",
+    description: "Pengembangan produk pendukung aktivitas laboratorium dan kebutuhan ruang kerja teknis.",
     href: "/services#lab-engineering",
   },
   {
-    icon: "Settings",
-    title: "Kalibrasi & Perawatan",
-    description: "Servis berkala & kalibrasi akurasi standar ISO.",
-    href: "/services#calibration",
-  },
-  {
     icon: "Droplets",
-    title: "Pengolahan Air Industri",
-    description: "Sistem air murni RO/EDI & otomasi IPAL.",
+    title: "Sistem Pengolahan Air",
+    description: "Pengembangan produk dan sistem terkait pemurnian serta pengolahan air.",
     href: "/services#water-treatment",
   },
   {
     icon: "BarChart2",
-    title: "Platform Cloud & Analytics",
-    description: "Dashboard kustomisasi & integrasi API ERP.",
+    title: "Platform & Integrasi Data",
+    description: "Integrasi data perangkat ke dashboard dan platform untuk mendukung pemantauan terpusat.",
     href: "/services#platform-integration",
-  },
-  {
-    icon: "Headset",
-    title: "Konsultasi & Audit Teknis",
-    description: "Studi kelayakan & pendampingan akreditasi lab.",
-    href: "/services#consulting",
   },
 ];
 
@@ -69,13 +45,13 @@ export default function CoreSolutions() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <AnimatedElement type="fade-up">
           <SectionHeading
-            title="Layanan & Solusi Utama Kami"
-            subtitle="Portofolio layanan penyedia produk industri berbasis kebutuhan teknologi IoT & laboratorium."
+            title="Kapabilitas Pengembangan Produk"
+            subtitle="Pendekatan rekayasa yang menghubungkan perangkat, sistem, dan data untuk kebutuhan operasional."
             align="center"
           />
         </AnimatedElement>
 
-        <AnimatedElement type="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <AnimatedElement type="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {coreSolutions.map((solution) => {
             const Icon = iconMap[solution.icon];
             return (

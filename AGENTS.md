@@ -95,11 +95,11 @@ In-memory rate limiter di `lib/rate-limit.ts` (Map-based, auto-cleanup setiap 60
 ### Wiring halaman publik → Supabase
 Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan baca server-only — pakai `cookies()`, jadi halaman pemakainya dynamic; **jangan import ke komponen client**):
 - `/products` & `/store` — sudah wired lebih dulu (fungsi di `lib/admin-data.ts` + `dynamic = "force-dynamic"`). Store memakai sidebar filter (`components/store/StoreFilterSidebar.tsx`) + card compact (`components/store/StoreProductCard.tsx`).
-- `/careers` (route karir; **bukan `/news` lagi**) — list + detail baca tabel `careers` (status `open`), fallback ke `lib/data/careers.ts` bila query error. Tombol "Lamar Posisi Ini" memakai `getRecruitmentUrl()` (`lib/public-data.ts`) yang membaca `site_settings` key `recruitment` (value `{ url }`); bila kosong tombol jadi disabled. URL diatur admin lewat `components/admin/RecruitmentForm.tsx` di `/admin/karir` (aksi `lib/actions/recruitment.ts`).
+- `/careers` — **dua sumber data**: (1) **Mika Career API** (`lib/api/mika-career.ts`) sebagai primary — external Laravel backend via ngrok, data job listing + detail lengkap; (2) **Supabase `careers` table** (`lib/public-data.ts`) sebagai legacy fallback — masih dipakai oleh **home page** (`HomeCareers`) saja. `/careers` listing fetch initial dari Mika API di server, lalu `CareersClient.tsx` handle filter/pagination client-side. Detail `/careers/[slug]` coba Mika API dulu, fallback ke Supabase. Tombol "Lamar Posisi Ini" memakai `getRecruitmentUrl()` (site_settings key `recruitment`). **Gotcha**: Mika pakai numeric IDs, legacy pakai slug — keduanya di-handle oleh route `[slug]`. `ApplyRecruitmentButton.tsx` ada tapi **unused** di route saat ini.
 - `/about` — company profile manifest (`site_settings` key `compro`, fallback viewer hardcoded) + Grup Kami (`group_companies`) + Partner Kami (`partners`) + Tim Kami (`team_members`).
-- Seksi home — **Brands** (`brands`) & **HomeCareers** (`careers`), fetch server-side di `app/(site)/page.tsx` lalu di-pass sebagai props ke komponen client.
+- Seksi home — **Hero** (`home_hero` site_settings, produk B2B via `getHeroSlides()`), **Brands** (`brands`) & **HomeCareers** (`careers`), fetch server-side di `app/(site)/page.tsx` lalu di-pass sebagai props ke komponen client.
 - **SearchModal** — query anon client-side (browser Supabase client) utk produk b2b `published`+`is_active` dan karir `open`; RLS menegakkan filter publik.
-- **Sisa statis**: `solutions` (`lib/data/solutions.ts`), konteks AI (`lib/ai/*`), Hero home (sengaja hardcoded). `industries.ts` & `projects.ts` **sudah dihapus** (dead code). `lib/data/news.ts` **tetap dipertahankan** meski halaman `/news` sudah tidak ada — dipakai `scripts/build-seed.ts` untuk seed tabel `articles` (dormant); jangan hapus. `lib/data/team.ts` tetap dipertahankan sebagai fallback statis untuk Tim Kami.
+- **Sisa statis**: `solutions` (`lib/data/solutions.ts`), konteks AI (`lib/ai/*`). `industries.ts` & `projects.ts` **sudah dihapus** (dead code). `lib/data/news.ts` **tetap dipertahankan** meski halaman `/news` sudah tidak ada — dipakai `scripts/build-seed.ts` untuk seed tabel `articles` (dormant); jangan hapus. `lib/data/team.ts` tetap dipertahankan sebagai fallback statis untuk Tim Kami.
 - Pola: fungsi di `lib/public-data.ts` beri fallback ke array statis `lib/data/*` bila Supabase error; katalog/karir/home memakai `export const dynamic = "force-dynamic"`.
 
 ### Customer Auth & E-Commerce Flow
@@ -115,8 +115,10 @@ Sistem autentikasi customer terpisah dari admin, mengalir dari store → auth �
 - **Wishlist**: `useWishlist` hook (`components/store/useWishlist.ts`) — localStorage-backed (key `autentik-wishlist:v1`, max 100 items). `WishlistButton` punya 3 variant: `"card"` (absolute position), `"detail"` (inline), `"bar"` (untuk StickyMobileBar). Toggle di card, detail, dan MobileMenu.
 - **Recently viewed**: `useRecentlyViewed` hook (`components/store/useRecentlyViewed.ts`) — localStorage-backed (key `autentik-recently-viewed:v1`, max 8 items). `RecentlyViewed` component: horizontal scroll strip. `RelatedProducts` component: 4-card grid berdasarkan brand/kategori.
 
-### Sparepart Variant System
-Tabel `product_variants` mendukung varian produk (ukuran, warna, kapasitas) untuk sparepart:
+### Komponen Marketplace Variant System
+`product_type = "sparepart"` adalah **legacy internal technical key** yang secara bisnis merepresentasikan produk marketplace **Komponen**. Pertahankan literal tersebut pada validation discriminator, query filter, actions, checkout RPC, historical migrations, sitemap filtering, dan database constraint; hanya copy customer/admin-facing yang memakai istilah Komponen.
+
+Tabel `product_variants` mendukung varian produk Komponen (ukuran, warna, kapasitas):
 
 - **Schema**: `id` (uuid PK), `product_id` (text FK → `products.id`), `variant_group` (nullable — "Panjang", "Warna", atau NULL untuk single-axis/flattened), `label` (text — "1m", "3m"), `sku` (nullable), `price_override` (nullable — NULL = fallback ke `products.price`), `stock` (integer), `is_active`, `sort_order`, `deleted_at` (soft-delete), timestamps.
 - **RLS**: public SELECT hanya `is_active=true AND deleted_at IS NULL`; staff all.
@@ -131,10 +133,10 @@ Tabel `product_variants` mendukung varian produk (ukuran, warna, kapasitas) untu
 - **`order_items`**: tambah `variant_id uuid` (FK → product_variants, ON DELETE SET NULL) + `variant_label text` (snapshot nama varian).
 - **Order snapshot + display**: `OrderSnapshot.items` punya `variant_label: string | null`. `DbOrderItem` (optional) punya `variant_label?: string | null`. `OrderConfirmationClient` dan `PrintCustomerInvoice` tampilkan "Varian: {label}" under item name.
 - **Gotcha**: `products.id` bertipe `text` (bukan `uuid`). `product_variants.product_id` harus `text`. `order_items.variant_id` tetap `uuid` (FK ke product_variants.id yang uuid).
-- **`products.variants` (JSONB)**: column ini masih ada di tabel tapi **DEAD** — semua sparepart products punya `variants = '[]'`. Drop column dijadwalkan di Migration C (paling terakhir).
+- **`products.variants` (JSONB)**: column ini masih ada di tabel tapi **DEAD** — semua produk Komponen (internal `product_type = "sparepart"`) punya `variants = '[]'`. Drop column dijadwalkan di Migration C (paling terakhir).
 
-### Store UI (JakartaNotebook Style)
-Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white space, font padat.
+### Marketplace Komponen UI (JakartaNotebook Style)
+Desain marketplace Komponen mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white space, font padat.
 
 - **Design tokens**: `rounded-sm`/`rounded` (bukan `rounded-2xl`), padding `p-2`–`p-2.5`, contrast border tinggi, pricing warna merah `text-red-600`.
 - **StoreProductDetail** (`components/store/StoreProductDetail.tsx`) — komponen utama halaman detail produk. Accepts `variants?: StoreVariant[]` prop dari page.tsx (query `product_variants` table). `selectedVariant` state dengan lazy init (auto-select first in-stock). `effectivePrice`/`effectiveStock` derivation. Interactive flat pill variant selector (mobile + desktop). Sidebar purchase sticky, image gallery, tabs (deskripsi/spesifikasi), dual CTA (Beli Langsung solid + Keranjang outline). Handle `handleBuyNow` auth-aware: `addItem()` dengan variant info sebelum auth check. Passes `selectedVariant`/`hasVariants` ke `AddToCartButton` dan `StickyMobileBar`.
@@ -148,6 +150,20 @@ Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white spa
 - **StoreTrustStrip** (`components/store/StoreTrustStrip.tsx`) — 4 trust badges (100% Original, Garansi Toko, Ready Stock, Pengiriman Cepat).
 - **StorePromoBanner** (`components/store/StorePromoBanner.tsx`) — 3-column promo grid.
 
+### 3D Product Viewer & Hotspot System
+Komponen viewer 3D produk (`components/product/Product3DViewer.tsx`) dengan hotspot interaktif:
+
+- **Arsitektur state**: `activeKey` single source of truth di parent `Product3DViewer`, ModelView menerima sebagai prop. ModelView hanya membaca `activeKey` (untuk warna marker) dan melaporkan event via `onActiveHotspotChange` callback — tidak ada state lokal duplikat.
+- **Marker rendering**: Billboard + WebGL mesh (`circleGeometry`), proportional ke ukuran model via `modelRadius * 0.02` (computed via `useMemo` dari bounding sphere scene). `isActive` multiplier 1.5x (oranye vs merah).
+- **Info panel**: Fixed panel di bawah Canvas (`mt-3 rounded-sm border ...`), Tailwind classes (bukan inline CSS variables). Tampilkan title + description saat marker diklik, atau placeholder text saat tidak ada.
+- **Camera auto-frame**: `useEffect` hitung bounding box model → `cam.position.set(center.x + dist, center.y + dist * 0.7, center.z + dist)` → `cam.lookAt(center)`. `dist = radius * 2.6`.
+- **OrbitControls**: `enablePan={false}`, `enableZoom={false}`, rotasi vertikal bebas penuh (tanpa polar angle limits).
+- **Hotspot admin**: Click-to-place di `ProductForm.tsx` — guard `!isSparepart && form.id && form.model3dUrl`, `HotspotModal` component, `hotspotsPayload` → RPC `upsert_product_hotspots`. Load existing hotspot via `getProductHotspots()` di `lib/admin-data.ts`.
+- **DB**: `product_hotspots` table (migration `0036`), `upsert_product_hotspots` RPC (migration `0038`). `product_hotspots.product_id` bertipe `text` (match `products.id` yang juga `text`).
+- **Gotcha CSS**: `ProductMediaTabs.tsx` 3D tab wrapper: **jangan pakai** `overflow-hidden` (akan clip info panel). Photo tab wrapper tetap `overflow-hidden`.
+- **Gotcha dark mode**: Gunakan Tailwind `dark:` classes untuk text colors, bukan inline `style={{ color: "var(--text-primary)" }}` — lebih reliable di hydration/SSR.
+- **Gotcha lint**: Jangan panggil `setState` di dalam `useEffect` — pakai `useMemo` untuk derived values (lint error `react-hooks/set-state-in-effect`).
+
 ## Styling & design system
 - Tailwind v4 CSS-first config: `@import "tailwindcss"` + token `@theme` di `app/globals.css` (palet navy/teal). **Tidak ada file `tailwind.config.*`.**
 - Dark mode adalah kelas `.dark` khusus di `<html>` lewat `components/ThemeProvider.tsx` (key localStorage `autentik-theme`), bukan varian `dark:` Tailwind. Komponen memakai variabel CSS semantik (mis. `style={{ color: "var(--text-primary)" }}`) dari blok `:root`/`.dark` di `globals.css`; warna brand dari `lib/design-tokens.ts` (kelas badge/pill).
@@ -159,7 +175,7 @@ Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white spa
 - **Zod v4**: `z.enum(arr, { errorMap })` **tidak valid** — argumen kedua untuk enum adalah string message, bukan `errorMap`: `z.enum(careerTypes, "Tipe pekerjaan tidak valid")` (contoh `lib/validations/careerSchema.ts`).
 - **Form admin** (mis. `ProductForm` di `/admin/produk`, `/admin/sparepart`) **tidak** memakai react-hook-form. Mereka memakai `useState` lokal untuk state field dan memanggil server action langsung saat submit. Ikuti pola ini untuk form admin baru — jangan perkenalkan react-hook-form ke `app/admin/`.
 - **Upload gambar admin**: `ProductForm` meng-upload gambar client-side lewat browser Supabase client (`utils/supabase/client.ts`) ke bucket publik `media` (policy RLS `storage.objects` khusus staf di `0004_media_storage_policies.sql`) lalu menyimpan URL publik hasilnya di `products.image_url`. Tidak ada field input URL.
-- **Linking produk → merek**: `products.brand` tetap **teks bebas** (tidak pernah dipaksa jadi FK). `products.brand_id` (FK opsional → `brands.id`, on delete set null) diisi bila admin memilih merek dari dropdown `ProductForm` (prop `brands` dari `listBrands()`); opsi **"Merek lain… (tulis manual)"** ada sengaja untuk kasus di luar daftar merek (sparepart generik, brand belum terdaftar) → `brand_id` NULL, bukan bug. Saat simpan `lib/actions/products.ts` men-derive `brand_id` otomatis (case-insensitive) bila teks brand cocok dengan merek terdaftar. Filter publik (`/products`, `/store`, `SearchModal`, marquee home) **tetap berbasis string `products.brand`**, TIDAK memakai `brand_id` — mengubahnya ke berbasis `brand_id` bukan perilaku saat ini.
+- **Linking produk → merek**: `products.brand` tetap **teks bebas** (tidak pernah dipaksa jadi FK). `products.brand_id` (FK opsional → `brands.id`, on delete set null) diisi bila admin memilih merek dari dropdown `ProductForm` (prop `brands` dari `listBrands()`); opsi **"Merek lain… (tulis manual)"** ada sengaja untuk kasus di luar daftar merek (Komponen generik dengan internal `product_type = "sparepart"`, brand belum terdaftar) → `brand_id` NULL, bukan bug. Saat simpan `lib/actions/products.ts` men-derive `brand_id` otomatis (case-insensitive) bila teks brand cocok dengan merek terdaftar. Filter publik (`/products`, `/store`, `SearchModal`, marquee home) **tetap berbasis string `products.brand`**, TIDAK memakai `brand_id` — mengubahnya ke berbasis `brand_id` bukan perilaku saat ini.
 - `app/api/contact` memvalidasi dengan zod `safeParse` lalu memasukkan submission ke tabel `contact_messages` (anon insert via RLS) — muncul di `/admin/inquiry`. Jaga bentuk respons `{ success, message, errors? }`.
 - **Order snapshot**: `lib/order-snapshot.ts` menyimpan snapshot order di sessionStorage setelah checkout. Dipakai di halaman konfirmasi publik `/store/orders/[code]` (bukan DB). `OrderSnapshot.items` sekarang punya `variant_label: string | null`.
 
@@ -206,13 +222,17 @@ Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white spa
   - `0033_update_create_checkout_order.sql` — update `create_checkout_order` RPC: parse `variant_id` dari `p_items` JSONB (text → uuid cast + regex guard); cek `v_has_active_variants` → reject jika produk punya varian aktif tapi `variant_id` null; branch variant: lock + decrement `product_variants.stock`, ambil harga dari `COALESCE(price_override, products.price)`; branch non-variant: decrement `products.stock` (behavior existing); `v_variant_label` di-extract ke variable text SEBELUM INSERT ke `tmp_checkout_items` (bukan `v_variant.label` di INSERT — PL/pgSQL record variable bind gagal saat unassigned); INSERT `order_items` sertakan `variant_id` + `variant_label`. Signature TIDAK berubah (p_items tetap jsonb) → CREATE OR REPLACE tanpa DROP. **Bug fix: `v_variant := null` di awal loop (cegah stale data dari iterasi sebelumnya) + `v_variant_label` extraction (cegah crash "record not assigned" saat INSERT).**
   - `0034_upsert_product_variants.sql` — RPC `upsert_product_variants` (SECURITY DEFINER, authenticated + guard `is_staff()`) untuk admin CRUD varian: diff-based atomic INSERT/UPDATE/soft-delete. Input validation (label required, stock >= 0, unique constraint check). Called by `upsertProduct` in `lib/actions/products.ts`.
   - `0035_revoke_public_grants_admin_rpcs.sql` — hardening: `REVOKE EXECUTE FROM PUBLIC` + `REVOKE EXECUTE FROM anon` untuk `upsert_product_variants`, `cancel_order`, `delete_order`. Defense-in-depth: even if RLS fails, anon/public cannot call admin RPCs.
-- **Nomor WhatsApp publik — satu sumber kebenaran**: `site_settings` key `whatsapp` dibaca server-side via `getWhatsAppNumber()` (`lib/public-data.ts`, memakai `cookies()` → halaman pemakainya dynamic) dan client-side via browser Supabase client di `components/chatbot/FaqWidget.tsx` (fetch sekali saat mount, tombol disabled sampai terisi). UI link/tombol WA memakai `components/ui/WhatsAppButton.tsx` (client dumb, props `number` + `label?`/`message?`/`variant?: "link"|"button"`/`className?`/`id?`; disabled saat `number` null). **Ganti nomor = `UPDATE site_settings` key `whatsapp`** (belum ada form admin) — jangan hardcode di komponen. `lib/whatsapp.ts` (konstanta lama) sudah dihapus; tidak ada dua sumber.
-- **Chatbot AI (Gemini)** tetap dipakai penuh: `components/chatbot/FaqWidget.tsx` hanya mode AI (`/api/chat`, rate-limit `ai_chat_sessions`), dengan tombol "Hubungi via WhatsApp" ke nomor dari `site_settings` key `whatsapp` sebagai fallback kontak. Tidak ada live chat CS/Tawk lagi.
+  - `0036_product_hotspots.sql` — buat tabel `product_hotspots` (id uuid PK, product_id **text** FK → products.id, position_x/y/z float, title, description, is_active, sort_order, deleted_at, timestamps); RLS 3 policy; trigger `set_updated_at`. **Gotcha: `products.id` bertipe `text` — `product_hotspots.product_id` harus `text`.**
+  - `0037_grant_hardening_product_tables.sql` — hardening grants untuk `product_hotspots` + `product_variants`.
+  - `0038_upsert_product_hotspots.sql` — RPC `upsert_product_hotspots` (SECURITY DEFINER, authenticated + guard `is_staff()`) untuk admin CRUD hotspot: diff-based atomic INSERT/UPDATE/soft-delete. Guard `product_type = 'b2b_system'` — hanya produk tipe b2b yang boleh punya hotspot. Called by `upsertProduct` in `lib/actions/products.ts`.
+- **Routing WhatsApp publik — satu sumber kebenaran**: `site_settings` key `whatsapp` menyimpan `ppicAka` (`6287725077001`) dan `mikaSales` (`6281807201111`). Parser/resolver murni ada di `lib/communication.ts`; format lama `{"number":"..."}` tetap didukung sementara sebagai fallback deployment. Server memakai `getWhatsAppContact(intent)`/`getWhatsAppContacts()` di `lib/public-data.ts`; `FaqWidget` memakai parser yang sama di client. PPIC AKA menangani komponen, commerce, dan order; MIKA menangani produk manufaktur, distributor, sparepart, custom, services pihak ketiga, dan follow-up RFQ. `WhatsAppButton` tetap komponen dumb yang hanya menerima nomor hasil resolver. Ganti kontak dengan `UPDATE site_settings` key `whatsapp` setelah kode kompatibel ter-deploy; jangan hardcode nomor di komponen.
+- **Chatbot AI (Gemini)** tetap dipakai penuh: `components/chatbot/FaqWidget.tsx` hanya mode AI (`/api/chat`, rate-limit `ai_chat_sessions`) dan menyediakan dua CTA deterministik: "Tanya Komponen" ke PPIC AKA serta "Sales & Custom" ke MIKA. AI tidak menentukan atau menebak nomor tujuan. Tidak ada live chat CS/Tawk lagi.
 - Promosikan admin pertama di SQL editor Supabase:
   ```sql
   update public.profiles set role = 'admin' where email = 'your@email.com';
   ```
 - **Gotcha PostgREST**: jika sebuah halaman tampil kosong tepat setelah migrasi membuat/mengubah tabel, cache skema PostgREST mungkin usang — jalankan `NOTIFY pgrst, 'reload schema';` di SQL editor.
+- **`is_active` pada produk B2B HANYA mempengaruhi visibility di Hero homepage** — TIDAK mempengaruhi listing publik `/products` (yang hanya filter `product_type` + `deleted_at`). Kalau butuh `is_active` berlaku situs-lebar, itu perlu perubahan terpisah di `listProductsByType()`.
 - Env Supabase: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` di `.env.local`. Client: `utils/supabase/client.ts` (browser) / `utils/supabase/server.ts` (RSC) / `utils/supabase/middleware.ts`; refresh sesi di-wire lewat `proxy.ts`. Tidak ada key yang di-commit.
 
 ## How to
@@ -243,7 +263,7 @@ Desain store mengikuti gaya JakartaNotebook: dense, hard-edge, minimal white spa
 - `lib/format.ts` — `formatRupiah()` currency formatter
 - `lib/midtrans.ts` — Midtrans Snap client wrapper (`createMidtransTransaction`)
 - `lib/logger.ts` — structured logging (`logError`, `logAudit`)
-- `supabase/migrations/` — 33 SQL migrations (0001–0035, gaps: 0024, 0027, 0031); file baru lanjut `0036_`
+- `supabase/migrations/` — 36 SQL migrations (0001–0038, gaps: 0024, 0027, 0031); file baru lanjut `0039_`
 - `utils/supabase/` — client (browser), server (RSC), middleware (proxy)
 - `.agents/skills/` — 6 custom skills (admin-crud-pattern, no-ai-slop-design, supabase, supabase-migration-safety, supabase-postgres-best-practices, verification-before-done)
 

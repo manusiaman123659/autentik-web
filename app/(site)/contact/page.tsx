@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getWhatsAppNumber } from "@/lib/public-data";
+import { getWhatsAppContacts } from "@/lib/public-data";
 import ContactClient from "./ContactClient";
 
 export const metadata: Metadata = {
@@ -9,6 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default async function ContactPage() {
-  const waNumber = await getWhatsAppNumber();
-  return <ContactClient waNumber={waNumber} />;
+  const contacts = await getWhatsAppContacts();
+  return (
+    <ContactClient
+      ppicAkaNumber={contacts.ppicAka?.number ?? null}
+      mikaSalesNumber={contacts.mikaSales?.number ?? null}
+    />
+  );
 }

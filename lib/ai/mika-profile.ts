@@ -10,7 +10,6 @@ export const mikaIdentity = {
   website: "mikacares.id",
   eCatalog: "https://bit.ly/mikacares",
   email: "mitrakarya.analitika@gmail.com",
-  phone: "0818 0720 1111",
   address:
     "Ruko Amsterdam No. 9D, Jl. Klipang Raya, Sendangmulyo, Tembalang, Kota Semarang, Jawa Tengah",
 };
@@ -132,7 +131,7 @@ export function buildMikaProfileContext(): string {
 
   return [
     "PROFIL MITRA / GRUP: PT MITRA KARYA ANALITIKA (MIKA):",
-    `Nama: ${mikaIdentity.name} (${mikaIdentity.nickname}). Tagline: "${mikaIdentity.tagline}". Website: ${mikaIdentity.website}. E-katalog: ${mikaIdentity.eCatalog}. Email: ${mikaIdentity.email}. Telepon: ${mikaIdentity.phone}. Alamat: ${mikaIdentity.address}.`,
+    `Nama: ${mikaIdentity.name} (${mikaIdentity.nickname}). Tagline: "${mikaIdentity.tagline}". Website: ${mikaIdentity.website}. E-katalog: ${mikaIdentity.eCatalog}. Email: ${mikaIdentity.email}. Alamat: ${mikaIdentity.address}.`,
     "",
     "TENTANG:",
     mikaAbout,

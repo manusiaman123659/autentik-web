@@ -123,16 +123,16 @@ const serviceDetailsData = [
 ];
 
 const THIRD_PARTY_WA_MESSAGE =
-  "Halo, saya butuh bantuan technical support dan pengadaan produk pihak ketiga.";
+  "Halo Admin MIKA, saya membutuhkan bantuan technical support dan pengadaan produk pihak ketiga.";
 
 const fulfillmentPaths = [
   {
     icon: PackageCheck,
     title: "Stok Siap — Beli Langsung",
     description:
-      "Sparepart yang tersedia di gudang dapat langsung dibeli dan di-checkout di halaman Store kami, lengkap dengan harga, stok, dan proses pengiriman.",
+      "Komponen yang tersedia di gudang dapat langsung dibeli melalui Marketplace Komponen kami, lengkap dengan harga, stok, dan proses pengiriman.",
     points: ["Harga & stok transparan", "Checkout online cepat", "Pengiriman reguler"],
-    cta: { label: "Kunjungi Store", href: "/store" },
+    cta: { label: "Kunjungi Marketplace Komponen", href: "/store" },
     tone: "#0EA5A0",
   },
   {
@@ -151,7 +151,7 @@ const fulfillmentPaths = [
       "Produk dari vendor/prinsipal pihak ketiga yang kami kelola pengadaannya, lengkap dengan konsultasi technical support agar sesuai aplikasi Anda.",
     points: ["Pengadaan dikelola tim kami", "Technical support khusus", "Spesifikasi teknis terverifikasi"],
     cta: {
-      label: "Hubungi Technical Support",
+      label: "Hubungi Admin MIKA",
       href: "/contact",
       external: true,
     },
@@ -201,7 +201,7 @@ const faqs = [
   {
     question: "Berapa lama garansi layanan dan perangkat keras yang diberikan?",
     answer:
-      "Kami memberikan garansi resmi sparepart & layanan teknis hingga 12-24 bulan (tergantung paket layanan) lengkap dengan garansi dukungan tim teknis purna jual.",
+      "Kami memberikan garansi resmi komponen dan layanan teknis hingga 12-24 bulan (tergantung paket layanan) lengkap dengan garansi dukungan tim teknis purna jual.",
   },
   {
     question: "Bagaimana cara mengajukan permintaan survey lokasi atau konsultasi awal?",

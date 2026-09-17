@@ -95,12 +95,14 @@ export default function OrderConfirmationClient({
   bankAccount,
   dbOrder,
   statusParam,
+  paymentFlow,
 }: {
   code: string;
   waNumber: string | null;
   bankAccount: { bankName: string; accountNumber: string; accountHolder: string } | null;
   dbOrder: DbOrder | null;
   statusParam: string | null;
+  paymentFlow: "manual_transfer" | "manual_cod" | "midtrans";
 }) {
   const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -205,12 +207,13 @@ export default function OrderConfirmationClient({
               href="/store"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
             >
-              Kembali ke Store
+              Kembali ke Marketplace Komponen
               <ChevronRight size={16} />
             </Link>
             <WhatsAppButton
               number={waNumber}
-              label="Hubungi Kami"
+              label="Hubungi PPIC AKA"
+              message={`Halo PPIC AKA, saya membutuhkan bantuan untuk menemukan pesanan komponen dengan kode ${code}.`}
               variant="button"
               className="px-6 py-3 rounded-xl text-sm"
             />
@@ -228,7 +231,7 @@ export default function OrderConfirmationClient({
 
   return (
     <>
-    <PrintCustomerInvoice snapshot={snapshot} bankAccount={bankAccount} />
+    <PrintCustomerInvoice snapshot={snapshot} bankAccount={bankAccount} showBankTransfer={paymentFlow === "manual_transfer"} />
     <div className="min-h-screen print:hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
       {/* Header */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
@@ -435,7 +438,7 @@ export default function OrderConfirmationClient({
           </div>
         </div>
 
-        {/* Payment section — conditional based on status */}
+        {/* Payment section — conditional based on paymentFlow and status */}
         {isPaid ? (
           <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-sm p-6 bg-emerald-50/50 dark:bg-emerald-950/20">
             <div className="flex items-center gap-2 mb-3">
@@ -460,7 +463,7 @@ export default function OrderConfirmationClient({
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Pembayaran tidak berhasil. Anda dapat mencoba membayar kembali atau menghubungi tim kami.
             </p>
-            {effectiveInvoiceUrl && (
+            {paymentFlow === "midtrans" && effectiveInvoiceUrl && (
               <a
                 href={effectiveInvoiceUrl}
                 target="_blank"
@@ -473,83 +476,131 @@ export default function OrderConfirmationClient({
             )}
           </div>
         ) : (
-          /* Pending payment — show Midtrans link or transfer instructions */
+          /* Pending payment — branching per paymentFlow */
           <div className="rounded-2xl border shadow-sm p-6" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-            <h2 className="text-base font-bold mb-1" style={{ color: "var(--text-primary)" }}>Instruksi Pembayaran</h2>
-            <p className="text-xs mt-1 mb-5" style={{ color: "var(--text-secondary)" }}>
-              Selesaikan pembayaran menggunakan salah satu metode di bawah.
-            </p>
 
-            {effectiveInvoiceUrl ? (
-              <a
-                href={effectiveInvoiceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2.5 bg-[#0EA5A0] hover:bg-[#0D9E98] active:scale-[0.99] text-white font-semibold py-3.5 px-4 rounded-xl shadow-md transition-all text-sm sm:text-base leading-snug"
-              >
-                <CreditCard className="h-5 w-5 shrink-0" />
-                <span className="text-center">Bayar via Payment Gateway (QRIS, VA, CC)</span>
-                <ExternalLink className="h-4 w-4 shrink-0 opacity-80" />
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={handleRegenerateInvoice}
-                disabled={generatingInvoice}
-                className="w-full flex items-center justify-center gap-2.5 bg-[#0EA5A0] hover:bg-[#0D9E98] active:scale-[0.99] text-white font-semibold py-3.5 px-4 rounded-xl shadow-md transition-all text-sm sm:text-base leading-snug disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {generatingInvoice ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin shrink-0" />
-                    <span>Membuat Link Pembayaran...</span>
-                  </>
-                ) : (
-                  <>
+            {paymentFlow === "manual_transfer" && (
+              <>
+                <h2 className="text-base font-bold mb-1" style={{ color: "var(--text-primary)" }}>Instruksi Pembayaran</h2>
+                <p className="text-xs mt-1 mb-5" style={{ color: "var(--text-secondary)" }}>
+                  Silakan transfer ke rekening bank di bawah ini. Setelah transfer, silakan hubungi PPIC AKA via WhatsApp untuk konfirmasi.
+                </p>
+
+                {bankAccount && (
+                  <div className="rounded-xl border p-4 space-y-1.5 text-sm mb-4" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Bank</span>
+                      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{bankAccount.bankName}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Atas Nama</span>
+                      <span className="font-semibold text-right" style={{ color: "var(--text-primary)" }}>{bankAccount.accountHolder}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs" style={{ color: "var(--text-secondary)" }}>No. Rekening</span>
+                      <span className="font-mono font-bold" style={{ color: "var(--text-primary)" }}>{bankAccount.accountNumber}</span>
+                    </div>
+                  </div>
+                )}
+
+                {bankAccount && (
+                  <p className="text-[11px] text-slate-400 mb-4 font-light">
+                    Sertakan kode pesanan <span className="font-mono font-semibold">{snapshot.code}</span> sebagai referensi transfer.
+                  </p>
+                )}
+
+                <div className="border-t pt-4" style={{ borderColor: "var(--border-subtle)" }}>
+                  <WhatsAppButton
+                    number={waNumber}
+                    label="Konfirmasi via WhatsApp"
+                     message={`Halo PPIC AKA, saya ingin konfirmasi pembayaran pesanan komponen dengan nomor order ${snapshot.code} atas nama ${dbOrder?.customer_name ?? "-"} via transfer bank.`}
+                    variant="button"
+                    className="w-full px-6 py-3 rounded-xl text-sm"
+                  />
+                </div>
+              </>
+            )}
+
+            {paymentFlow === "manual_cod" && (
+              <>
+                <h2 className="text-base font-bold mb-1" style={{ color: "var(--text-primary)" }}>Pembayaran di Tempat (COD)</h2>
+                <p className="text-xs mt-1 mb-5" style={{ color: "var(--text-secondary)" }}>
+                  Pesanan Anda akan diproses dan dikirim. Pembayaran dilakukan secara tunai saat barang diterima.
+                </p>
+
+                <div className="rounded-xl border p-4 text-sm" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                    Total yang harus dibayar saat barang sampai:
+                  </p>
+                  <p className="text-lg font-bold mt-1" style={{ color: "var(--text-primary)" }}>
+                    {formatRupiah(snapshot.total)}
+                  </p>
+                </div>
+
+                <div className="border-t mt-4 pt-4" style={{ borderColor: "var(--border-subtle)" }}>
+                  <WhatsAppButton
+                    number={waNumber}
+                     label="Hubungi PPIC AKA"
+                     message={`Halo PPIC AKA, saya ingin menanyakan pesanan COD lama dengan nomor order ${snapshot.code} atas nama ${dbOrder?.customer_name ?? "-"}.`}
+                    variant="button"
+                    className="w-full px-6 py-3 rounded-xl text-sm"
+                  />
+                </div>
+              </>
+            )}
+
+            {paymentFlow === "midtrans" && (
+              <>
+                <h2 className="text-base font-bold mb-1" style={{ color: "var(--text-primary)" }}>Instruksi Pembayaran</h2>
+                <p className="text-xs mt-1 mb-5" style={{ color: "var(--text-secondary)" }}>
+                  Selesaikan pembayaran menggunakan salah satu metode di bawah.
+                </p>
+
+                {effectiveInvoiceUrl ? (
+                  <a
+                    href={effectiveInvoiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2.5 bg-[#0EA5A0] hover:bg-[#0D9E98] active:scale-[0.99] text-white font-semibold py-3.5 px-4 rounded-xl shadow-md transition-all text-sm sm:text-base leading-snug"
+                  >
                     <CreditCard className="h-5 w-5 shrink-0" />
                     <span className="text-center">Bayar via Payment Gateway (QRIS, VA, CC)</span>
                     <ExternalLink className="h-4 w-4 shrink-0 opacity-80" />
-                  </>
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleRegenerateInvoice}
+                    disabled={generatingInvoice}
+                    className="w-full flex items-center justify-center gap-2.5 bg-[#0EA5A0] hover:bg-[#0D9E98] active:scale-[0.99] text-white font-semibold py-3.5 px-4 rounded-xl shadow-md transition-all text-sm sm:text-base leading-snug disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {generatingInvoice ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                        <span>Membuat Link Pembayaran...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-5 w-5 shrink-0" />
+                        <span className="text-center">Bayar via Payment Gateway (QRIS, VA, CC)</span>
+                        <ExternalLink className="h-4 w-4 shrink-0 opacity-80" />
+                      </>
+                    )}
+                  </button>
                 )}
-              </button>
-            )}
 
-            {bankAccount && (
-              <details className="mt-4">
-                <summary
-                  className="text-xs font-semibold cursor-pointer select-none"
-                  style={{ color: "var(--text-secondary)" }}
-                >
-                  Atau transfer manual ke rekening bank
-                </summary>
-                <div className="mt-3 rounded-xl border p-4 space-y-1.5 text-sm" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Bank</span>
-                    <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{bankAccount.bankName}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Atas Nama</span>
-                    <span className="font-semibold text-right" style={{ color: "var(--text-primary)" }}>{bankAccount.accountHolder}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>No. Rekening</span>
-                    <span className="font-mono font-bold" style={{ color: "var(--text-primary)" }}>{bankAccount.accountNumber}</span>
-                  </div>
+                <div className="border-t mt-4 pt-4" style={{ borderColor: "var(--border-subtle)" }}>
+                  <WhatsAppButton
+                    number={waNumber}
+                     label="Hubungi PPIC AKA"
+                     message={`Halo PPIC AKA, saya ingin menanyakan pesanan komponen dengan nomor order ${snapshot.code} atas nama ${dbOrder?.customer_name ?? "-"}.`}
+                    variant="button"
+                    className="w-full px-6 py-3 rounded-xl text-sm"
+                  />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-2 font-light">
-                  Sertakan kode pesanan <span className="font-mono font-semibold">{snapshot.code}</span> sebagai referensi.
-                </p>
-              </details>
+              </>
             )}
 
-            <div className="border-t mt-4 pt-4" style={{ borderColor: "var(--border-subtle)" }}>
-              <WhatsAppButton
-                number={waNumber}
-                label="Hubungi Admin via WhatsApp"
-                message={`Halo Admin PT Autentik Karya Analitika, saya ingin konfirmasi pesanan dengan nomor order ${snapshot.code} atas nama ${dbOrder?.customer_name ?? "-"}.`}
-                variant="button"
-                className="w-full px-6 py-3 rounded-xl text-sm"
-              />
-            </div>
           </div>
         )}
 

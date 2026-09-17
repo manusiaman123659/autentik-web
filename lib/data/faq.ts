@@ -15,21 +15,21 @@ export const faqItems: FaqItem[] = [
     question: "Jam operasional & cara menghubungi sales",
     keywords: ["jam", "operasional", "buka", "kontak", "hubungi", "sales", "telepon", "jam kerja"],
     answer:
-      "Kami beroperasi Senin–Jumat pukul 08.00–17.00 WIB. Hubungi sales melalui halaman /contact (formulir), WhatsApp, atau email resmi yang tertera di footer situs. Tim kami membalas dalam 1–2 hari kerja.",
+      "Kami beroperasi Senin–Jumat pukul 08.00–17.00 WIB. Buka halaman /contact untuk memilih PPIC AKA bagi kebutuhan komponen dan pesanan, atau Admin MIKA bagi kebutuhan produk, sparepart, custom, dan distribusi.",
   },
   {
     id: "order-b2b",
     question: "Cara memesan produk B2B (sistem custom)",
     keywords: ["b2b", "pesan", "custom", "sistem", "instalasi", "katalog", "beli", "produk"],
     answer:
-      "Buka /products untuk melihat produk sistem kami, lalu gunakan tombol 'Tanya via WhatsApp' atau 'Hubungi Sales' pada halaman produk. Tim sales akan membantu kebutuhan spesifik, penawaran harga, dan proses instalasi.",
+      "Buka /products untuk melihat produk manufaktur AKA. Gunakan 'Minta RFQ' untuk mengirim permintaan penawaran ke sistem AKA, atau 'Hubungi Sales / Distributor' untuk berkonsultasi langsung dengan Admin MIKA.",
   },
   {
     id: "order-store",
-    question: "Cara beli sparepart di Store (alur keranjang & checkout)",
-    keywords: ["store", "sparepart", "keranjang", "cart", "checkout", "beli", "pesan"],
+    question: "Cara membeli komponen di Marketplace Komponen",
+    keywords: ["marketplace", "store", "komponen", "sparepart", "keranjang", "cart", "checkout", "beli", "pesan"],
     answer:
-      "Buka /store, pilih sparepart, klik 'Tambah ke Keranjang', lalu periksa keranjang di /store/cart. Lanjutkan ke Checkout, isi data pengiriman, dan selesaikan pembayaran. Setelah itu halaman konfirmasi akan menampilkan kode pesanan Anda.",
+      "Buka /store, pilih komponen, klik 'Tambah ke Keranjang', lalu periksa keranjang di /store/cart. Lanjutkan ke Checkout, isi data pengiriman, dan selesaikan pembayaran. Setelah itu halaman konfirmasi akan menampilkan kode pesanan Anda.",
   },
   {
     id: "what-custom",
@@ -43,7 +43,7 @@ export const faqItems: FaqItem[] = [
     question: "Apa itu produk 'Pihak Ketiga' / technical support?",
     keywords: ["pihak ketiga", "third party", "technical support", "vendor", "pengadaan", "procurement"],
     answer:
-      "Produk Pihak Ketiga adalah barang dari vendor/prinsipal yang pengadaannya kami kelola, lengkap dengan konsultasi technical support agar sesuai aplikasi Anda. Gunakan tombol 'Hubungi Technical Support' di halaman produk untuk berkonsultasi via WhatsApp.",
+      "Produk Pihak Ketiga adalah barang dari vendor/prinsipal yang pengadaannya dibantu oleh MIKA. Gunakan tombol 'Hubungi Admin MIKA' untuk konsultasi technical support dan pengadaan.",
   },
   {
     id: "payment",
@@ -57,20 +57,20 @@ export const faqItems: FaqItem[] = [
     question: "Estimasi pengiriman & biaya ongkir",
     keywords: ["kirim", "pengiriman", "ongkir", "estimasi", "lama", "packing", "logistik"],
     answer:
-      "Estimasi pengiriman 2–7 hari kerja tergantung wilayah tujuan. Biaya ongkir dikonfirmasi oleh admin melalui WhatsApp/email setelah pesanan diverifikasi, menyesuaikan berat dan tujuan pengiriman.",
+      "Estimasi pengiriman 2–7 hari kerja tergantung wilayah tujuan. Untuk bantuan pengiriman pesanan Marketplace Komponen, hubungi PPIC AKA melalui WhatsApp dan sertakan kode pesanan.",
   },
   {
     id: "track-order",
     question: "Cara cek status pesanan",
     keywords: ["track", "cek", "status", "pesanan", "kode", "resi", "order", "kemana"],
     answer:
-      "Kode pesanan dan ringkasan hanya tampil sekali di halaman konfirmasi tepat setelah checkout selesai — segera simpan atau screenshot halaman tersebut. Halaman /store/orders/<kode> bersifat sesi (datanya dari browser), jadi setelah tab ditutup detail tidak bisa dibuka kembali. Untuk cek status pesanan setelahnya, hubungi tim kami via WhatsApp/email dan sebutkan kode pesanan Anda.",
+      "Kode pesanan dan ringkasan ditampilkan setelah checkout dan tersedia pada riwayat pesanan akun Anda. Untuk bantuan status pesanan Marketplace Komponen, hubungi PPIC AKA melalui WhatsApp dan sebutkan kode pesanan.",
   },
   {
     id: "complaint",
     question: "Kontak untuk komplain / keluhan",
     keywords: ["komplain", "keluhan", "masalah", "garansi", "retur", "pengaduan"],
     answer:
-      "Sampaikan komplain atau keluhan melalui formulir di /contact (kategori Pertanyaan Umum) atau WhatsApp/email resmi kami. Sebutkan kode pesanan bila ada — tim kami akan merespons dalam 1–2 hari kerja.",
+      "Sampaikan keluhan melalui formulir /contact. Untuk pesanan Marketplace Komponen, pilih WhatsApp PPIC AKA dan sertakan kode pesanan; untuk produk, sparepart, custom, atau distribusi, pilih Admin MIKA.",
   },
 ];

@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Lock, Mail, Eye, EyeOff, User, Phone } from "lucide-react";
 import {
   customerRegisterSchema,
   type CustomerRegisterFormData,
   validateRegister,
 } from "@/lib/validations/authSchema";
+import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
 import { createClient } from "@/utils/supabase/client";
 
 export default function RegisterForm() {
@@ -18,6 +19,8 @@ export default function RegisterForm() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const customerRedirect = getSafeCustomerRedirect(searchParams.get("redirect"));
   const supabase = createClient();
 
   const {
@@ -73,7 +76,7 @@ export default function RegisterForm() {
           "Registrasi berhasil! Silakan masuk dengan akun yang baru dibuat."
         );
         setTimeout(() => {
-          router.push("/auth/login");
+          router.push(`/auth/login?redirect=${encodeURIComponent(customerRedirect)}`);
         }, 2000);
       }
     } catch {

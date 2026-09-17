@@ -36,12 +36,19 @@ export interface StoreVariant {
 
 interface StoreProductDetailProps {
   product: ProductRow;
-  waNumber: string | null;
+  ppicAkaNumber: string | null;
+  mikaSalesNumber: string | null;
   relatedProducts?: ProductRow[];
   variants?: StoreVariant[];
 }
 
-export default function StoreProductDetail({ product, waNumber, relatedProducts = [], variants = [] }: StoreProductDetailProps) {
+export default function StoreProductDetail({
+  product,
+  ppicAkaNumber,
+  mikaSalesNumber,
+  relatedProducts = [],
+  variants = [],
+}: StoreProductDetailProps) {
   const [activeTab, setActiveTab] = useState<Tab>("description");
   const router = useRouter();
   const supabase = createClient();
@@ -78,7 +85,6 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
 
   const fulfillmentType = product.fulfillment_type ?? "ready_stock";
   const isReady = fulfillmentType === "ready_stock";
-  const isThirdParty = fulfillmentType === "third_party";
 
   const hasDiscount = selectedVariant == null &&
     product.compare_at_price != null &&
@@ -117,7 +123,7 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
           <nav className="flex items-center gap-1 text-[11px]" style={{ color: "var(--text-muted)" }}>
             <Link href="/" className="hover:text-[#0EA5A0] transition-colors">Home</Link>
             <ChevronRight size={10} />
-            <Link href="/store" className="hover:text-[#0EA5A0] transition-colors">Store</Link>
+            <Link href="/store" className="hover:text-[#0EA5A0] transition-colors">Marketplace Komponen</Link>
             <ChevronRight size={10} />
             <span className="font-medium truncate max-w-[180px]" style={{ color: "var(--text-primary)" }}>
               {product.name}
@@ -368,17 +374,17 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
                   fulfillmentType={fulfillmentType}
                   name={product.name}
                   slug={product.slug}
-                  waNumber={waNumber}
+                  waNumber={mikaSalesNumber}
                   variant="detail"
                 />
               )}
 
               {/* WhatsApp */}
-              {!isThirdParty && (
+              {isReady && (
                 <WhatsAppButton
-                  number={waNumber}
+                  number={ppicAkaNumber}
                   label="Tanya via WhatsApp"
-                  message={`Halo, saya ingin menanyakan ketersediaan sparepart ${product.name}`}
+                  message={`Halo PPIC AKA, saya ingin menanyakan ketersediaan komponen ${product.name}`}
                   variant="button"
                   className="w-full py-2 text-white font-semibold text-xs rounded-sm flex items-center justify-center gap-1.5 shadow-none transition-opacity hover:opacity-90"
                 />
@@ -439,7 +445,7 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
-          <RelatedProducts products={relatedProducts} waNumber={waNumber} />
+          <RelatedProducts products={relatedProducts} mikaSalesNumber={mikaSalesNumber} />
         )}
 
         {/* Recently Viewed */}
@@ -458,7 +464,7 @@ export default function StoreProductDetail({ product, waNumber, relatedProducts 
           variant_label: selectedVariant?.label ?? null,
         })}
         onBuyNow={() => handleBuyNow(1)}
-        waNumber={waNumber}
+        waNumber={isReady ? ppicAkaNumber : mikaSalesNumber}
         effectivePrice={effectivePrice}
         effectiveStock={effectiveStock}
         selectedVariant={selectedVariant}

@@ -32,7 +32,7 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
     <div className="max-w-6xl">
       <PageHeader
         title="Pesanan"
-        description="Proses pesanan sparepart: status bayar & kirim"
+        description="Proses pesanan komponen: status pembayaran dan pengiriman"
         actionLabel="Buat Pesanan Manual"
         actionHref="/admin/orders/new"
       />

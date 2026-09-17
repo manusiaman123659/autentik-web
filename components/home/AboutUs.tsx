@@ -1,6 +1,28 @@
 "use client";
 
+import { Blocks, DraftingCompass, MonitorCog } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
+
+const developmentSteps = [
+  {
+    icon: DraftingCompass,
+    number: "01",
+    title: "Rekayasa Produk",
+    description: "Perancangan produk dan sistem berdasarkan kebutuhan penggunaan.",
+  },
+  {
+    icon: Blocks,
+    number: "02",
+    title: "Integrasi Sistem",
+    description: "Penggabungan perangkat, kontrol, dan konektivitas dalam satu solusi.",
+  },
+  {
+    icon: MonitorCog,
+    number: "03",
+    title: "Implementasi",
+    description: "Penerapan produk untuk kebutuhan monitoring, laboratorium, dan lingkungan.",
+  },
+];
 
 export default function AboutUs() {
   return (
@@ -14,7 +36,7 @@ export default function AboutUs() {
                 className="text-xs font-bold tracking-widest uppercase"
                 style={{ color: "var(--text-secondary)" }}
               >
-                ABOUT US
+                IDENTITAS MANUFAKTUR
               </h4>
             </div>
             <h2
@@ -30,87 +52,49 @@ export default function AboutUs() {
             className="text-lg mb-12 leading-relaxed font-light"
             style={{ color: "var(--text-secondary)" }}
           >
-            Perusahaan teknologi pintar yang senantiasa berkomitmen untuk memberikan dan meningkatkan kepuasan pelanggan melalui produk dan layanan berkualitas prima.
+            AKA mengembangkan produk dan sistem teknologi untuk kebutuhan industri,
+            laboratorium, dan pemantauan lingkungan. Proses pengembangan memadukan
+            rekayasa perangkat, integrasi IoT, serta pengolahan data agar setiap solusi
+            dapat diterapkan sesuai konteks operasional penggunanya.
           </p>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-y-10 gap-x-8">
-            <div>
-              <h3
-                className="text-4xl font-bold mb-2"
-                style={{ color: "var(--text-primary)" }}
-              >
-                10+
-              </h3>
-              <p
-                className="text-xs font-semibold tracking-wider uppercase"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Tahun <br /> Pengalaman
-              </p>
-            </div>
-
-            <div>
-              <h3
-                className="text-4xl font-bold mb-2"
-                style={{ color: "var(--text-primary)" }}
-              >
-                100+
-              </h3>
-              <p
-                className="text-xs font-semibold tracking-wider uppercase"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Proyek Terselesaikan
-              </p>
-            </div>
-
-            <div>
-              <h3
-                className="text-4xl font-bold mb-2"
-                style={{ color: "var(--text-primary)" }}
-              >
-                5+
-              </h3>
-              <p
-                className="text-xs font-semibold tracking-wider uppercase"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Brand Partner
-              </p>
-            </div>
-
-            <div>
-              <h3
-                className="text-4xl font-bold mb-2"
-                style={{ color: "var(--text-primary)" }}
-              >
-                99%
-              </h3>
-              <p
-                className="text-xs font-semibold tracking-wider uppercase"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Kepuasan Pelanggan
-              </p>
-            </div>
-          </div>
         </AnimatedElement>
 
-        {/* Right Decorative Image */}
         <AnimatedElement type="fade-up">
           <div
-            className="relative h-[500px] lg:h-[600px] w-full rounded-3xl overflow-hidden shadow-2xl border"
-            style={{ borderColor: "var(--border-subtle)" }}
+            className="relative overflow-hidden rounded-3xl border p-6 sm:p-8 lg:p-10"
+            style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}
           >
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80')",
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+            <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#0EA5A0]/10 blur-3xl" />
+            <p className="relative text-xs font-bold uppercase tracking-[0.2em] text-[#0EA5A0]">
+              Dari kebutuhan ke implementasi
+            </p>
+            <div className="relative mt-7 space-y-4">
+              {developmentSteps.map((step) => {
+                const Icon = step.icon;
+                return (
+                  <div
+                    key={step.number}
+                    className="grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-2xl border p-4 sm:p-5"
+                    style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
+                  >
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0EA5A0]/10 text-[#0EA5A0]">
+                      <Icon size={22} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold" style={{ color: "var(--text-primary)" }}>
+                        {step.title}
+                      </h3>
+                      <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                        {step.description}
+                      </p>
+                    </div>
+                    <span className="self-start font-mono text-xs font-bold text-[#0EA5A0]/60">
+                      {step.number}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </AnimatedElement>
       </div>

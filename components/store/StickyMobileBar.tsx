@@ -35,6 +35,11 @@ export default function StickyMobileBar({
   const fulfillmentType = product.fulfillment_type ?? "ready_stock";
   const isReady = fulfillmentType === "ready_stock";
   const canAdd = isReady && stock > 0 && effectivePrice != null && (!hasVariants || selectedVariant != null);
+  const waMessage = isReady
+    ? `Halo PPIC AKA, saya ingin menanyakan ketersediaan komponen ${product.name}`
+    : fulfillmentType === "custom_request"
+      ? `Halo Admin MIKA, saya ingin berkonsultasi mengenai kebutuhan custom untuk ${product.name}`
+      : `Halo Admin MIKA, saya membutuhkan bantuan terkait sparepart atau pengadaan ${product.name}`;
 
   const handleCart = useCallback(() => {
     if (!canAdd) return;
@@ -63,7 +68,7 @@ export default function StickyMobileBar({
   }, [product.slug, product.name]);
 
   const waHref = waNumber
-    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(`Halo, saya ingin menanyakan ketersediaan sparepart ${product.name}`)}`
+    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`
     : null;
 
   return (

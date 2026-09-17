@@ -21,15 +21,15 @@ export default function ProductFulfillmentCta({
   const isCustom = fulfillmentType === "custom_request";
 
   const href = isCustom
-    ? `/custom-request?product=${encodeURIComponent(slug)}`
-    : waNumber
+      ? `/custom-request?product=${encodeURIComponent(slug)}`
+      : waNumber
       ? `https://wa.me/${waNumber}?text=${encodeURIComponent(
-          `Halo, saya butuh bantuan technical support untuk produk ${name}. Mohon bantuannya untuk pengadaan dan dukungan teknis.`
+          `Halo Admin MIKA, saya membutuhkan bantuan terkait sparepart atau pengadaan produk ${name}.`
         )}`
       : "/contact";
 
   const Icon = isCustom ? PackageSearch : Headset;
-  const label = isCustom ? "Ajukan Kebutuhan Custom" : "Hubungi Technical Support";
+  const label = isCustom ? "Ajukan Kebutuhan Custom" : "Hubungi Admin MIKA";
 
   if (variant === "card") {
     return (

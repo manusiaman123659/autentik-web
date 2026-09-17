@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useCallback } from "react";
+import { useState, useTransition, useEffect, useCallback, useRef } from "react";
 import {
   Sparkles,
   Lightbulb,
@@ -14,13 +14,13 @@ import AnimatedElement from "@/components/ui/ScrollAnimations";
 import MikaJobCard from "@/components/careers/MikaJobCard";
 import MikaJobFilter from "@/components/careers/MikaJobFilter";
 import MikaPagination from "@/components/careers/MikaPagination";
-import { getMikaJobs } from "@/lib/api/mika-career";
-import type { MikaJob, MikaDepartment, MikaPaginationMeta } from "@/types/mika-career";
+import type { MikaJob, MikaCompany, MikaDepartment, MikaPaginationMeta } from "@/types/mika-career";
 
 interface CareersClientProps {
   initialJobs: MikaJob[];
   initialMeta: MikaPaginationMeta;
   departments: MikaDepartment[];
+  companies: MikaCompany[];
   recruitmentUrl: string | null;
   apiMessage?: string;
 }
@@ -29,53 +29,74 @@ export default function CareersClient({
   initialJobs,
   initialMeta,
   departments,
+  companies,
   recruitmentUrl,
   apiMessage,
 }: CareersClientProps) {
   const [jobs, setJobs] = useState<MikaJob[]>(initialJobs);
   const [meta, setMeta] = useState<MikaPaginationMeta>(initialMeta);
+  const [statusMessage, setStatusMessage] = useState(apiMessage);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedEmploymentType, setSelectedEmploymentType] = useState("all");
-  const [selectedLocation, setSelectedLocation] = useState("all");
+  const [selectedCompany, setSelectedCompany] = useState("all");
   const [isPending, startTransition] = useTransition();
+  const hasFilterInteraction = useRef(false);
 
   // Fetch jobs dynamically when filters or page change
   const fetchFilteredJobs = useCallback(
     (pageNumber: number = 1) => {
       startTransition(async () => {
-        const res = await getMikaJobs({
-          page: pageNumber,
-          per_page: 10,
-          search: searchQuery,
-          department_id: selectedDept,
-          employment_type: selectedEmploymentType,
-          location: selectedLocation,
+        const searchParams = new URLSearchParams({
+          page: String(pageNumber),
+          per_page: "10",
         });
+        if (searchQuery.trim()) searchParams.set("search", searchQuery.trim());
+        if (selectedDept !== "all") searchParams.set("department_id", selectedDept);
+        if (selectedEmploymentType !== "all") {
+          searchParams.set("employment_type", selectedEmploymentType);
+        }
+        if (selectedCompany !== "all") searchParams.set("company_id", selectedCompany);
 
-        if (res && res.data) {
-          setJobs(res.data);
-          setMeta(res.meta);
+        try {
+          const response = await fetch(`/api/careers/jobs?${searchParams.toString()}`, {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          const result = await response.json();
+          if (!response.ok || !result.success || !Array.isArray(result.data) || !result.meta) {
+            throw new Error(result.message || "Respons lowongan tidak valid");
+          }
+
+          setJobs(result.data);
+          setMeta(result.meta);
+          setStatusMessage(result.message);
+        } catch (error) {
+          console.error("[Careers] Gagal memperbarui lowongan:", error);
+          setStatusMessage("Lowongan belum dapat diperbarui. Menampilkan data terakhir.");
         }
       });
     },
-    [searchQuery, selectedDept, selectedEmploymentType, selectedLocation]
+    [searchQuery, selectedDept, selectedEmploymentType, selectedCompany]
   );
 
   // Debounced search trigger
   useEffect(() => {
+    if (!hasFilterInteraction.current) return;
+
     const timer = setTimeout(() => {
       fetchFilteredJobs(1);
     }, 280);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedDept, selectedEmploymentType, selectedLocation, fetchFilteredJobs]);
+  }, [searchQuery, selectedDept, selectedEmploymentType, selectedCompany, fetchFilteredJobs]);
 
   const handleResetFilters = () => {
+    hasFilterInteraction.current = true;
     setSearchQuery("");
     setSelectedDept("all");
     setSelectedEmploymentType("all");
-    setSelectedLocation("all");
+    setSelectedCompany("all");
   };
 
   const handlePageChange = (newPage: number) => {
@@ -282,7 +303,7 @@ export default function CareersClient({
               </h2>
             </div>
 
-            {apiMessage && (
+            {statusMessage && (
               <div
                 className="text-xs px-3 py-1.5 rounded-md border flex items-center gap-1.5"
                 style={{
@@ -292,7 +313,7 @@ export default function CareersClient({
                 }}
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>{apiMessage}</span>
+                <span>{statusMessage}</span>
               </div>
             )}
           </div>
@@ -300,13 +321,26 @@ export default function CareersClient({
           {/* Filter Bar */}
           <MikaJobFilter
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+            onSearchChange={(value) => {
+              hasFilterInteraction.current = true;
+              setSearchQuery(value);
+            }}
+            selectedCompany={selectedCompany}
+            onCompanyChange={(value) => {
+              hasFilterInteraction.current = true;
+              setSelectedCompany(value);
+            }}
             selectedDepartment={selectedDept}
-            onDepartmentChange={setSelectedDept}
+            onDepartmentChange={(value) => {
+              hasFilterInteraction.current = true;
+              setSelectedDept(value);
+            }}
             selectedEmploymentType={selectedEmploymentType}
-            onEmploymentTypeChange={setSelectedEmploymentType}
-            selectedLocation={selectedLocation}
-            onLocationChange={setSelectedLocation}
+            onEmploymentTypeChange={(value) => {
+              hasFilterInteraction.current = true;
+              setSelectedEmploymentType(value);
+            }}
+            companies={companies}
             departments={departments}
             onReset={handleResetFilters}
             totalResults={meta.total_items}

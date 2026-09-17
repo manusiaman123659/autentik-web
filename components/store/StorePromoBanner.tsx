@@ -14,7 +14,7 @@ export default function StorePromoBanner() {
           <ShieldCheck size={18} className="text-[#0EA5A0]" />
         </div>
         <div>
-          <p className="text-xs font-bold text-white">Sparepart Original Garansi Resmi</p>
+          <p className="text-xs font-bold text-white">Komponen Original Bergaransi Resmi</p>
           <p className="text-[10px] text-slate-300 mt-0.5">Tersedia untuk unit Talpha, Cylab, Ullun, dan Epal</p>
         </div>
       </Link>

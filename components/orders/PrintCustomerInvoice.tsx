@@ -18,9 +18,10 @@ interface Props {
     accountNumber: string;
     accountHolder: string;
   } | null;
+  showBankTransfer: boolean;
 }
 
-export default function PrintCustomerInvoice({ snapshot, bankAccount }: Props) {
+export default function PrintCustomerInvoice({ snapshot, bankAccount, showBankTransfer }: Props) {
   const statusLabel =
     snapshot.paymentStatus === "paid"
       ? "Lunas"
@@ -166,8 +167,8 @@ export default function PrintCustomerInvoice({ snapshot, bankAccount }: Props) {
         </div>
       </section>
 
-      {/* Catatan Pembayaran */}
-      {bankAccount && (
+      {/* Catatan Pembayaran — hanya untuk transfer manual */}
+      {showBankTransfer && bankAccount && (
         <section className="mb-8 p-4 rounded-lg border border-slate-200 bg-slate-50 break-inside-avoid">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
             Instruksi Pembayaran (Transfer Bank)
@@ -186,7 +187,7 @@ export default function PrintCustomerInvoice({ snapshot, bankAccount }: Props) {
       <footer className="text-center pt-8 border-t border-slate-200">
         <p className="text-xs text-slate-400">
           Dokumen ini merupakan bukti pesanan dari PT Autentik Karya Analitika.
-          Hubungi kami via WhatsApp untuk konfirmasi pembayaran.
+          Hubungi PPIC AKA via WhatsApp untuk konfirmasi pembayaran.
         </p>
       </footer>
 

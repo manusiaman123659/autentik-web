@@ -27,13 +27,16 @@ interface SearchJob {
 }
 
 const sitePages = [
-  { title: "Home", href: "/", category: "Page" },
-  { title: "About Us", href: "/about", category: "Page" },
-  { title: "Products", href: "/products", category: "Page" },
-  { title: "Services", href: "/services", category: "Page" },
-  { title: "Careers", href: "/careers", category: "Page" },
-  { title: "Contact", href: "/contact", category: "Page" },
-  { title: "Store", href: "/store", category: "Page" },
+  { title: "Beranda", href: "/", category: "Halaman" },
+  { title: "Produk", href: "/products", category: "Halaman" },
+  { title: "Layanan", href: "/services", category: "Halaman" },
+  { title: "Profil Perusahaan", href: "/about", category: "Halaman" },
+  { title: "Jaringan Distributor", href: "/distributors", category: "Halaman" },
+  { title: "Riset & Kemitraan", href: "/research-partnership", category: "Halaman" },
+  { title: "Karier", href: "/careers", category: "Halaman" },
+  { title: "Kontak", href: "/contact", category: "Halaman" },
+  { title: "Marketplace Komponen", href: "/store", category: "Halaman" },
+  { title: "Permintaan Kustom", href: "/custom-request", category: "Halaman" },
 ];
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {

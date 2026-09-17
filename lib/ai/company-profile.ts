@@ -7,7 +7,6 @@ export const profileIdentity = {
   tagline: "Smart Technology is Yours",
   website: "autentik.co.id",
   email: "autentik.info@gmail.com",
-  phone: "0818 0720 1111",
   address:
     "Ruko Amsterdam No. 9E, Jl. Klipang Raya, Sendangmulyo, Tembalang, Kota Semarang, Jawa Tengah 50272",
 };
@@ -217,7 +216,7 @@ export function buildCompanyProfileContext(): string {
 
   return [
     "PROFIL PERUSAHAAN (COMPRO AKA 2026):",
-    `Nama: ${profileIdentity.name}. Tagline: "${profileIdentity.tagline}". Website: ${profileIdentity.website}. Email: ${profileIdentity.email}. Telepon: ${profileIdentity.phone}. Alamat: ${profileIdentity.address}.`,
+    `Nama: ${profileIdentity.name}. Tagline: "${profileIdentity.tagline}". Website: ${profileIdentity.website}. Email: ${profileIdentity.email}. Alamat: ${profileIdentity.address}.`,
     "",
     `VISI: ${profileVision.id}.`,
     "MISI:",

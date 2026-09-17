@@ -159,7 +159,6 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul>
               <li>Email: autentik.info@gmail.com</li>
-              <li>WhatsApp: +62 821-3738-4029</li>
             </ul>
 
             <h2>6. Retensi Data</h2>
@@ -200,8 +199,6 @@ export default function PrivacyPolicyPage() {
               Kota Semarang, Jawa Tengah 50272
               <br />
               Email: autentik.info@gmail.com
-              <br />
-              WhatsApp: +62 821-3738-4029
             </p>
           </div>
         </div>

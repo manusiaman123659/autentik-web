@@ -117,13 +117,13 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
           <Package size={40} className="mx-auto mb-4 opacity-30" />
           <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Keranjang Anda kosong</h3>
           <p className="text-xs text-slate-400 mt-1 font-light">
-            Tambahkan sparepart terlebih dahulu sebelum melanjutkan ke checkout.
+            Tambahkan komponen terlebih dahulu sebelum melanjutkan ke checkout.
           </p>
           <Link
             href="/store"
             className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
           >
-            Jelajahi Store
+            Jelajahi Marketplace Komponen
             <ChevronRight size={16} />
           </Link>
         </div>
@@ -393,7 +393,8 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
               <div className="mt-4">
                 <WhatsAppButton
                   number={waNumber ?? null}
-                  label="Butuh bantuan? Hubungi Admin"
+                  label="Butuh bantuan? Hubungi PPIC AKA"
+                  message="Halo PPIC AKA, saya membutuhkan bantuan terkait checkout Marketplace Komponen."
                   variant="button"
                   className="w-full py-3 rounded-xl text-sm border"
                 />

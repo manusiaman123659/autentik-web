@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import type { OrderStatus } from "@/lib/validations/storeSchema";
 import { ORDER_DEFAULT_PAGE_SIZE } from "@/lib/validations/storeSchema";
 import type { ComproSettings } from "@/lib/validations/comproSchema";
+import type { HeroSlideInput } from "@/lib/validations/heroSchema";
 
 export interface ProductRow {
   id: string;
@@ -176,6 +177,21 @@ export async function getComproSettings(): Promise<ComproSettings> {
         ? value.pdfFilename
         : null,
   };
+}
+
+export async function getHeroSlidesSettings(): Promise<HeroSlideInput[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "home_hero")
+    .maybeSingle();
+  if (error || !data) return [];
+  const value = (data as { value: unknown }).value;
+  if (!value || typeof value !== "object") return [];
+  const slides = (value as { slides?: unknown }).slides;
+  if (!Array.isArray(slides)) return [];
+  return slides as HeroSlideInput[];
 }
 
 export async function getRecruitmentUrlSetting(): Promise<string> {
@@ -404,12 +420,17 @@ export async function listStaff(): Promise<StaffRow[]> {
   const { data, error } = await supabase
     .from("profiles")
     .select("id, email, full_name, role, is_active, created_at")
+    .in("role", ["admin", "editor"])
     .order("created_at", { ascending: false });
   if (error) {
     console.error("[admin-data] staff", error);
     return [];
   }
-  return (data ?? []) as StaffRow[];
+
+  return (data ?? []).flatMap((row) => {
+    if (row.role !== "admin" && row.role !== "editor") return [];
+    return [{ ...row, role: row.role }];
+  });
 }
 
 export async function listAudit(limit = 100): Promise<AuditRow[]> {
@@ -746,6 +767,46 @@ export async function getPartner(id: string): Promise<PartnerRow | null> {
     .maybeSingle();
   if (error || !data) return null;
   return data as PartnerRow;
+}
+
+export interface DistributionEntityRow {
+  id: string;
+  name: string;
+  legal_name: string | null;
+  short_name: string | null;
+  distribution_type: "group_distribution" | "distributor" | "sub_distributor";
+  parent_id: string | null;
+  market_segment: string | null;
+  region_label: string | null;
+  city: string | null;
+  province: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website_url: string | null;
+  contact_name: string | null;
+  logo_url: string | null;
+  description: string | null;
+  is_active: boolean;
+  sort_order: number;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listDistributionEntities(): Promise<DistributionEntityRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("distribution_entities")
+    .select("*")
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  if (error) {
+    console.error("[admin-data] distribution_entities", error);
+    return [];
+  }
+  return (data ?? []) as DistributionEntityRow[];
 }
 
 export async function getStoreSettings(): Promise<Record<string, unknown>> {

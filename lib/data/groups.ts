@@ -26,7 +26,7 @@ export const groups: GroupCompany[] = [
   {
     id: "agra-prima",
     name: "Agra Prima",
-    legalName: "PT Agra Prima Indonesia",
+    legalName: "CV Agra Prima Indonesia",
     logoUrl: "/images/grup_kami/agra_prima.png",
   },
 ];

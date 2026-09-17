@@ -11,10 +11,10 @@ import WishlistButton from "@/components/store/WishlistButton";
 
 interface StoreProductCardProps {
   product: ProductRow;
-  waNumber: string | null;
+  mikaSalesNumber: string | null;
 }
 
-export default function StoreProductCard({ product, waNumber }: StoreProductCardProps) {
+export default function StoreProductCard({ product, mikaSalesNumber }: StoreProductCardProps) {
   const stock = product.stock ?? 0;
   const low = product.low_stock_threshold ?? 5;
   const fulfillment = product.fulfillment_type ?? "ready_stock";
@@ -136,7 +136,7 @@ export default function StoreProductCard({ product, waNumber }: StoreProductCard
             fulfillmentType={fulfillment}
             name={product.name}
             slug={product.slug}
-            waNumber={waNumber}
+            waNumber={mikaSalesNumber}
             variant="card"
           />
         )}

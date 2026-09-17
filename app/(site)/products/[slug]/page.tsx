@@ -4,18 +4,15 @@ import Link from "next/link";
 import {
   ArrowLeft,
   CheckCircle2,
-  Phone,
   ChevronRight,
   Wrench,
   Download,
   FileText,
 } from "lucide-react";
-import { getProductBySlug } from "@/lib/admin-data";
-import type { ProductRow } from "@/lib/admin-data";
-import { getWhatsAppNumber } from "@/lib/public-data";
+import { getPublicProductBySlug, getWhatsAppContact } from "@/lib/public-data";
+import type { ProductRow } from "@/lib/public-data";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
-import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 import ProductMediaTabs from "@/components/product/ProductMediaTabs";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import TechnicalDocsSection from "@/components/product/TechnicalDocsSection";
@@ -48,14 +45,13 @@ function toPublicProduct(row: ProductRow) {
     imageUrl: row.image_url ?? undefined,
     brochureUrl: row.brochure_url ?? undefined,
     model3dUrl: row.model_3d_url ?? undefined,
-    fulfillmentType: row.fulfillment_type ?? "ready_stock",
   };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const row = await getProductBySlug(slug);
-  if (!row) return {};
+  const row = await getPublicProductBySlug(slug);
+  if (!row) notFound();
   return {
     title: row.seo_title || `${row.name} — ${row.brand} | PT Autentik Karya Analitika`,
     description: row.seo_description || row.description,
@@ -64,11 +60,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params;
-  const row = await getProductBySlug(slug);
+  const row = await getPublicProductBySlug(slug);
   if (!row) notFound();
 
   const product = toPublicProduct(row);
-  const waNumber = await getWhatsAppNumber();
+  const mikaContact = await getWhatsAppContact("mika_product_sales");
 
   let documents: Array<{
     id: string;
@@ -218,27 +214,15 @@ export default async function ProductDetailPage({ params }: Props) {
 
               {/* CTA Buttons */}
               <div className="space-y-3">
-                {/* Row 1: WhatsApp + Contact Sales (2-column grid) */}
-                <div className="grid grid-cols-2 gap-3">
-                  {product.fulfillmentType !== "third_party" && (
-                    <WhatsAppButton
-                      number={waNumber}
-                      label="Tanya via WhatsApp"
-                      message="Halo, saya ingin menanyakan ketersediaan produk"
-                      variant="button"
-                      className="h-11 rounded-xl text-sm font-medium"
-                      id="whatsapp-cta"
-                    />
-                  )}
-                  <Link
-                    href="/contact"
-                    id="contact-sales-cta"
-                    className="inline-flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors"
-                  >
-                    <Phone size={16} />
-                    Hubungi Sales
-                  </Link>
-                </div>
+                {/* Row 1: Sales dan distribusi melalui MIKA */}
+                <WhatsAppButton
+                  number={mikaContact?.number ?? null}
+                  label="Hubungi Sales / Distributor"
+                  message={`Halo Admin MIKA, saya ingin berkonsultasi mengenai pembelian atau distribusi produk ${product.name}.`}
+                  variant="button"
+                  className="w-full h-11 rounded-xl text-sm font-medium"
+                  id="whatsapp-cta"
+                />
 
                 {/* Row 2: RFQ (full-width, highlight) */}
                 <RfqButton
@@ -259,26 +243,16 @@ export default async function ProductDetailPage({ params }: Props) {
                   </a>
                 )}
 
-                {/* Row 4: Sparepart (full-width, dark) */}
+                {/* Row 4: Komponen marketplace (full-width, dark) */}
                 <Link
                   href={`/store?compatible=${product.slug}`}
                   id="sparepart-cta"
                   className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium text-white bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 transition-colors"
                 >
                   <Wrench size={16} />
-                  Tanya Sparepart untuk Produk Ini
+                  Cari Komponen untuk Produk Ini
                 </Link>
 
-                {/* Fallback CTA (if fulfillment is third_party, show ProductFulfillmentCta separately) */}
-                {product.fulfillmentType === "third_party" && (
-                  <ProductFulfillmentCta
-                    fulfillmentType={product.fulfillmentType}
-                    name={product.name}
-                    slug={product.slug}
-                    waNumber={waNumber}
-                    variant="detail"
-                  />
-                )}
               </div>
             </div>
           </AnimatedElement>

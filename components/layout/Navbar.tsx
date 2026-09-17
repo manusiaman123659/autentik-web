@@ -1,53 +1,167 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, Search, Sun, Moon, ShoppingCart } from "lucide-react";
-import MobileMenu from "./MobileMenu";
+import { ChevronDown, Menu, X, Search, Sun, Moon, ShoppingCart } from "lucide-react";
+import MobileMenu, { type NavItem } from "./MobileMenu";
 import SearchModal from "./SearchModal";
 import CustomerAuthButton from "@/components/auth/CustomerAuthButton";
 import { useTheme } from "@/components/ThemeProvider";
 import { useCart } from "@/components/cart/CartProvider";
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/about", label: "About" },
-  { href: "/products", label: "Products" },
-  { href: "/services", label: "Services" },
-  { href: "/careers", label: "Careers" },
-  { href: "/contact", label: "Contact" },
+const navLinks: NavItem[] = [
+  { href: "/", label: "Beranda" },
+  { href: "/products", label: "Produk" },
+  { href: "/services", label: "Layanan" },
+  {
+    label: "Perusahaan",
+    children: [
+      { href: "/about", label: "Profil Perusahaan" },
+      { href: "/distributors", label: "Jaringan Distributor" },
+      { href: "/research-partnership", label: "Riset & Kemitraan" },
+    ],
+  },
+  { href: "/careers", label: "Karier" },
+  { href: "/contact", label: "Kontak" },
 ];
+const companyItemCount = navLinks.find((item) => item.children)?.children?.length ?? 0;
+
+function isPathActive(pathname: string, href: string) {
+  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+}
+
+function isNavItemActive(pathname: string, item: NavItem) {
+  if (item.href) return isPathActive(pathname, item.href);
+  return item.children?.some((child) => isPathActive(pathname, child.href)) ?? false;
+}
+
+function useScrolled(threshold = 20) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    let frame: number | null = null;
+
+    const syncScrollState = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        setScrolled(window.scrollY > threshold);
+        frame = null;
+      });
+    };
+
+    syncScrollState();
+    window.addEventListener("scroll", syncScrollState, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", syncScrollState);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
+  }, [threshold]);
+
+  return scrolled;
+}
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
+  const scrolled = useScrolled(20);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const companyRef = useRef<HTMLDivElement>(null);
+  const companyTriggerRef = useRef<HTMLButtonElement>(null);
+  const companyItemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { totalItems, hydrated } = useCart();
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    if (!companyOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (companyRef.current && !companyRef.current.contains(event.target as Node)) {
+        setCompanyOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setCompanyOpen(false);
+      companyTriggerRef.current?.focus();
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [companyOpen]);
 
   // Close mobile menu when route changes (adjust state during render)
   const [prevPathname, setPrevPathname] = useState(pathname);
   if (pathname !== prevPathname) {
     setPrevPathname(pathname);
     setMobileOpen(false);
+    setCompanyOpen(false);
   }
+
+  const focusCompanyItem = (index: number) => {
+    window.requestAnimationFrame(() => companyItemRefs.current[index]?.focus());
+  };
+
+  const handleCompanyKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const itemCount = companyItemRefs.current.length;
+    const activeIndex = companyItemRefs.current.findIndex(
+      (item) => item === document.activeElement,
+    );
+
+    if (event.target === companyTriggerRef.current) {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        const nextOpen = !companyOpen;
+        setCompanyOpen(nextOpen);
+        if (nextOpen) focusCompanyItem(0);
+        return;
+      }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault();
+        setCompanyOpen(true);
+        focusCompanyItem(event.key === "ArrowDown" ? 0 : companyItemCount - 1);
+        return;
+      }
+    }
+
+    if (!companyOpen || activeIndex < 0 || itemCount === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      companyItemRefs.current[(activeIndex + 1) % itemCount]?.focus();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      companyItemRefs.current[(activeIndex - 1 + itemCount) % itemCount]?.focus();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      companyItemRefs.current[0]?.focus();
+    } else if (event.key === "End") {
+      event.preventDefault();
+      companyItemRefs.current[itemCount - 1]?.focus();
+    }
+  };
 
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled ? "shadow-md" : "shadow-sm"
+        className={`sticky top-0 z-50 w-full border-b transition-[background-color,box-shadow,border-color,backdrop-filter] duration-300 ${
+          scrolled ? "backdrop-blur-md" : ""
         }`}
-        style={{ backgroundColor: "var(--navbar-bg)" }}
+        style={{
+          backgroundColor: scrolled
+            ? "color-mix(in srgb, var(--navbar-bg) 80%, transparent)"
+            : "color-mix(in srgb, var(--navbar-bg) 95%, transparent)",
+          borderColor: scrolled
+            ? "color-mix(in srgb, var(--border-color) 60%, transparent)"
+            : "transparent",
+          boxShadow: scrolled ? "var(--navbar-shadow)" : "none",
+        }}
       >
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -56,7 +170,7 @@ export default function Navbar() {
               <div className="w-9 h-9 relative flex items-center justify-center">
                 <Image
                   src="/images/logo_aka/akaaaaaaa.png"
-                  alt="Autentik Logo"
+                  alt="Logo Autentik"
                   width={36}
                   height={36}
                   className="object-contain w-full h-full"
@@ -73,15 +187,84 @@ export default function Navbar() {
             {/* Desktop Nav Links */}
             <div className="hidden lg:flex items-center gap-1">
               {navLinks.map((link) => {
-                const isActive =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(link.href);
+                const isActive = isNavItemActive(pathname, link);
+                if (link.children) {
+                  return (
+                    <div
+                      key={link.label}
+                      ref={companyRef}
+                      className="relative"
+                      onKeyDown={handleCompanyKeyDown}
+                    >
+                      <button
+                        ref={companyTriggerRef}
+                        type="button"
+                        aria-haspopup="menu"
+                        aria-expanded={companyOpen}
+                        aria-controls="company-navigation-menu"
+                        onClick={() => setCompanyOpen((open) => !open)}
+                        className={`relative flex items-center gap-1 rounded-sm px-3 py-2 text-sm font-medium transition-colors ${
+                          isActive ? "text-[#0EA5A0]" : "hover:text-[#0EA5A0]"
+                        }`}
+                        style={!isActive ? { color: "var(--text-secondary)" } : {}}
+                      >
+                        {link.label}
+                        <ChevronDown
+                          size={14}
+                          className={`transition-transform duration-200 ${companyOpen ? "rotate-180" : ""}`}
+                        />
+                        {isActive && (
+                          <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-[#0EA5A0]" />
+                        )}
+                      </button>
+
+                      {companyOpen && (
+                        <div
+                          id="company-navigation-menu"
+                          role="menu"
+                          className="absolute left-0 top-full z-50 mt-1 w-64 rounded-sm border py-1 shadow-lg"
+                          style={{
+                            backgroundColor: "var(--bg-card)",
+                            borderColor: "var(--border-subtle)",
+                          }}
+                        >
+                          {link.children.map((child, index) => {
+                            const childActive = isPathActive(pathname, child.href);
+                            return (
+                              <Link
+                                key={child.href}
+                                ref={(element) => {
+                                  companyItemRefs.current[index] = element;
+                                }}
+                                role="menuitem"
+                                href={child.href}
+                                aria-current={childActive ? "page" : undefined}
+                                onClick={() => setCompanyOpen(false)}
+                                className={`block px-4 py-2.5 text-sm font-medium transition-colors hover:text-[#0EA5A0] ${
+                                  childActive ? "text-[#0EA5A0]" : ""
+                                }`}
+                                style={{
+                                  backgroundColor: childActive
+                                    ? "var(--bg-card-hover)"
+                                    : "transparent",
+                                  ...(!childActive ? { color: "var(--text-secondary)" } : {}),
+                                }}
+                              >
+                                {child.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
                 return (
                   <Link
                     key={link.href}
-                    href={link.href}
-                    className={`px-3 py-2 text-sm font-medium rounded-md transition-colors relative group ${
+                    href={link.href!}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`relative rounded-sm px-3 py-2 text-sm font-medium transition-colors ${
                       isActive
                         ? "text-[#0EA5A0]"
                         : "hover:text-[#0EA5A0]"
@@ -92,7 +275,7 @@ export default function Navbar() {
                   >
                     {link.label}
                     {isActive && (
-                      <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-[#0EA5A0] rounded-full" />
+                      <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-[#0EA5A0]" />
                     )}
                   </Link>
                 );
@@ -123,7 +306,7 @@ export default function Navbar() {
               {/* Dark Mode Toggle */}
               <button
                 id="theme-toggle"
-                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label={theme === "dark" ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
                 onClick={toggleTheme}
                 className="flex items-center justify-center w-9 h-9 rounded-md transition-all duration-300 hover:bg-slate-100 dark:hover:bg-slate-800 relative overflow-hidden"
                 style={{ color: "var(--text-secondary)" }}
@@ -170,15 +353,19 @@ export default function Navbar() {
               <Link
                 href="/store"
                 id="navbar-store-btn"
-                className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-md transition-all duration-200 hover:opacity-90 hover:shadow-md"
+                aria-label="Marketplace Komponen"
+                className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-sm transition-[opacity,box-shadow] duration-200 hover:opacity-90 hover:shadow-md"
                 style={{ backgroundColor: "#0B1F3A" }}
               >
-                Store
+                Komponen
               </Link>
 
               {/* Mobile Hamburger */}
               <button
+                type="button"
                 aria-label="Menu"
+                aria-expanded={mobileOpen}
+                aria-controls="mobile-navigation-drawer"
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className="lg:hidden flex items-center justify-center w-9 h-9 transition-colors"
                 style={{ color: "var(--text-secondary)" }}
@@ -190,16 +377,15 @@ export default function Navbar() {
         </nav>
       </header>
 
-      {/* Spacer */}
-      <div className="h-16" />
-
       {/* Mobile Menu */}
-      <MobileMenu
-        isOpen={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        navLinks={navLinks}
-        pathname={pathname}
-      />
+      {mobileOpen && (
+        <MobileMenu
+          isOpen={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          navLinks={navLinks}
+          pathname={pathname}
+        />
+      )}
 
       {/*Global Search Modal*/}
       <SearchModal

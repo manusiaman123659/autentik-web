@@ -70,7 +70,7 @@ export default function TermsOfServicePage() {
               </li>
               <li>
                 <strong>Layanan</strong> — informasi produk, chat AI, formulir
-                kontak, dan toko online (marketplace sparepart)
+                kontak, dan Marketplace Komponen
               </li>
               <li>
                 <strong>Pengguna</strong> — setiap orang yang mengakses dan
@@ -89,7 +89,7 @@ export default function TermsOfServicePage() {
                 Informasi produk dan layanan PT Autentik Karya Analitika
               </li>
               <li>Fitur chat AI untuk pertanyaan umum seputar produk</li>
-              <li>Toko online untuk pembelian sparepart</li>
+              <li>Marketplace untuk pembelian komponen</li>
               <li>Formulir kontak dan permintaan khusus</li>
             </ul>
 
@@ -167,7 +167,6 @@ export default function TermsOfServicePage() {
             </p>
             <ul>
               <li>Email: autentik.info@gmail.com</li>
-              <li>WhatsApp: +62 821-3738-4029</li>
             </ul>
           </div>
         </div>

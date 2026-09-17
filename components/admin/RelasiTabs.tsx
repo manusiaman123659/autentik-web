@@ -1,28 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Handshake, Users } from "lucide-react";
-import type { TeamMemberRow, GroupCompanyRow, PartnerRow } from "@/lib/admin-data";
+import { Building2, Handshake, Network, Users } from "lucide-react";
+import type { TeamMemberRow, GroupCompanyRow, PartnerRow, DistributionEntityRow } from "@/lib/admin-data";
 import TeamTab from "@/components/admin/TeamTab";
 import GroupTab from "@/components/admin/GroupTab";
 import PartnerTab from "@/components/admin/PartnerTab";
+import DistributionTab from "@/components/admin/DistributionTab";
 
-type TabKey = "team" | "groups" | "partners";
+type TabKey = "team" | "groups" | "partners" | "distribution";
 
 const TABS: { key: TabKey; label: string; icon: typeof Users }[] = [
   { key: "team", label: "Tim Internal", icon: Users },
   { key: "groups", label: "Grup Perusahaan", icon: Building2 },
   { key: "partners", label: "Partner", icon: Handshake },
+  { key: "distribution", label: "Jaringan Distribusi", icon: Network },
 ];
 
 export default function RelasiTabs({
   team,
   groups,
   partners,
+  distribution,
 }: {
   team: TeamMemberRow[];
   groups: GroupCompanyRow[];
   partners: PartnerRow[];
+  distribution: DistributionEntityRow[];
 }) {
   const [active, setActive] = useState<TabKey>("team");
 
@@ -30,6 +34,7 @@ export default function RelasiTabs({
     team: team.length,
     groups: groups.length,
     partners: partners.length,
+    distribution: distribution.length,
   };
 
   return (
@@ -69,6 +74,7 @@ export default function RelasiTabs({
         {active === "team" && <TeamTab team={team} />}
         {active === "groups" && <GroupTab groups={groups} />}
         {active === "partners" && <PartnerTab partners={partners} />}
+        {active === "distribution" && <DistributionTab entities={distribution} />}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getProductBySlug, getRelatedProducts, getSupabase } from "@/lib/admin-data";
-import { getWhatsAppNumber } from "@/lib/public-data";
+import { getWhatsAppContacts } from "@/lib/public-data";
 import StoreProductDetail from "@/components/store/StoreProductDetail";
 import type { StoreVariant } from "@/components/store/StoreProductDetail";
 import JsonLd from "@/components/seo/JsonLd";
@@ -29,7 +29,7 @@ export default async function StoreProductPage({ params }: Props) {
 
   if (!row || row.product_type !== "sparepart" || row.is_store_visible !== true) notFound();
 
-  const waNumber = await getWhatsAppNumber();
+  const contacts = await getWhatsAppContacts();
   const relatedProducts = await getRelatedProducts(row);
 
   const supabase = await getSupabase();
@@ -45,7 +45,13 @@ export default async function StoreProductPage({ params }: Props) {
   return (
     <>
       <JsonLd data={productOfferSchema(row)} />
-      <StoreProductDetail product={row} waNumber={waNumber} relatedProducts={relatedProducts} variants={variants} />
+      <StoreProductDetail
+        product={row}
+        ppicAkaNumber={contacts.ppicAka?.number ?? null}
+        mikaSalesNumber={contacts.mikaSales?.number ?? null}
+        relatedProducts={relatedProducts}
+        variants={variants}
+      />
     </>
   );
 }

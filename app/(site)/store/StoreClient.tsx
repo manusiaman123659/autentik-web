@@ -34,12 +34,14 @@ const INITIAL_FILTERS: FilterState = {
 export default function StoreClient({
   products,
   compatible,
-  waNumber,
+  ppicAkaNumber,
+  mikaSalesNumber,
   initialQuery,
 }: {
   products: ProductRow[];
   compatible: string | null;
-  waNumber: string | null;
+  ppicAkaNumber: string | null;
+  mikaSalesNumber: string | null;
   initialQuery?: string;
 }) {
   const [filters, setFilters] = useState<FilterState>({
@@ -139,24 +141,24 @@ export default function StoreClient({
         <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 mb-4 backdrop-blur-md">
             <ShoppingBag size={14} className="text-[#0EA5A0]" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-[#0EA5A0]">Marketplace Sparepart</span>
+            <span className="text-xs font-semibold uppercase tracking-widest text-[#0EA5A0]">Marketplace Komponen</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">
-            Store Sparepart & Komponen
+            Marketplace Komponen
           </h1>
           <p className="text-slate-200 text-sm sm:text-base max-w-xl font-light">
-            Sparepart original bergaransi untuk unit Talpha, Cylab, Ullun, dan Epal.
+            Komponen original bergaransi untuk unit Talpha, Cylab, Ullun, dan Epal.
           </p>
           {compatible && (
             <div className="max-w-xl mt-4 p-3 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-200 text-sm flex items-start gap-2">
               <PackageCheck size={16} className="text-[#0EA5A0] mt-0.5 shrink-0" />
               <span>
-                Sparepart untuk <strong className="text-white uppercase">{compatible.replace(/-/g, " ")}</strong>. Sistem belum bisa filter otomatis —{" "}
+                Komponen untuk <strong className="text-white uppercase">{compatible.replace(/-/g, " ")}</strong>. Sistem belum bisa filter otomatis —{" "}
                 <WhatsAppButton
-                  number={waNumber}
+                  number={ppicAkaNumber}
                   variant="link"
                   label="tanya via WhatsApp"
-                  message={`Halo, saya butuh sparepart yang kompatibel dengan ${compatible.replace(/-/g, " ")}. Bisa bantu rekomendasi?`}
+                  message={`Halo, saya membutuhkan komponen yang kompatibel dengan ${compatible.replace(/-/g, " ")}. Bisa bantu rekomendasinya?`}
                   className="text-teal-200 hover:text-white"
                 />
                 {" "}untuk rekomendasi yang tepat.
@@ -274,7 +276,7 @@ export default function StoreClient({
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                   {pageItems.map((product) => (
-                    <StoreProductCard key={product.id} product={product} waNumber={waNumber} />
+                    <StoreProductCard key={product.id} product={product} mikaSalesNumber={mikaSalesNumber} />
                   ))}
                 </div>
 

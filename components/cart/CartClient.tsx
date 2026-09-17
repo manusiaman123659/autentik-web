@@ -84,7 +84,7 @@ export default function CartClient() {
               <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
                 {totalItems > 0
                   ? `${totalItems} item dalam keranjang Anda`
-                  : "Belanja sparepart original untuk unit Anda"}
+                  : "Belanja komponen original untuk unit Anda"}
               </p>
             </div>
           </div>
@@ -99,13 +99,13 @@ export default function CartClient() {
               Keranjang Anda kosong
             </h3>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto font-light">
-              Temukan sparepart original bergaransi resmi untuk unit Talpha, Cylab, Ullun, dan Epal.
+              Temukan komponen original bergaransi resmi untuk unit Talpha, Cylab, Ullun, dan Epal.
             </p>
             <Link
               href="/store"
               className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
             >
-              Jelajahi Store
+              Jelajahi Marketplace Komponen
               <ChevronRight size={16} />
             </Link>
           </div>
@@ -221,7 +221,7 @@ export default function CartClient() {
                 <ChevronRight size={16} />
               </Link>
               <p className="text-[11px] text-slate-400 text-center mt-2 font-light">
-                Pembayaran transfer, dikonfirmasi manual oleh tim kami.
+                Pembayaran aman via Midtrans.
               </p>
             </div>
           </div>

@@ -6,6 +6,7 @@ import type { ZodError } from "zod";
 import { getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 import { storeSettingsSchema } from "@/lib/validations/storeSchema";
+import { heroSlidesSchema } from "@/lib/validations/heroSchema";
 import { recordAudit } from "@/lib/audit";
 import type { ActionResult } from "./products";
 
@@ -95,4 +96,47 @@ export async function saveBankAccount(input: {
   revalidatePath("/store/orders");
 
   return { success: true, message: "Informasi rekening berhasil disimpan." };
+}
+
+export async function saveHeroSlides(input: unknown): Promise<ActionResult> {
+  const admin = await getAdminUser();
+  if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
+
+  const parsed = heroSlidesSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, message: "Periksa kembali isian.", errors: toErrors(parsed.error) };
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  for (const slide of parsed.data.slides) {
+    const { data: product } = await supabase
+      .from("products")
+      .select("id")
+      .eq("id", slide.productId)
+      .eq("product_type", "b2b_system")
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!product) {
+      return {
+        success: false,
+        message: `Produk "${slide.productId}" tidak ditemukan, bukan tipe B2B, atau sedang nonaktif.`,
+      };
+    }
+  }
+
+  const { error } = await supabase
+    .from("site_settings")
+    .upsert({ key: "home_hero", value: parsed.data as never }, { onConflict: "key" });
+  if (error) {
+    console.error("[action] save hero slides", error);
+    return { success: false, message: "Gagal menyimpan hero slides. " + error.message };
+  }
+
+  await recordAudit("site_settings.updated", "site_settings", "home_hero", parsed.data);
+  revalidatePath("/");
+  revalidatePath("/admin/integrasi");
+  return { success: true, message: "Hero homepage berhasil disimpan." };
 }

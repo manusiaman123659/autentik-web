@@ -210,8 +210,8 @@ export default function CustomRequestClient({
                     Butuh lebih cepat? Hubungi kami via WhatsApp di{" "}
                     <WhatsAppButton
                       number={waNumber}
-                      label="WhatsApp CS / Sales"
-                      message="Halo, saya ingin konsultasi produk custom"
+                      label="Admin MIKA"
+                      message="Halo Admin MIKA, saya ingin berkonsultasi mengenai produk custom atau kebutuhan kustomisasi."
                       variant="link"
                     />
                   </p>

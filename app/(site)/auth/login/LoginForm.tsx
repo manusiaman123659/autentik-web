@@ -9,6 +9,7 @@ import {
   customerLoginSchema,
   type CustomerLoginFormData,
 } from "@/lib/validations/authSchema";
+import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
 import { createClient } from "@/utils/supabase/client";
 
 function translateAuthError(error: { code?: string; message?: string }): string {
@@ -31,7 +32,8 @@ export default function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const explicitRedirect = searchParams.get("redirect");
+  const requestedRedirect = searchParams.get("redirect");
+  const customerRedirect = getSafeCustomerRedirect(requestedRedirect);
   const supabase = createClient();
 
   const {
@@ -55,8 +57,8 @@ export default function LoginForm() {
         return;
       }
 
-      if (explicitRedirect) {
-        router.push(explicitRedirect);
+      if (requestedRedirect) {
+        router.push(customerRedirect);
       } else {
         const {
           data: { user },
