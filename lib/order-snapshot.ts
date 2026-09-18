@@ -15,6 +15,9 @@ export interface OrderSnapshot {
   }[];
   subtotal: number;
   shippingCost?: number;
+  shippingTotalWeightG?: number | null;
+  shippingZoneId?: string | null;
+  shippingRateId?: string | null;
   total: number;
 }
 

@@ -354,13 +354,13 @@ export default function ProductMediaTabs({
                   </button>
                 </div>
 
-                {/* Callout Image (compact aspect-[4/3], ~120-140px) */}
-                <div className="relative w-full aspect-[4/3] max-h-[135px] bg-slate-100 dark:bg-slate-950 overflow-hidden border-b border-slate-200 dark:border-slate-700">
+                {/* Callout Image (compact container with object-contain to display full image without cropping) */}
+                <div className="relative w-full h-[150px] max-h-[170px] bg-slate-50 dark:bg-slate-950 overflow-hidden border-b border-slate-200 dark:border-slate-700 flex items-center justify-center">
                   <Image
                     src={activePhotoHotspot.callout_image_url}
                     alt={activePhotoHotspot.title}
                     fill
-                    className="object-cover"
+                    className="object-contain object-center p-1"
                     sizes="250px"
                   />
                 </div>

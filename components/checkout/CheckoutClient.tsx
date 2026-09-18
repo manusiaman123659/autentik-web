@@ -14,6 +14,11 @@ import { formatRupiah } from "@/lib/format";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
 import { createClient as createSupabaseClient } from "@/utils/supabase/client";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
+import {
+  parseShippingQuote,
+  SHIPPING_UNAVAILABLE_MESSAGE,
+  type ShippingQuote,
+} from "@/lib/shipping";
 
 const supabase = createSupabaseClient();
 
@@ -26,7 +31,8 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
   const { items, hydrated, subtotal, totalItems, clearCart } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
-  const [shippingCost, setShippingCost] = useState<number | null>(null);
+  const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
+  const [quotedRequestKey, setQuotedRequestKey] = useState("");
   const [estimating, setEstimating] = useState(false);
 
   const {
@@ -41,34 +47,57 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
 
   const city = useWatch({ control, name: "city" });
   const province = useWatch({ control, name: "province" });
+  const quoteRequestKey = JSON.stringify({
+    items: items.map((item) => ({
+      product_id: item.id,
+      quantity: item.quantity,
+      variant_id: item.variant_id ?? null,
+    })),
+    city: city?.trim().toLocaleLowerCase("id-ID") ?? "",
+    province: province?.trim().toLocaleLowerCase("id-ID") ?? "",
+  });
 
   useEffect(() => {
     let cancelled = false;
     if (!city?.trim() || !province?.trim() || items.length === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShippingCost(null);
+      setShippingQuote(null);
+      setQuotedRequestKey("");
       setEstimating(false);
       return;
     }
+    const requestKey = quoteRequestKey;
     const timer = setTimeout(async () => {
       setEstimating(true);
-      try {
-        const { data } = await supabase.rpc("estimate_shipping_cost", {
-          p_items: items.map((i) => ({ product_id: i.id, quantity: i.quantity })),
-          p_shipping_address: { city, province },
-        });
-        if (!cancelled) setShippingCost(typeof data === "number" ? data : 0);
-      } catch {
-        if (!cancelled) setShippingCost(null);
-      } finally {
-        if (!cancelled) setEstimating(false);
+      const { data, error } = await supabase.rpc("get_shipping_quote", {
+        p_items: items.map((item) => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          variant_id: item.variant_id ?? null,
+        })),
+        p_shipping_address: { city, province },
+      });
+      if (!cancelled) {
+        const parsed = error ? null : parseShippingQuote(data);
+        setShippingQuote(
+          parsed ?? {
+            status: "SHIPPING_UNAVAILABLE",
+            cost: null,
+            totalWeightG: null,
+            zoneId: null,
+            rateId: null,
+            message: SHIPPING_UNAVAILABLE_MESSAGE,
+          },
+        );
+        setQuotedRequestKey(requestKey);
+        setEstimating(false);
       }
     }, 400);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [city, province, items]);
+  }, [city, province, items, quoteRequestKey]);
 
   // Auto-fill dari profil user yang sudah login
   useEffect(() => {
@@ -86,18 +115,6 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
     loadProfile();
     return () => { active = false; };
   }, [reset]);
-
-  const estimateShipping = async (): Promise<number> => {
-    try {
-      const { data } = await supabase.rpc("estimate_shipping_cost", {
-        p_items: items.map((i) => ({ product_id: i.id, quantity: i.quantity })),
-        p_shipping_address: { city: city ?? "", province: province ?? "" },
-      });
-      return typeof data === "number" ? data : 0;
-    } catch {
-      return 0;
-    }
-  };
 
   if (!hydrated) {
     return (
@@ -132,6 +149,12 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
   }
 
   const onSubmit = async (data: CheckoutFormData) => {
+    const quoteIsCurrent = quotedRequestKey === quoteRequestKey;
+    if (!quoteIsCurrent || shippingQuote?.status !== "QUOTED" || !shippingQuote.cost || shippingQuote.cost <= 0) {
+      setServerError(SHIPPING_UNAVAILABLE_MESSAGE);
+      return;
+    }
+
     setSubmitting(true);
     setServerError("");
     try {
@@ -144,9 +167,17 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
         setServerError(result.message || "Terjadi kesalahan. Silakan coba lagi.");
         return;
       }
-
-      const finalShipping =
-        shippingCost !== null ? shippingCost : data.city?.trim() && data.province?.trim() ? await estimateShipping() : 0;
+      if (
+        result.subtotal == null ||
+        result.shippingCost == null ||
+        result.shippingTotalWeightG == null ||
+        !result.shippingZoneId ||
+        !result.shippingRateId ||
+        result.total == null
+      ) {
+        setServerError("Data pesanan belum lengkap. Silakan buka riwayat pesanan atau hubungi PPIC AKA.");
+        return;
+      }
 
       const snapshot: OrderSnapshot = {
         code: result.orderCode,
@@ -163,9 +194,12 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
           quantity: i.quantity,
           variant_label: i.variant_label ?? null,
         })),
-        subtotal,
-        shippingCost: finalShipping,
-        total: subtotal + finalShipping,
+        subtotal: result.subtotal,
+        shippingCost: result.shippingCost,
+        shippingTotalWeightG: result.shippingTotalWeightG,
+        shippingZoneId: result.shippingZoneId,
+        shippingRateId: result.shippingRateId,
+        total: result.total,
       };
 
       try {
@@ -189,6 +223,12 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
       setSubmitting(false);
     }
   };
+
+  const quoteIsCurrent = quotedRequestKey === quoteRequestKey;
+  const validQuote =
+    quoteIsCurrent && shippingQuote?.status === "QUOTED" && shippingQuote.cost != null && shippingQuote.cost > 0;
+  const quoteUnavailable =
+    quoteIsCurrent && shippingQuote != null && shippingQuote.status !== "QUOTED";
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
@@ -363,10 +403,12 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
                       <Loader2 size={12} className="animate-spin text-[#0EA5A0]" />
                       Menghitung...
                     </span>
-                  ) : shippingCost !== null ? (
+                  ) : validQuote ? (
                     <span className="font-semibold tabular-nums" style={{ color: "var(--text-primary)" }}>
-                      {shippingCost > 0 ? formatRupiah(shippingCost) : "Gratis"}
+                      {formatRupiah(shippingQuote.cost!)}
                     </span>
+                  ) : quoteUnavailable ? (
+                    <span className="text-xs font-semibold text-amber-600">Perlu konfirmasi</span>
                   ) : (
                     <span className="text-xs font-light">Isi kota & provinsi untuk estimasi</span>
                   )}
@@ -374,14 +416,28 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
                 <div className="flex items-center justify-between">
                   <span className="font-bold" style={{ color: "var(--text-primary)" }}>Total</span>
                   <span className="text-lg font-extrabold tabular-nums" style={{ color: "var(--text-primary)" }}>
-                    {formatRupiah(subtotal + (shippingCost ?? 0))}
+                    {validQuote ? formatRupiah(subtotal + shippingQuote.cost!) : "Belum tersedia"}
                   </span>
                 </div>
               </div>
 
+              {quoteUnavailable && (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3">
+                  <p className="text-xs font-semibold text-amber-900">{SHIPPING_UNAVAILABLE_MESSAGE}</p>
+                  <div className="mt-2">
+                    <WhatsAppButton
+                      number={waNumber ?? null}
+                      label="Hubungi PPIC AKA"
+                      message={`Halo PPIC AKA, saya perlu konfirmasi ongkir Marketplace Komponen untuk ${city ?? ""}, ${province ?? ""}.`}
+                      variant="link"
+                    />
+                  </div>
+                </div>
+              )}
+
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || estimating || !validQuote}
                 className="mt-6 w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] shadow-lg shadow-[#0EA5A0]/20 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
               >
                 {submitting ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}

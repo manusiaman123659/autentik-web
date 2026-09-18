@@ -7,6 +7,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { checkoutOrderSchema } from "@/lib/validations/storeSchema";
 import { createMidtransTransaction } from "@/lib/midtrans";
 import { logError } from "@/lib/logger";
+import { SHIPPING_UNAVAILABLE_MESSAGE } from "@/lib/shipping";
 
 export interface CheckoutResult {
   success: boolean;
@@ -14,6 +15,12 @@ export interface CheckoutResult {
   errors?: Record<string, string>;
   orderCode?: string;
   redirectUrl?: string;
+  subtotal?: number;
+  shippingCost?: number;
+  shippingTotalWeightG?: number;
+  shippingZoneId?: string;
+  shippingRateId?: string;
+  total?: number;
 }
 
 function toErrors(error: ZodError): Record<string, string> {
@@ -69,7 +76,13 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
   });
 
   if (error) {
-    return { success: false, message: error.message };
+    logError("checkout.create_order", error, { userId: user.id });
+    return {
+      success: false,
+      message: error.message.includes(SHIPPING_UNAVAILABLE_MESSAGE)
+        ? SHIPPING_UNAVAILABLE_MESSAGE
+        : "Pesanan belum dapat dibuat. Periksa kembali keranjang dan data pengiriman Anda.",
+    };
   }
 
   if (typeof orderCode !== "string" || !orderCode) {
@@ -80,7 +93,7 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
   try {
     const { data: orderRow, error: orderError } = await supabase
       .from("orders")
-      .select("total")
+      .select("subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total")
       .eq("order_code", orderCode)
       .eq("user_id", user.id)
       .single();
@@ -90,6 +103,17 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     }
 
     const totalAmount = Math.round(Number(orderRow?.total ?? 0));
+    const shippingCost = Number(orderRow.shipping_cost ?? 0);
+    const shippingTotalWeightG = Number(orderRow.shipping_total_weight_g ?? 0);
+
+    if (
+      shippingCost <= 0 ||
+      shippingTotalWeightG <= 0 ||
+      !orderRow.shipping_zone_id ||
+      !orderRow.shipping_rate_id
+    ) {
+      return { success: false, message: SHIPPING_UNAVAILABLE_MESSAGE, orderCode };
+    }
 
     if (totalAmount > 0) {
       console.log("[CHECKOUT] Creating Midtrans transaction for:", orderCode, "Amount:", totalAmount);
@@ -133,6 +157,12 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
         message: "Pesanan berhasil dibuat.",
         orderCode,
         redirectUrl: transaction.redirect_url,
+        subtotal: Number(orderRow.subtotal),
+        shippingCost,
+        shippingTotalWeightG,
+        shippingZoneId: orderRow.shipping_zone_id,
+        shippingRateId: orderRow.shipping_rate_id,
+        total: totalAmount,
       };
     }
     return {

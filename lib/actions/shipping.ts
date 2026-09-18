@@ -18,13 +18,6 @@ function toErrors(error: ZodError): Record<string, string> {
   return out;
 }
 
-function parseList(value: string): string[] {
-  return value
-    .split(/[\n,]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 export async function saveZone(input: unknown): Promise<ActionResult> {
   const admin = await getAdminUser();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
@@ -40,8 +33,6 @@ export async function saveZone(input: unknown): Promise<ActionResult> {
 
   const patch = {
     name: data.name,
-    provinces: parseList(data.provincesText),
-    cities: parseList(data.citiesText),
     sort_order: data.sortOrder,
     is_active: data.isActive,
   };

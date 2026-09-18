@@ -30,7 +30,7 @@ export default function ShippingRatesManager({ zones }: { zones: ShippingZoneWit
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-white">Tarif Ongkir</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Zona (provinsi/kota) × rentang berat (gram). Pencocokan zona: provinsi ATAU kota cocok.
+              Zona wilayah terstruktur × rentang berat inklusif (gram).
             </p>
           </div>
         </div>
@@ -51,16 +51,16 @@ export default function ShippingRatesManager({ zones }: { zones: ShippingZoneWit
             <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
               <AlertTriangle size={13} />
               {activeZones === 0
-                ? "Belum ada zona aktif — selama pengiriman diaktifkan, semua alamat dihitung gratis."
-                : "Baru 1 zona aktif — provinsi/kota di luar zona ini dihitung gratis."}
+                ? "Belum ada zona aktif — checkout Marketplace Komponen tidak dapat menghitung ongkir."
+                : "Pastikan seluruh wilayah tujuan memiliki mapping region dan tarif aktif."}
             </span>
           )}
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          Ongkir hanya berlaku bila <span className="font-semibold">Pengiriman diaktifkan</span> pada form
-          Integrasi Toko di atas. Provinsi/kota yang belum masuk zona mana pun dianggap gratis. Berat total yang
-          melebihi band terakhir memakai ongkir band terakhir.
+          Ongkir hanya tersedia bila <span className="font-semibold">Pengiriman diaktifkan</span>, alamat cocok
+          dengan mapping region, dan berat masuk tepat satu rentang tarif. Mapping region dikelola melalui schema
+          terstruktur; editor wilayah lengkap akan tersedia pada Task 8D.
         </p>
 
         {zones.length === 0 && !showNew && (
@@ -85,8 +85,6 @@ function ZoneCard({ zone, onDone }: { zone: ShippingZoneWithRates | null; onDone
   const isNew = !zone;
 
   const [name, setName] = useState(zone?.name ?? "");
-  const [provincesText, setProvincesText] = useState(zone?.provinces.join(", ") ?? "");
-  const [citiesText, setCitiesText] = useState(zone?.cities.join(", ") ?? "");
   const [sortOrder, setSortOrder] = useState(zone ? String(zone.sort_order) : "0");
   const [isActive, setIsActive] = useState(zone?.is_active ?? true);
   const [zoneErrors, setZoneErrors] = useState<Record<string, string>>({});
@@ -99,7 +97,7 @@ function ZoneCard({ zone, onDone }: { zone: ShippingZoneWithRates | null; onDone
   const handleSaveZone = async () => {
     setSavingZone(true);
     setZoneErrors({});
-    const result = await saveZone({ id: zone?.id, name, provincesText, citiesText, sortOrder, isActive });
+    const result = await saveZone({ id: zone?.id, name, sortOrder, isActive });
     setSavingZone(false);
     if (!result.success) {
       setZoneErrors(result.errors ?? {});
@@ -176,24 +174,6 @@ function ZoneCard({ zone, onDone }: { zone: ShippingZoneWithRates | null; onDone
             <label className={labelClass}>Nama Zona</label>
             <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="Jawa Tengah & Yogyakarta" />
             <FieldError message={zoneErrors.name} />
-          </div>
-          <div>
-            <label className={labelClass}>Provinsi (pisahkan dengan koma)</label>
-            <textarea
-              className={`${inputClass} min-h-[72px] resize-y`}
-              value={provincesText}
-              onChange={(e) => setProvincesText(e.target.value)}
-              placeholder="Jawa Tengah, DI Yogyakarta"
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Kota/Kabupaten (pisahkan dengan koma)</label>
-            <textarea
-              className={`${inputClass} min-h-[72px] resize-y`}
-              value={citiesText}
-              onChange={(e) => setCitiesText(e.target.value)}
-              placeholder="Semarang, Surakarta, Yogyakarta"
-            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -344,7 +324,7 @@ function RateRow({
   };
 
   const showPreview =
-    weightToG !== "" && cost !== "" && Number(weightFromG) >= 0 && Number(weightToG) > Number(weightFromG) && Number(cost) >= 0;
+    weightToG !== "" && cost !== "" && Number(weightFromG) >= 0 && Number(weightToG) >= Number(weightFromG) && Number(cost) > 0;
 
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3">
@@ -354,7 +334,7 @@ function RateRow({
           <input
             className={inputClass}
             type="number"
-            min={0}
+            min={1}
             value={weightFromG}
             onChange={(e) => setWeightFromG(e.target.value)}
             placeholder="0"

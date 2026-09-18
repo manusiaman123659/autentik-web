@@ -40,18 +40,6 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
   };
 
   const audit: Record<string, unknown> = { status: data.status };
-  if (data.shippingCost !== undefined) {
-    const { data: ord } = await supabase
-      .from("orders")
-      .select("subtotal")
-      .eq("id", id)
-      .single();
-    const subtotal = Number(ord?.subtotal ?? 0);
-    patch.shipping_cost = data.shippingCost;
-    patch.total = subtotal + data.shippingCost;
-    audit.shipping_cost = data.shippingCost;
-    audit.total = patch.total;
-  }
 
   // Cancel => restore stok atomik via RPC (guard anti double-restore di DB).
   // status/cancel_reason sudah di-set RPC dalam satu transaksi; patch biasa

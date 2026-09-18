@@ -3,7 +3,7 @@
 import { Component, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import * as THREE from "three";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { Billboard, OrbitControls, useGLTF, useProgress } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
@@ -19,6 +19,101 @@ export interface Hotspot {
 }
 
 const DRAG_THRESHOLD = 5;
+
+/**
+ * Individual hotspot marker with per-frame occlusion check.
+ * Uses raycasting to hide the marker when it's behind the model.
+ */
+function HotspotMarker({
+  hotspot,
+  scene,
+  modelRadius,
+  isActive,
+  editable,
+  onMarkerClick,
+}: {
+  hotspot: Hotspot;
+  scene: THREE.Object3D;
+  modelRadius: number;
+  isActive: boolean;
+  editable: boolean;
+  onMarkerClick: (h: Hotspot) => void;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const frameCount = useRef(0);
+
+  const base = modelRadius * 0.035;
+  const visualRadius = isActive ? base * 1.6 : base;
+  // Invisible hit-area radius — much bigger for easy mobile tapping
+  const hitRadius = Math.max(visualRadius * 5, modelRadius * 0.08);
+
+  // Every few frames, raycast from camera → hotspot to check if model occludes it
+  useFrame(({ camera }) => {
+    if (!groupRef.current) return;
+    frameCount.current += 1;
+    // Throttle to every 3 frames for performance
+    if (frameCount.current % 3 !== 0) return;
+
+    const worldPos = new THREE.Vector3();
+    groupRef.current.getWorldPosition(worldPos);
+
+    const dir = worldPos.clone().sub(camera.position).normalize();
+    raycaster.set(camera.position, dir);
+
+    const distToHotspot = camera.position.distanceTo(worldPos);
+    const intersects = raycaster.intersectObject(scene, true);
+
+    // If model surface is hit before reaching the hotspot, it's occluded.
+    // Use a small margin (5% of model radius) to avoid hiding markers
+    // that sit exactly on the surface.
+    const margin = modelRadius * 0.05;
+    const occluded =
+      intersects.length > 0 &&
+      intersects[0].distance < distToHotspot - margin;
+
+    groupRef.current.visible = !occluded;
+  });
+
+  return (
+    <group
+      ref={groupRef}
+      position={[hotspot.position_x, hotspot.position_y, hotspot.position_z]}
+      renderOrder={999}
+    >
+      <Billboard>
+        {/* Invisible larger hit-area for easier mobile tap */}
+        <mesh
+          onClick={(e) => {
+            e.stopPropagation();
+            onMarkerClick(hotspot);
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
+          onPointerOver={() => {
+            if (!editable) document.body.style.cursor = "pointer";
+          }}
+          onPointerOut={() => {
+            document.body.style.cursor = "auto";
+          }}
+        >
+          <circleGeometry args={[hitRadius, 16]} />
+          <meshBasicMaterial transparent opacity={0} depthTest={false} />
+        </mesh>
+        {/* Visible marker dot — rendered on top of model surface */}
+        <mesh renderOrder={999}>
+          <circleGeometry args={[visualRadius, 24]} />
+          <meshBasicMaterial
+            color={isActive ? "orange" : "red"}
+            depthTest={false}
+            depthWrite={false}
+          />
+        </mesh>
+      </Billboard>
+    </group>
+  );
+}
 
 function ModelView({
   url,
@@ -122,34 +217,22 @@ function ModelView({
       {hotspots.map((h) => {
         const key = h.id ?? `${h.position_x},${h.position_y},${h.position_z}`;
         const isActive = key === activeKey;
-        const base = modelRadius * 0.02;
         return (
-          <group key={key} position={[h.position_x, h.position_y, h.position_z]}>
-            <Billboard>
-              <mesh
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleMarkerClick(h);
-                }}
-                onPointerOver={() => {
-                  document.body.style.cursor = "pointer";
-                }}
-                onPointerOut={() => {
-                  document.body.style.cursor = "auto";
-                }}
-              >
-                <circleGeometry args={[isActive ? base * 1.5 : base, 16]} />
-                <meshBasicMaterial color={isActive ? "orange" : "red"} />
-              </mesh>
-            </Billboard>
-          </group>
+          <HotspotMarker
+            key={key}
+            hotspot={h}
+            scene={scene}
+            modelRadius={modelRadius}
+            isActive={isActive}
+            editable={!!editable}
+            onMarkerClick={handleMarkerClick}
+          />
         );
       })}
       {/* Catatan: rotasi vertikal dibiarkan bebas penuh (tanpa
-          minPolarAngle/maxPolarAngle) sesuai keputusan produk. Efek samping
-          yang diketahui dan diterima: marker Billboard bisa terlihat sedikit
-          distorsi saat kamera di sudut ekstrem (hampir persis dari atas/bawah)
-          — known limitation, bukan bug. */}
+          minPolarAngle/maxPolarAngle) sesuai keputusan produk.
+          Marker yang terhalang model otomatis disembunyikan via raycasting
+          di komponen HotspotMarker. */}
       <OrbitControls
         ref={controlsRef}
         enableDamping

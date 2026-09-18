@@ -154,9 +154,7 @@ export default function PrintCustomerInvoice({ snapshot, bankAccount, showBankTr
             <span className="text-slate-500">Ongkos Kirim</span>
             <span className="font-medium text-slate-900">
               {snapshot.shippingCost != null
-                ? snapshot.shippingCost > 0
-                  ? formatRupiah(snapshot.shippingCost)
-                  : "Gratis"
+                ? formatRupiah(snapshot.shippingCost)
                 : "Dihitung saat konfirmasi"}
             </span>
           </div>

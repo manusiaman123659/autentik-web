@@ -65,6 +65,9 @@ export default async function OrderConfirmationPage({ params }: Props) {
     payment_method: string | null;
     subtotal: number;
     shipping_cost: number;
+    shipping_total_weight_g: number | null;
+    shipping_zone_id: string | null;
+    shipping_rate_id: string | null;
     total: number;
     paid_at: string | null;
     midtrans_redirect_url: string | null;
@@ -76,6 +79,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
       unit_price: number;
       quantity: number;
       product_id: string | null;
+      variant_label: string | null;
     }[];
   };
 
@@ -84,7 +88,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
   try {
     const { data } = await supabase
       .from("orders")
-      .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id)")
+      .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id, variant_label)")
       .eq("order_code", code)
       .is("deleted_at", null)
       .single();
@@ -111,6 +115,9 @@ export default async function OrderConfirmationPage({ params }: Props) {
         payment_method: rawOrder.payment_method,
         subtotal: rawOrder.subtotal,
         shipping_cost: rawOrder.shipping_cost,
+        shipping_total_weight_g: rawOrder.shipping_total_weight_g,
+        shipping_zone_id: rawOrder.shipping_zone_id,
+        shipping_rate_id: rawOrder.shipping_rate_id,
         total: rawOrder.total,
         paid_at: rawOrder.paid_at,
         midtrans_redirect_url: rawOrder.midtrans_redirect_url,

@@ -18,7 +18,6 @@ export default function OrderStatusForm({
     trackingCourier: string;
     trackingNumber: string;
     cancelReason: string;
-    shippingCost: number;
   };
 }) {
   const router = useRouter();
@@ -27,7 +26,6 @@ export default function OrderStatusForm({
   const [trackingCourier, setTrackingCourier] = useState(initial.trackingCourier);
   const [trackingNumber, setTrackingNumber] = useState(initial.trackingNumber);
   const [cancelReason, setCancelReason] = useState(initial.cancelReason);
-  const [shippingCost, setShippingCost] = useState(String(initial.shippingCost));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
@@ -39,7 +37,6 @@ export default function OrderStatusForm({
       trackingCourier,
       trackingNumber,
       cancelReason,
-      shippingCost,
     });
     setBusy(false);
     if (!result.success) {
@@ -66,22 +63,6 @@ export default function OrderStatusForm({
             {ORDER_STATUS_LABELS[s]}
           </button>
         ))}
-      </div>
-
-      <div className="grid sm:grid-cols-3 gap-4">
-        <div>
-          <label className={labelClass}>Ongkos Kirim (Rp)</label>
-          <input
-            type="number"
-            min={0}
-            className={inputClass}
-            value={shippingCost}
-            onChange={(e) => setShippingCost(e.target.value)}
-            placeholder="0"
-          />
-          <FieldError message={errors.shippingCost} />
-          <p className="mt-1 text-[11px] text-slate-400">Total otomatis = subtotal + ongkos kirim.</p>
-        </div>
       </div>
 
       {status === "shipped" && (

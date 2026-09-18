@@ -39,6 +39,9 @@ type DbOrder = {
   payment_method: string | null;
   subtotal: number;
   shipping_cost: number;
+  shipping_total_weight_g: number | null;
+  shipping_zone_id: string | null;
+  shipping_rate_id: string | null;
   total: number;
   paid_at: string | null;
   midtrans_redirect_url: string | null;
@@ -79,6 +82,9 @@ function buildSnapshotFromDb(db: DbOrder): OrderSnapshot {
     })),
     subtotal: Number(db.subtotal),
     shippingCost: Number(db.shipping_cost),
+    shippingTotalWeightG: db.shipping_total_weight_g,
+    shippingZoneId: db.shipping_zone_id,
+    shippingRateId: db.shipping_rate_id,
     total: Number(db.total),
   };
 }
@@ -114,7 +120,7 @@ export default function OrderConfirmationClient({
     const fromStorage = readSnapshot(code);
     // Prefer sessionStorage if present; otherwise use DB data
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSnapshot(fromStorage ?? (dbOrder ? buildSnapshotFromDb(dbOrder) : null));
+    setSnapshot(dbOrder ? buildSnapshotFromDb(dbOrder) : fromStorage);
     setMounted(true);
   }, [code, dbOrder]);
 
@@ -419,7 +425,7 @@ export default function OrderConfirmationClient({
               <span>Ongkos kirim</span>
               {snapshot.shippingCost !== undefined ? (
                 <span className="font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
-                  {snapshot.shippingCost > 0 ? formatRupiah(snapshot.shippingCost) : "Gratis"}
+                  {formatRupiah(snapshot.shippingCost)}
                 </span>
               ) : (
                 <span className="text-xs font-light">Dihitung saat konfirmasi</span>
