@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -16,12 +16,16 @@ import {
   FileText,
   Box,
   MapPin,
+  Image as ImageIcon,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 import { upsertProduct } from "@/lib/actions/products";
 import { upsertTechnicalDocument, deleteTechnicalDocument } from "@/lib/actions/technicalDocuments";
 import TechnicalDocsManager from "@/components/admin/TechnicalDocsManager";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
 import { createClient } from "@/utils/supabase/client";
+import { clickToImagePercent, computeContainedImageRect } from "@/lib/photo-hotspot-utils";
 import {
   FULFILLMENT_TYPE_LABELS,
   type FulfillmentType,
@@ -55,6 +59,17 @@ export interface HotspotItem {
   description: string | null;
 }
 
+export interface PhotoHotspotItem {
+  _tempKey: string;
+  id?: string;
+  target_image_url: string;
+  position_x: number;
+  position_y: number;
+  title: string;
+  description: string | null;
+  callout_image_url: string;
+}
+
 export interface ProductFormValues {
   id?: string;
   productType: ProductType;
@@ -67,6 +82,7 @@ export interface ProductFormValues {
   brandColor: string;
   categoryColor: string;
   imageUrl: string;
+  gallery: string[];
   brochureUrl: string;
   model3dUrl: string;
   features: string[];
@@ -98,6 +114,7 @@ function toFormValues(product: ProductRow | undefined, productType: ProductType)
     brandColor: product?.brand_color ?? "#0EA5A0",
     categoryColor: product?.category_color ?? "#0B1F3A",
     imageUrl: product?.image_url ?? "",
+    gallery: Array.isArray(product?.gallery) ? (product.gallery as string[]).filter(Boolean) : [],
     brochureUrl: product?.brochure_url ?? "",
     model3dUrl: product?.model_3d_url ?? "",
     features: Array.isArray(product?.features)
@@ -284,6 +301,7 @@ export default function ProductForm({
   initialDocuments = [],
   initialVariants = [],
   initialHotspots = [],
+  initialPhotoHotspots = [],
 }: {
   productType: ProductType;
   initial?: ProductRow;
@@ -291,6 +309,7 @@ export default function ProductForm({
   initialDocuments?: TechDocRow[];
   initialVariants?: VariantRow[];
   initialHotspots?: HotspotItem[];
+  initialPhotoHotspots?: PhotoHotspotItem[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -299,9 +318,10 @@ export default function ProductForm({
     variants: initialVariants,
   }));
   const [errors, setErrors] = useState<Record<string, string>>({});
-const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [galleryUploading, setGalleryUploading] = useState(false);
   const [brochureUploading, setBrochureUploading] = useState(false);
   const [brochureUploadError, setBrochureUploadError] = useState("");
   const [modelUploading, setModelUploading] = useState(false);
@@ -319,9 +339,28 @@ const [saving, setSaving] = useState(false);
   const [hotspots, setHotspots] = useState<HotspotItem[]>(initialHotspots);
   const [editingHotspot, setEditingHotspot] = useState<HotspotItem | null>(null);
   const [isPlacingHotspot, setIsPlacingHotspot] = useState(false);
+
+  const [photoHotspots, setPhotoHotspots] = useState<PhotoHotspotItem[]>(initialPhotoHotspots);
+  const [editingPhotoHotspot, setEditingPhotoHotspot] = useState<PhotoHotspotItem | null>(null);
+  const [isPlacingPhotoHotspot, setIsPlacingPhotoHotspot] = useState(false);
+  const [selectedPhotoForHotspot, setSelectedPhotoForHotspot] = useState<string>("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const brochureInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
+
+  const allProductImages = useMemo(
+    () => [
+      ...(form.imageUrl ? [form.imageUrl] : []),
+      ...form.gallery.filter((g) => g && g !== form.imageUrl),
+    ],
+    [form.imageUrl, form.gallery]
+  );
+  const activePhotoForHotspot =
+    selectedPhotoForHotspot && allProductImages.includes(selectedPhotoForHotspot)
+      ? selectedPhotoForHotspot
+      : allProductImages[0] || "";
 
   const brochureFilename = decodeURIComponent(form.brochureUrl.split("/").pop() ?? "") || "brosur.pdf";
   const modelFilename = decodeURIComponent(form.model3dUrl.split("/").pop() ?? "") || "model.glb";
@@ -506,6 +545,95 @@ const [saving, setSaving] = useState(false);
     });
   };
 
+  const handleGalleryUpload = async (file?: File) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast("error", "Ukuran foto galeri maksimal 5MB.");
+      return;
+    }
+    setGalleryUploading(true);
+    try {
+      const publicUrl = await uploadToMedia(file, {
+        pathPrefix: "products/gallery",
+        contentType: file.type || "image/jpeg",
+        errorContext: "foto galeri",
+      });
+      setForm((prev) => ({
+        ...prev,
+        gallery: [...prev.gallery, publicUrl],
+      }));
+      toast("success", "Foto galeri berhasil ditambahkan.");
+    } catch (err: unknown) {
+      toast("error", err instanceof Error ? err.message : "Gagal mengunggah foto galeri.");
+    } finally {
+      setGalleryUploading(false);
+    }
+  };
+
+  // Patch 2: Orphan marker handling — gallery image removal no longer deletes hotspots.
+  // Hotspots whose target_image_url no longer exists become "orphans" and are shown
+  // with a warning badge in admin. Public side filters them out automatically.
+  const handleRemoveGalleryImage = (urlToRemove: string) => {
+    setForm((prev) => ({
+      ...prev,
+      gallery: prev.gallery.filter((u) => u !== urlToRemove),
+    }));
+    // DO NOT delete photoHotspots — they become orphans
+  };
+
+  // Patch 1: Coordinate system — use actual image rect for accurate placement
+  const photoCanvasImgRef = useRef<HTMLImageElement>(null);
+
+  const handlePhotoHotspotCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isPlacingPhotoHotspot || !activePhotoForHotspot) return;
+    const img = photoCanvasImgRef.current;
+    if (!img) return;
+    const containerRect = e.currentTarget.getBoundingClientRect();
+    const result = clickToImagePercent(e.clientX, e.clientY, img, containerRect);
+    if (!result) return; // Click on letterbox/padding — ignore
+
+    setEditingPhotoHotspot({
+      _tempKey: `ph_${Date.now()}`,
+      target_image_url: activePhotoForHotspot,
+      position_x: result.x,
+      position_y: result.y,
+      title: "",
+      description: "",
+      callout_image_url: "",
+    });
+  };
+
+  // Patch 2: Orphan detection helper
+  const isOrphanHotspot = useCallback((ph: PhotoHotspotItem) => {
+    return !allProductImages.includes(ph.target_image_url);
+  }, [allProductImages]);
+
+  // Patch 1: Recalculate marker pixel positions when container resizes
+  const [markerPositions, setMarkerPositions] = useState<Map<string, { left: number; top: number }>>(new Map());
+
+  const recalcMarkerPositions = useCallback(() => {
+    const img = photoCanvasImgRef.current;
+    if (!img) return;
+    const imgRect = computeContainedImageRect(img);
+    if (!imgRect) return;
+    const newPositions = new Map<string, { left: number; top: number }>();
+    photoHotspots
+      .filter((ph) => ph.target_image_url === activePhotoForHotspot)
+      .forEach((ph) => {
+        newPositions.set(ph._tempKey, {
+          left: imgRect.left + (ph.position_x / 100) * imgRect.width,
+          top: imgRect.top + (ph.position_y / 100) * imgRect.height,
+        });
+      });
+    setMarkerPositions(newPositions);
+  }, [photoHotspots, activePhotoForHotspot]);
+
+  useEffect(() => {
+    recalcMarkerPositions();
+    window.addEventListener("resize", recalcMarkerPositions);
+    return () => window.removeEventListener("resize", recalcMarkerPositions);
+  }, [recalcMarkerPositions]);
+
   const handleSubmit = async () => {
     setSaving(true);
     setErrors({});
@@ -525,6 +653,18 @@ const [saving, setSaving] = useState(false);
           }))
       : undefined;
 
+    const photoHotspotsPayload = photoHotspots
+      .filter((ph) => ph.title.trim() && ph.callout_image_url.trim())
+      .map((ph) => ({
+        id: ph.id,
+        target_image_url: ph.target_image_url,
+        position_x: ph.position_x,
+        position_y: ph.position_y,
+        title: ph.title,
+        description: ph.description,
+        callout_image_url: ph.callout_image_url,
+      }));
+
     // Exclude variants dari payload upsertProduct — Zod schema lama
     // (productSchema) masih expect struktur {name, options: string[]},
     // sedangkan form sekarang pakai VariantRow[]. Variants akan diproses
@@ -537,7 +677,7 @@ const [saving, setSaving] = useState(false);
       features: form.features.filter((f) => f.trim()),
     };
 
-    const result = await upsertProduct(payload, variantsPayload, hotspotsPayload);
+    const result = await upsertProduct(payload, variantsPayload, hotspotsPayload, photoHotspotsPayload);
     setSaving(false);
     if (!result.success) {
       setErrors(result.errors ?? {});
@@ -549,6 +689,9 @@ const [saving, setSaving] = useState(false);
     }
     if (result.hotspotWarning) {
       toast("error", result.hotspotWarning);
+    }
+    if (result.photoHotspotWarning) {
+      toast("error", result.photoHotspotWarning);
     }
 
     const productId = form.id || (result as { productId?: string }).productId;
@@ -765,6 +908,59 @@ const [saving, setSaving] = useState(false);
             )}
             <FieldError message={uploadError || errors.imageUrl} />
           </div>
+
+          <div className="sm:col-span-2">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <label className={labelClass}>Galeri Foto Tambahan (opsional)</label>
+                <p className="text-xs text-slate-400">Unggah sudut pandang lain atau foto close-up yang bisa disematkan marker interaktif.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                disabled={galleryUploading}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#0EA5A0] text-[#0EA5A0] hover:bg-[#0EA5A0]/10 transition-colors disabled:opacity-60"
+              >
+                {galleryUploading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                {galleryUploading ? "Mengunggah..." : "Tambah Foto Galeri"}
+              </button>
+            </div>
+
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                void handleGalleryUpload(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+
+            {form.gallery.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                {form.gallery.map((gUrl, idx) => (
+                  <div
+                    key={gUrl + idx}
+                    className="relative group rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden aspect-square bg-slate-50 dark:bg-slate-900"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={gUrl} alt={`Galeri ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveGalleryImage(gUrl)}
+                      className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700 shadow-md"
+                      title="Hapus foto ini dari galeri"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 mt-1">Belum ada foto galeri tambahan.</p>
+            )}
+          </div>
           <div className="sm:col-span-2">
             <label className={labelClass}>Deskripsi</label>
             <textarea
@@ -909,6 +1105,303 @@ onChange={(e) => set("description", e.target.value)}
             </button>
           )}
           <FieldError message={modelUploadError || errors.model3dUrl} />
+        </section>
+      )}
+
+      {/* Hotspot Foto Produk */}
+      {!isSparepart && form.id && allProductImages.length === 0 && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">Hotspot Foto Produk</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Unggah gambar produk utama atau foto galeri terlebih dahulu untuk menambahkan marker fitur interaktif.
+          </p>
+        </section>
+      )}
+
+      {!isSparepart && form.id && allProductImages.length > 0 && (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Hotspot Foto Produk</h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0EA5A0]/10 text-[#0EA5A0]">
+                  Interaktif 2D
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Pilih foto produk dan klik pada foto untuk menempatkan titik marker fitur dengan foto detail callout wajib, judul, dan deskripsi.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (isPlacingPhotoHotspot) {
+                  setIsPlacingPhotoHotspot(false);
+                  setEditingPhotoHotspot(null);
+                } else {
+                  setIsPlacingPhotoHotspot(true);
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg border transition-colors flex-shrink-0 ${
+                isPlacingPhotoHotspot
+                  ? "border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60"
+                  : "border-[#0EA5A0] text-[#0EA5A0] bg-[#0EA5A0]/5 hover:bg-[#0EA5A0]/10"
+              }`}
+            >
+              <MapPin size={14} />
+              {isPlacingPhotoHotspot ? "Selesai Menempatkan" : "Tempatkan Marker"}
+            </button>
+          </div>
+
+          {/* Photo Selector if multiple images */}
+          {allProductImages.length > 1 && (
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">
+                Pilih Foto yang Ditandai:
+              </label>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {allProductImages.map((imgUrl, i) => (
+                  <button
+                    key={imgUrl + i}
+                    type="button"
+                    onClick={() => setSelectedPhotoForHotspot(imgUrl)}
+                    className={`relative w-16 h-16 rounded-lg border overflow-hidden flex-shrink-0 transition-all ${
+                      imgUrl === activePhotoForHotspot
+                        ? "border-[#0EA5A0] ring-2 ring-[#0EA5A0]/40 scale-105"
+                        : "border-slate-200 dark:border-slate-700 opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imgUrl} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                    {i === 0 && (
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-white font-bold py-0.5 text-center">
+                        Utama
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Canvas Photo Interactive */}
+          <div className="relative mb-5">
+            {isPlacingPhotoHotspot && (
+              <div className="absolute top-3 inset-x-3 z-20 pointer-events-none flex justify-center">
+                <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-900/90 text-white shadow-lg backdrop-blur-sm border border-white/20 animate-bounce">
+                  Klik titik pada foto di bawah untuk memasang marker
+                </span>
+              </div>
+            )}
+
+            <div
+              onClick={handlePhotoHotspotCanvasClick}
+              className={`relative w-full max-h-[460px] aspect-video rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 flex items-center justify-center overflow-hidden select-none ${
+                isPlacingPhotoHotspot ? "cursor-crosshair ring-2 ring-[#0EA5A0]" : ""
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                ref={photoCanvasImgRef}
+                src={activePhotoForHotspot}
+                alt="Product Preview"
+                className="w-full h-full object-contain pointer-events-none"
+                onLoad={recalcMarkerPositions}
+              />
+
+              {/* Render Markers for Active Photo — positioned using computed image rect */}
+              {photoHotspots
+                .filter((ph) => ph.target_image_url === activePhotoForHotspot)
+                .map((ph, idx) => {
+                  const pos = markerPositions.get(ph._tempKey);
+                  if (!pos) return null;
+                  return (
+                    <button
+                      key={ph._tempKey}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPhotoHotspot(ph);
+                      }}
+                      style={{
+                        left: `${pos.left}px`,
+                        top: `${pos.top}px`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                      className="absolute z-10 group cursor-pointer focus:outline-none w-11 h-11 flex items-center justify-center"
+                      aria-label={`Lihat detail ${ph.title || `Marker ${idx + 1}`}`}
+                    >
+                      <div className="relative flex items-center justify-center pointer-events-none">
+                        <span className="absolute w-7 h-7 rounded-full bg-red-500/30 animate-ping group-hover:bg-[#0EA5A0]/40" />
+                        <div className="w-6 h-6 rounded-full bg-slate-900 border-2 border-white shadow-lg flex items-center justify-center transition-transform group-hover:scale-125">
+                          <span className="w-2 h-2 rounded-full bg-white group-hover:bg-red-400" />
+                        </div>
+                      </div>
+                      {/* Tooltip on hover */}
+                      <div className="absolute left-1/2 -top-8 -translate-x-1/2 hidden group-hover:flex items-center px-2 py-0.5 rounded bg-slate-900 text-white text-[11px] font-medium whitespace-nowrap shadow pointer-events-none z-30">
+                        {ph.title || `Marker ${idx + 1}`}
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* Table / List of Photo Hotspots */}
+          {photoHotspots.length === 0 ? (
+            <p className="text-xs text-slate-400 mb-4">
+              Belum ada marker foto. Klik &quot;Tempatkan Marker&quot; lalu klik titik pada foto.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-16">Callout</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400">Judul Fitur</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400">Deskripsi</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-32">Foto Target</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-500 dark:text-slate-400 w-24">Posisi</th>
+                    <th className="py-2 pl-2 w-16"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {photoHotspots.map((ph) => {
+                    const isCurrentPhoto = ph.target_image_url === activePhotoForHotspot;
+                    const orphan = isOrphanHotspot(ph);
+                    return (
+                      <tr
+                        key={ph._tempKey}
+                        className={`border-b border-slate-100 dark:border-slate-800 transition-colors ${
+                          orphan
+                            ? "bg-amber-50/80 dark:bg-amber-950/20"
+                            : isCurrentPhoto
+                              ? "bg-[#0EA5A0]/5"
+                              : ""
+                        }`}
+                      >
+                        <td className="py-2 px-2">
+                          <div className="w-10 h-10 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
+                            {ph.callout_image_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={ph.callout_image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-red-500">
+                                <ImageIcon size={14} />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2 font-semibold text-slate-800 dark:text-slate-100">
+                          {ph.title || <span className="text-red-500 italic">Wajib diisi</span>}
+                        </td>
+                        <td className="py-2 px-2 text-slate-500 dark:text-slate-400 max-w-[220px] truncate">
+                          {ph.description || "—"}
+                        </td>
+                        <td className="py-2 px-2">
+                          {orphan ? (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-md">
+                                <AlertTriangle size={10} />
+                                Foto sumber tidak tersedia
+                              </span>
+                              {allProductImages.length > 0 && (
+                                <select
+                                  className="block w-full text-[10px] rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-1 py-0.5"
+                                  value=""
+                                  onChange={(e) => {
+                                    if (!e.target.value) return;
+                                    setPhotoHotspots((prev) =>
+                                      prev.map((x) =>
+                                        x._tempKey === ph._tempKey
+                                          ? { ...x, target_image_url: e.target.value }
+                                          : x
+                                      )
+                                    );
+                                  }}
+                                >
+                                  <option value="">Pindahkan ke…</option>
+                                  {allProductImages.map((imgUrl, i) => (
+                                    <option key={imgUrl} value={imgUrl}>
+                                      {imgUrl === form.imageUrl ? "Foto Utama" : `Galeri ${i}`}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPhotoForHotspot(ph.target_image_url)}
+                              className="inline-flex items-center gap-1 text-[11px] text-[#0EA5A0] hover:underline"
+                            >
+                              <span className="w-2 h-2 rounded-full bg-[#0EA5A0]" />
+                              {ph.target_image_url === form.imageUrl ? "Foto Utama" : "Galeri"}
+                            </button>
+                          )}
+                        </td>
+                        <td className="py-2 px-2 text-slate-400 font-mono text-[10px]">
+                          {ph.position_x.toFixed(1)}%, {ph.position_y.toFixed(1)}%
+                        </td>
+                        <td className="py-2 pl-2">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!orphan) setSelectedPhotoForHotspot(ph.target_image_url);
+                                setEditingPhotoHotspot(ph);
+                              }}
+                              className="text-slate-400 hover:text-[#0EA5A0] transition-colors p-1"
+                              aria-label="Edit marker"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPhotoHotspots((prev) => prev.filter((x) => x._tempKey !== ph._tempKey))}
+                              className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                              aria-label="Hapus marker"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {editingPhotoHotspot && (
+            <PhotoHotspotModal
+              hotspot={editingPhotoHotspot}
+              onSave={({ title, description, callout_image_url }) => {
+                setPhotoHotspots((prev) => {
+                  const exists = prev.some((x) => x._tempKey === editingPhotoHotspot._tempKey);
+                  if (exists) {
+                    return prev.map((x) =>
+                      x._tempKey === editingPhotoHotspot._tempKey
+                        ? { ...x, title, description, callout_image_url }
+                        : x
+                    );
+                  }
+                  return [
+                    ...prev,
+                    {
+                      ...editingPhotoHotspot,
+                      title,
+                      description,
+                      callout_image_url,
+                    },
+                  ];
+                });
+                setEditingPhotoHotspot(null);
+              }}
+              onClose={() => setEditingPhotoHotspot(null)}
+            />
+          )}
         </section>
       )}
 
@@ -1483,6 +1976,227 @@ function HotspotModal({
           >
             <Save size={15} />
             Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PhotoHotspotModal({
+  hotspot,
+  onSave,
+  onClose,
+}: {
+  hotspot: PhotoHotspotItem;
+  onSave: (data: { title: string; description: string | null; callout_image_url: string }) => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(hotspot.title);
+  const [description, setDescription] = useState(hotspot.description ?? "");
+  const [calloutImageUrl, setCalloutImageUrl] = useState(hotspot.callout_image_url);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const calloutInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCalloutUpload = async (file?: File) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Ukuran foto callout maksimal 5MB.");
+      return;
+    }
+    setUploading(true);
+    setError("");
+    try {
+      const url = await uploadToMedia(file, {
+        pathPrefix: "products/photo-hotspots",
+        contentType: file.type || "image/jpeg",
+        errorContext: "foto callout",
+      });
+      setCalloutImageUrl(url);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Gagal mengunggah foto callout.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSave = () => {
+    if (!calloutImageUrl.trim()) {
+      setError("Foto callout fitur wajib diunggah.");
+      return;
+    }
+    if (!title.trim()) {
+      setError("Judul fitur wajib diisi.");
+      return;
+    }
+    onSave({
+      title: title.trim(),
+      description: description.trim() || null,
+      callout_image_url: calloutImageUrl.trim(),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 overflow-y-auto">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-6 my-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-slate-900 border-2 border-white flex items-center justify-center shadow">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                {hotspot.id ? "Edit Marker Foto" : "Marker Foto Baru"}
+              </h3>
+              <p className="text-[11px] text-slate-400 font-mono">
+                Posisi: X: {hotspot.position_x.toFixed(1)}%, Y: {hotspot.position_y.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Upload Foto Callout (Wajib) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+              Foto Callout Detail Fitur <span className="text-red-500">* (Wajib)</span>
+            </label>
+            <input
+              ref={calloutInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                void handleCalloutUpload(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            {calloutImageUrl ? (
+              <div className="relative rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={calloutImageUrl}
+                  alt="Callout Preview"
+                  className="w-full h-44 object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => calloutInputRef.current?.click()}
+                    disabled={uploading}
+                    className="px-3 py-1.5 rounded-lg bg-white/90 text-slate-900 text-xs font-semibold hover:bg-white transition-colors"
+                  >
+                    Ganti Foto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalloutImageUrl("")}
+                    className="p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => calloutInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:border-[#0EA5A0] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors py-6 flex flex-col items-center justify-center gap-2"
+              >
+                {uploading ? (
+                  <Loader2 size={24} className="animate-spin text-[#0EA5A0]" />
+                ) : (
+                  <Upload size={24} className="text-slate-400" />
+                )}
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {uploading ? "Mengunggah foto..." : "Pilih & Unggah Foto Detail Callout"}
+                </p>
+                <p className="text-[10px] text-slate-400">PNG, JPG, WEBP — maksimal 5MB</p>
+              </button>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+              Judul Fitur <span className="text-red-500">*</span>
+            </label>
+            <input
+              autoFocus
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0]"
+              value={title}
+              onChange={(e) => { setTitle(e.target.value); setError(""); }}
+              placeholder="mis. Tuas Pengunci Rem / Sensor Presisi"
+              onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+              Deskripsi Fitur (opsional)
+            </label>
+            <textarea
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] resize-none"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="Jelaskan keunggulan fitur atau fungsi komponen yang ditandai ini..."
+            />
+          </div>
+
+          {/* Mini Live Preview */}
+          {calloutImageUrl && (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Preview Kartu Callout Pengunjung:
+              </p>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-800 shadow-md">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={calloutImageUrl}
+                  alt={title || "Preview"}
+                  className="w-full h-32 object-cover"
+                />
+                <div className="p-3">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    {title || "Judul Fitur"}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    {description || "Deskripsi penjelasan fitur akan muncul di sini."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={uploading}
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0C8C87] transition-colors disabled:opacity-60"
+          >
+            <Save size={15} />
+            Simpan Marker
           </button>
         </div>
       </div>

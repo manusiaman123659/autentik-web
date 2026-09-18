@@ -50,6 +50,9 @@ export interface OrderRow {
   shipping_address?: Record<string, unknown> | null;
   subtotal: number;
   shipping_cost: number;
+  shipping_total_weight_g?: number | null;
+  shipping_zone_id?: string | null;
+  shipping_rate_id?: string | null;
   total: number;
   payment_method?: string | null;
   payment_status?: string | null;
@@ -412,6 +415,34 @@ export async function getProductHotspots(productId: string): Promise<HotspotRow[
     return [];
   }
   return (data ?? []) as HotspotRow[];
+}
+
+export interface PhotoHotspotRow {
+  id: string;
+  product_id: string;
+  target_image_url: string;
+  position_x: number;
+  position_y: number;
+  title: string;
+  description: string | null;
+  callout_image_url: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export async function getProductPhotoHotspots(productId: string): Promise<PhotoHotspotRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("product_photo_hotspots")
+    .select("*")
+    .eq("product_id", productId)
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[admin-data] product photo hotspots", error);
+    return [];
+  }
+  return (data ?? []) as PhotoHotspotRow[];
 }
 
 export async function listStaff(): Promise<StaffRow[]> {

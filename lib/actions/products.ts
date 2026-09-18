@@ -14,6 +14,17 @@ export interface ActionResult {
   errors?: Record<string, string>;
   variantWarning?: string;
   hotspotWarning?: string;
+  photoHotspotWarning?: string;
+}
+
+export interface PhotoHotspotInput {
+  id?: string;
+  target_image_url: string;
+  position_x: number;
+  position_y: number;
+  title: string;
+  description?: string | null;
+  callout_image_url: string;
 }
 
 function toErrors(error: ZodError): Record<string, string> {
@@ -64,7 +75,8 @@ const revalidateProductRoutes = () => {
 export async function upsertProduct(
   input: unknown,
   variantsPayload?: VariantRow[],
-  hotspotsPayload?: { id?: string; position_x: number; position_y: number; position_z: number; title: string; description?: string | null }[]
+  hotspotsPayload?: { id?: string; position_x: number; position_y: number; position_z: number; title: string; description?: string | null }[],
+  photoHotspotsPayload?: PhotoHotspotInput[]
 ): Promise<ActionResult> {
   const admin = await getAdminUser();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
@@ -122,6 +134,7 @@ export async function upsertProduct(
         category_color: p.categoryColor,
         description: p.description,
         image_url: p.imageUrl || null,
+        gallery: p.gallery || [],
         brochure_url: p.brochureUrl?.trim() ? stripQuery(p.brochureUrl.trim()) : null,
         model_3d_url: p.model3dUrl?.trim() ? stripQuery(p.model3dUrl.trim()) : null,
         features: p.features.filter((f) => f.trim()),
@@ -151,6 +164,7 @@ export async function upsertProduct(
         category_color: p.categoryColor,
         description: p.description,
         image_url: p.imageUrl || null,
+        gallery: p.gallery || [],
         features: p.features.filter((f) => f.trim()),
         specs: p.specs.filter((s) => s.label.trim() || s.value.trim()),
         product_type: "sparepart" as const,
@@ -244,6 +258,64 @@ export async function upsertProduct(
       };
     }
   }
+
+  // Wire photo hotspots via RPC — Patch 4: B2B enforcement + Patch 7: Safe storage cleanup
+  if (photoHotspotsPayload && isB2B) {
+    // Patch 7: Capture old callout URLs before upsert for safe cleanup
+    let oldCalloutUrls: string[] = [];
+    if (p.id?.trim()) {
+      const { data: existingHotspots } = await supabase
+        .from("product_photo_hotspots")
+        .select("callout_image_url")
+        .eq("product_id", id)
+        .is("deleted_at", null);
+      oldCalloutUrls = (existingHotspots ?? []).map(
+        (h: { callout_image_url: string }) => h.callout_image_url
+      );
+    }
+
+    const { error: photoHotspotError } = await supabase.rpc("upsert_product_photo_hotspots", {
+      p_product_id: id,
+      p_hotspots: photoHotspotsPayload.map((h, i) => ({
+        id: h.id || null,
+        target_image_url: h.target_image_url,
+        position_x: h.position_x,
+        position_y: h.position_y,
+        title: h.title,
+        description: h.description || null,
+        callout_image_url: h.callout_image_url,
+        sort_order: i,
+      })),
+    });
+    if (photoHotspotError) {
+      console.error("[action] upsert product photo hotspots", photoHotspotError);
+      return {
+        success: true,
+        message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+        photoHotspotWarning: "Gagal menyimpan photo hotspot: " + photoHotspotError.message,
+      };
+    }
+
+    // Patch 7: Safe storage cleanup — only after successful DB save
+    // Delete old callout images that are no longer referenced
+    const newCalloutUrls = new Set(photoHotspotsPayload.map((h) => h.callout_image_url));
+    for (const oldUrl of oldCalloutUrls) {
+      if (!newCalloutUrls.has(oldUrl)) {
+        // Only delete managed photo-hotspot files, never external URLs
+        const path = storagePathFromPublicUrl(oldUrl);
+        if (path && path.startsWith("products/photo-hotspots/")) {
+          await removeStorageObjectIfAny(supabase, oldUrl, "old callout image");
+        }
+      }
+    }
+  } else if (photoHotspotsPayload && !isB2B) {
+    // Patch 4: Silently reject photo hotspot mutations for non-B2B products
+    console.warn("[action] photo hotspot payload rejected: product type is not b2b_system");
+  }
+
+  revalidateProductRoutes();
+  revalidatePath("/products");
+  revalidatePath(`/products/${p.slug}`);
 
   return { success: true, message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan." };
 }

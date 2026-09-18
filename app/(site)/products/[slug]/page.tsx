@@ -43,6 +43,7 @@ function toPublicProduct(row: ProductRow) {
       ? row.specs.map((s) => ({ label: String(s?.label ?? ""), value: String(s?.value ?? "") }))
       : [],
     imageUrl: row.image_url ?? undefined,
+    gallery: Array.isArray(row.gallery) ? (row.gallery as string[]).filter(Boolean) : [],
     brochureUrl: row.brochure_url ?? undefined,
     model3dUrl: row.model_3d_url ?? undefined,
   };
@@ -84,6 +85,16 @@ export default async function ProductDetailPage({ params }: Props) {
     description: string | null;
   }> = [];
 
+  let photoHotspots: Array<{
+    id: string;
+    target_image_url: string;
+    position_x: number;
+    position_y: number;
+    title: string;
+    description: string | null;
+    callout_image_url: string;
+  }> = [];
+
   try {
     const { cookies } = await import("next/headers");
     const { createClient } = await import("@/utils/supabase/server");
@@ -104,9 +115,19 @@ export default async function ProductDetailPage({ params }: Props) {
       .is("deleted_at", null)
       .order("sort_order");
     hotspots = hotspotRows ?? [];
+
+    const { data: photoHotspotRows } = await supabase
+      .from("product_photo_hotspots")
+      .select("id, target_image_url, position_x, position_y, title, description, callout_image_url")
+      .eq("product_id", row.id)
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("sort_order");
+    photoHotspots = photoHotspotRows ?? [];
   } catch {
     documents = [];
     hotspots = [];
+    photoHotspots = [];
   }
 
   return (
@@ -150,8 +171,10 @@ export default async function ProductDetailPage({ params }: Props) {
               name={product.name}
               brand={product.brand}
               imageUrl={product.imageUrl}
+              gallery={product.gallery}
               model3dUrl={product.model3dUrl}
               hotspots={hotspots}
+              photoHotspots={photoHotspots}
             />
 
             {/* Right — Details */}

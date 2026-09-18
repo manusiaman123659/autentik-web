@@ -104,3 +104,15 @@ export interface ContactFormData {
   industry: string;
   message: string;
 }
+
+export interface ProductPhotoHotspot {
+  id: string;
+  product_id?: string;
+  target_image_url: string;
+  position_x: number;
+  position_y: number;
+  title: string;
+  description: string | null;
+  callout_image_url: string;
+  sort_order?: number;
+}

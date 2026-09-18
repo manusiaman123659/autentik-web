@@ -32,6 +32,7 @@ const baseProduct = z.object({
   brandColor: z.string().min(1, "Warna merek wajib diisi"),
   categoryColor: z.string().min(1, "Warna kategori wajib diisi"),
   imageUrl: z.string().default(""),
+  gallery: z.array(z.string()).default([]),
   features: z.array(z.string()).default([]),
   specs: z.array(z.object({ label: z.string(), value: z.string() })).default([]),
   fulfillmentType: z.enum(FULFILLMENT_TYPES).default("ready_stock"),
