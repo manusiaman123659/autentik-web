@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
+import { parseBankAccount, type BankAccount } from "@/lib/bank-account";
 import type { CareerPosition } from "@/lib/data/careers";
 import { groups as staticGroups } from "@/lib/data/groups";
 import { partners as staticPartners } from "@/lib/data/partners";
@@ -8,7 +10,7 @@ import { teamMembers as staticTeamMembers } from "@/lib/data/team";
 import type { GroupCompany, Partner, TeamMember } from "@/types";
 import type { DistributionEntity, DistributionType } from "@/types";
 import { verifiedGroupDistribution } from "@/lib/data/distribution";
-import { heroSlidesSchema } from "@/lib/validations/heroSchema";
+import { heroSlidesReadSchema } from "@/lib/validations/heroSchema";
 import { logError } from "@/lib/logger";
 import type { ProductRow } from "@/lib/admin-data";
 import {
@@ -399,28 +401,31 @@ export async function getWhatsAppContacts(): Promise<ResolvedWhatsAppContacts> {
   return resolveWhatsAppContacts(value);
 }
 
-export async function getBankAccount(): Promise<{
-  bankName: string;
-  accountNumber: string;
-  accountHolder: string;
-} | null> {
+export async function getOwnedLegacyTransferBankAccount(orderCode: string): Promise<BankAccount | null> {
   const supabase = await getSupabase();
-  const { data, error } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: ownedTransferOrder, error: orderError } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("order_code", orderCode)
+    .eq("user_id", user.id)
+    .eq("payment_method", "transfer")
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (orderError || !ownedTransferOrder) return null;
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("site_settings")
     .select("value")
     .eq("key", "bank_account")
     .maybeSingle();
   if (error || !data) return null;
-  const value = (data as { value: unknown }).value as {
-    bankName?: string;
-    accountNumber?: string;
-    accountHolder?: string;
-  } | null;
-  const bankName = typeof value?.bankName === "string" ? value.bankName.trim() : "";
-  const accountNumber = typeof value?.accountNumber === "string" ? value.accountNumber.trim() : "";
-  const accountHolder = typeof value?.accountHolder === "string" ? value.accountHolder.trim() : "";
-  if (!bankName && !accountNumber && !accountHolder) return null;
-  return { bankName, accountNumber, accountHolder };
+  return parseBankAccount((data as { value: unknown }).value);
 }
 
 export async function getCompanyContact(): Promise<{
@@ -454,59 +459,34 @@ export async function getCompanyContact(): Promise<{
 }
 
 export interface HeroSlideResolved {
+  key: string;
   badge: string;
-  titlePart1: string | null;
-  titleHighlight: string | null;
-  titlePart2: string | null;
   subtitle: string;
-  ctaLink: string;
+  ctaLink: string | null;
   ctaLabel: string;
   productImage: string | null;
   productName: string;
   accentColor: string;
+  isCompanyFallback: boolean;
 }
 
-const DEFAULT_HERO_SLIDES: HeroSlideResolved[] = [
+const COMPANY_HERO_FALLBACK: HeroSlideResolved[] = [
   {
-    badge: "Produk Unggulan",
-    titlePart1: "TALPHA",
-    titleHighlight: "Smart Air Quality",
-    titlePart2: "Monitoring System",
-    subtitle:
-      "SMART AIR QUALITY MONITORING SYSTEM berbasis IoT untuk pemantauan lingkungan real-time.",
-    ctaLink: "/products/talpha-exinet-now",
+    key: "company",
+    badge: "Perusahaan Manufaktur",
+    subtitle: "Produsen produk teknologi industri Indonesia.",
+    ctaLink: "/products",
     ctaLabel: "Lihat Produk",
-    productImage: "/images/products/talpha-3_TALPHA EXYNET NOW.jpg",
-    productName: "TALPHA EXINET NOW",
-    accentColor: "#F59E0B",
-  },
-  {
-    badge: "Solusi Laboratorium",
-    titlePart1: "CYLAB",
-    titleHighlight: "Water Purification",
-    titlePart2: "System",
-    subtitle:
-      "Water Purification System (WPS-LS1012) berbasis IoT untuk kebutuhan air laboratorium analitik.",
-    ctaLink: "/products/cylab-wps-ls1012",
-    ctaLabel: "Lihat Produk",
-    productImage: "/images/products/cylab-1_CYLAB WPS LS1012.jpg",
-    productName: "CYLAB WPS LS1012",
-    accentColor: "#0EA5E9",
-  },
-  {
-    badge: "Produk Autentik",
-    titlePart1: "AUTENTIK",
-    titleHighlight: "Auto Dry",
-    titlePart2: "Desiccator Cabinet",
-    subtitle:
-      "Auto Dry Desiccator Cabinet (ADC-80) dengan pemantauan suhu dan kelembaban digital presisi.",
-    ctaLink: "/products/autentik-auto-dry-desiccator-cabinet-adc-80",
-    ctaLabel: "Lihat Produk",
-    productImage: "/images/products/autentik-1_AUTENTIK DRY CABINET 80 L.png",
-    productName: "AUTENTIK DRY CABINET 80L",
+    productImage: null,
+    productName: "PT Autentik Karya Analitika",
     accentColor: "#0EA5A0",
+    isCompanyFallback: true,
   },
 ];
+
+function safeBrandColor(value: string | null): string {
+  return value && /^#[0-9a-f]{6}$/i.test(value) ? value : "#0EA5A0";
+}
 
 export async function getHeroSlides(): Promise<HeroSlideResolved[]> {
   try {
@@ -516,47 +496,42 @@ export async function getHeroSlides(): Promise<HeroSlideResolved[]> {
       .select("value")
       .eq("key", "home_hero")
       .maybeSingle();
-    if (error || !data) return DEFAULT_HERO_SLIDES;
+    if (error || !data) return COMPANY_HERO_FALLBACK;
 
     const value = (data as { value: unknown }).value;
-    const parsed = heroSlidesSchema.safeParse(value);
-    if (!parsed.success || parsed.data.slides.length === 0) return DEFAULT_HERO_SLIDES;
+    const parsed = heroSlidesReadSchema.safeParse(value);
+    if (!parsed.success || parsed.data.slides.length === 0) return COMPANY_HERO_FALLBACK;
 
-    const resolved: HeroSlideResolved[] = [];
-    for (const slide of parsed.data.slides) {
-      const { data: product } = await supabase
+    const productIds = [...new Set(parsed.data.slides.map((slide) => slide.productId))];
+    const { data: products, error: productsError } = await supabase
         .from("products")
-        .select("name, slug, description, image_url, brand_color")
-        .eq("id", slide.productId)
+        .select("id, name, slug, brand, description, image_url, brand_color")
+        .in("id", productIds)
         .eq("product_type", "b2b_system")
         .eq("status", "published")
         .eq("is_active", true)
-        .is("deleted_at", null)
-        .maybeSingle();
-      if (!product) continue;
+        .is("deleted_at", null);
+    if (productsError) return COMPANY_HERO_FALLBACK;
 
-      const hasTitleOverride =
-        slide.titlePart1Override &&
-        slide.titleHighlightOverride &&
-        slide.titlePart2Override;
-
-      resolved.push({
-        badge: slide.badge || "Produk Unggulan",
-        titlePart1: hasTitleOverride ? slide.titlePart1Override : null,
-        titleHighlight: hasTitleOverride ? slide.titleHighlightOverride : null,
-        titlePart2: hasTitleOverride ? slide.titlePart2Override : null,
-        subtitle:
-          slide.subtitleOverride || (product.description ?? "").slice(0, 200),
+    const productMap = new Map((products ?? []).map((product) => [product.id, product]));
+    const resolved = productIds.flatMap((productId): HeroSlideResolved[] => {
+      const product = productMap.get(productId);
+      if (!product) return [];
+      return [{
+        key: product.id,
+        badge: product.brand || "Produk Unggulan",
+        subtitle: product.description ?? "",
         ctaLink: `/products/${product.slug}`,
-        ctaLabel: slide.ctaLabel || "Lihat Produk",
+        ctaLabel: "Lihat Produk",
         productImage: product.image_url,
         productName: product.name,
-        accentColor: product.brand_color ?? "#0EA5A0",
-      });
-    }
-    return resolved.length > 0 ? resolved : DEFAULT_HERO_SLIDES;
+        accentColor: safeBrandColor(product.brand_color),
+        isCompanyFallback: false,
+      }];
+    });
+    return resolved.length > 0 ? resolved : COMPANY_HERO_FALLBACK;
   } catch (err) {
     logError("getHeroSlides", err);
-    return DEFAULT_HERO_SLIDES;
+    return COMPANY_HERO_FALLBACK;
   }
 }

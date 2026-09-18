@@ -101,6 +101,9 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
         customerName: data.customerName,
         customerPhone: data.customerPhone,
       });
+      if (!transaction.redirect_url) {
+        throw new Error("Midtrans tidak mengembalikan URL pembayaran.");
+      }
 
       console.log("[CHECKOUT] Transaction created successfully:", transaction.redirect_url);
 
@@ -132,12 +135,20 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
         redirectUrl: transaction.redirect_url,
       };
     }
+    return {
+      success: false,
+      message: "Pesanan dibuat, tetapi total pembayaran tidak valid. Hubungi PPIC AKA.",
+      orderCode,
+    };
   } catch (err) {
     console.error("[CHECKOUT] Midtrans Transaction Failed:", err);
     logError("checkout.midtrans_transaction", err, { orderCode });
+    return {
+      success: false,
+      message: "Pesanan dibuat, tetapi link pembayaran Midtrans gagal dibuat. Silakan buka riwayat pesanan untuk mencoba kembali.",
+      orderCode,
+    };
   }
-
-  return { success: true, message: "Pesanan berhasil dibuat.", orderCode };
 }
 
 // --- Regenerate Midtrans Payment (fallback if original transaction creation failed) ---

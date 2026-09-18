@@ -103,8 +103,8 @@ export default function OrdersListClient({ orders, totalItems, page, pageSize, a
               ? `Belum ada pesanan berstatus "${ORDER_STATUS_LABELS[activeStatus]}".`
               : "Pesanan akan muncul di sini setelah pembeli menyelesaikan checkout."
           }
-          actionHref={activeStatus !== "all" ? "/admin/orders" : "/admin/orders/new"}
-          actionLabel={activeStatus !== "all" ? "Reset Filter" : "Buat Pesanan Manual"}
+          actionHref={activeStatus !== "all" ? "/admin/orders" : undefined}
+          actionLabel={activeStatus !== "all" ? "Reset Filter" : undefined}
         />
       ) : (
         <>

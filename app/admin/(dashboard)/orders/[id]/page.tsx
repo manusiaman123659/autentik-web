@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MapPin, Phone, Mail, Receipt } from "lucide-react";
-import { getOrder } from "@/lib/admin-data";
-import { getCompanyContact, getBankAccount } from "@/lib/public-data";
+import { getAdminBankAccount, getOrder } from "@/lib/admin-data";
+import { getCompanyContact } from "@/lib/public-data";
 import { PageHeader, Card, formatRupiah } from "@/components/admin/ui";
 import OrderStatusForm from "@/components/admin/OrderStatusForm";
 import OrderDeleteButton from "@/components/admin/OrderDeleteButton";
@@ -21,13 +21,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AdminOrderDetailPage({ params }: Props) {
   const { id } = await params;
-  const [data, companyContact, bankAccount] = await Promise.all([
+  const [data, companyContact] = await Promise.all([
     getOrder(id),
     getCompanyContact(),
-    getBankAccount(),
   ]);
   if (!data) notFound();
   const { order, items } = data;
+  const bankAccount = order.payment_method === "transfer"
+    ? await getAdminBankAccount()
+    : null;
   const addr = (order.shipping_address ?? {}) as Record<string, string>;
 
   return (
@@ -40,7 +42,12 @@ export default async function AdminOrderDetailPage({ params }: Props) {
       />
 
       <div className="mb-6 flex justify-end">
-        <OrderPrintActions order={order} items={items} companyContact={companyContact} bankAccount={bankAccount} />
+        <OrderPrintActions
+          order={order}
+          items={items}
+          companyContact={companyContact}
+          bankAccount={bankAccount}
+        />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">

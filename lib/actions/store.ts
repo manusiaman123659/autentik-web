@@ -5,10 +5,9 @@ import { cookies } from "next/headers";
 import type { ZodError } from "zod";
 import { getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
-import { manualOrderSchema, orderStatusSchema, stockUpdateSchema } from "@/lib/validations/storeSchema";
+import { orderStatusSchema, stockUpdateSchema } from "@/lib/validations/storeSchema";
 import { recordAudit } from "@/lib/audit";
 import { logError } from "@/lib/logger";
-import type { ProductRow } from "@/lib/admin-data";
 import type { ActionResult } from "./products";
 
 function toErrors(error: ZodError): Record<string, string> {
@@ -18,128 +17,6 @@ function toErrors(error: ZodError): Record<string, string> {
     if (!out[key]) out[key] = issue.message;
   }
   return out;
-}
-
-function formatOrderCode(): string {
-  const d = new Date();
-  const yymmdd =
-    String(d.getFullYear()).slice(2) +
-    String(d.getMonth() + 1).padStart(2, "0") +
-    String(d.getDate()).padStart(2, "0");
-  const random = Math.floor(1000 + Math.random() * 9000);
-  return `AU-${yymmdd}-${random}`;
-}
-
-export async function createManualOrder(input: unknown): Promise<ActionResult> {
-  const admin = await getAdminUser();
-  if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
-
-  const parsed = manualOrderSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, message: "Periksa kembali isian form.", errors: toErrors(parsed.error) };
-  }
-  const data = parsed.data;
-
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  const productsData = await supabase
-    .from("products")
-    .select("id, name, sku, price, weight_grams, stock")
-    .in(
-      "id",
-      data.items.map((i) => i.productId)
-    );
-
-  if (productsData.error || !productsData.data) {
-    return { success: false, message: "Gagal memuat produk pesanan." };
-  }
-
-  const productMap = new Map((productsData.data as ProductRow[]).map((p) => [p.id, p]));
-  const items: {
-    product_id: string;
-    product_name: string;
-    sku?: string | null;
-    unit_price: number;
-    quantity: number;
-    weight_grams: number;
-  }[] = [];
-
-  let subtotal = 0;
-  for (const item of data.items) {
-    const product = productMap.get(item.productId);
-    if (!product) return { success: false, message: "Produk " + item.productId + " tidak ditemukan." };
-    if ((product.stock ?? 0) < item.quantity) {
-      return { success: false, message: "Stok " + product.name + " tidak mencukupi." };
-    }
-    const unitPrice = Number(product.price ?? 0);
-    items.push({
-      product_id: product.id,
-      product_name: product.name,
-      sku: product.sku ?? null,
-      unit_price: unitPrice,
-      quantity: item.quantity,
-      weight_grams: Number(product.weight_grams ?? 0),
-    });
-    subtotal += unitPrice * item.quantity;
-  }
-
-  const orderCode = formatOrderCode();
-  const shippingAddress = {
-    address: data.address,
-    city: data.city,
-    province: data.province,
-    postal_code: data.postalCode,
-  };
-
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      order_code: orderCode,
-      customer_name: data.customerName,
-      customer_email: data.customerEmail || null,
-      customer_phone: data.customerPhone || null,
-      shipping_address: shippingAddress,
-      subtotal,
-      shipping_cost: 0,
-      total: subtotal,
-      payment_method: data.paymentMethod,
-      payment_status: "pending",
-      status: "pending",
-      notes: data.notes || null,
-      created_by: admin.id,
-    })
-    .select("id")
-    .single();
-
-  if (orderError || !order) {
-    logError("action.create_order", orderError);
-    return { success: false, message: "Gagal membuat pesanan. " + (orderError?.message ?? "") };
-  }
-
-  const { error: itemsError } = await supabase.from("order_items").insert(items.map((it) => ({ ...it, order_id: order.id })));
-  if (itemsError) {
-    logError("action.create_order_items", itemsError);
-    return { success: false, message: "Gagal menyimpan item pesanan. " + itemsError.message };
-  }
-
-  for (const item of items) {
-    const product = productMap.get(item.product_id);
-    if (product && product.stock != null) {
-      const next = Math.max(0, product.stock - item.quantity);
-      const { error: stockError } = await supabase
-        .from("products")
-        .update({ stock: next })
-        .eq("id", item.product_id);
-      if (stockError) logError("action.decrement_stock", stockError);
-    }
-  }
-
-  await recordAudit("order.created", "order", order.id, { order_code: orderCode, total: subtotal });
-  revalidatePath("/admin/orders");
-  revalidatePath("/admin");
-
-  return { success: true, message: "Pesanan " + orderCode + " berhasil dibuat." };
 }
 
 export async function updateOrderStatus(id: string, input: unknown): Promise<ActionResult> {

@@ -187,7 +187,7 @@ export default function PrintCustomerInvoice({ snapshot, bankAccount, showBankTr
       <footer className="text-center pt-8 border-t border-slate-200">
         <p className="text-xs text-slate-400">
           Dokumen ini merupakan bukti pesanan dari PT Autentik Karya Analitika.
-          Hubungi PPIC AKA via WhatsApp untuk konfirmasi pembayaran.
+          {showBankTransfer && " Hubungi PPIC AKA via WhatsApp untuk konfirmasi pembayaran transfer lama."}
         </p>
       </footer>
 

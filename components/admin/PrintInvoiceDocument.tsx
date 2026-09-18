@@ -179,22 +179,17 @@ export default function PrintInvoiceDocument({ order, items, bankAccount }: Prop
         </div>
       </section>
 
-      {/* Info Rekening */}
-      <section className="mb-8 p-4 rounded-lg border border-slate-200 bg-slate-50 break-inside-avoid">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-          Informasi Pembayaran (Transfer Bank)
-        </h3>
-        {bankAccount ? (
-          <>
+      {order.payment_method === "transfer" && bankAccount && (
+        <section className="mb-8 p-4 rounded-lg border border-slate-200 bg-slate-50 break-inside-avoid">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+            Informasi Pembayaran (Transfer Bank)
+          </h3>
             <p className="text-xs text-slate-700">
               <strong>{bankAccount.bankName}</strong> — a/n {bankAccount.accountHolder}
             </p>
             <p className="text-xs text-slate-700">No. Rekening: {bankAccount.accountNumber}</p>
-          </>
-        ) : (
-          <p className="text-xs text-slate-400 italic">Informasi rekening belum dikonfigurasi</p>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="text-center pt-8 border-t border-slate-200">

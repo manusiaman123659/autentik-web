@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import OrderConfirmationClient from "@/components/orders/OrderConfirmationClient";
-import { getWhatsAppContact, getBankAccount } from "@/lib/public-data";
+import { getWhatsAppContact, getOwnedLegacyTransferBankAccount } from "@/lib/public-data";
 import { createClient } from "@/utils/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -11,7 +11,6 @@ export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ status?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -22,9 +21,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function OrderConfirmationPage({ params, searchParams }: Props) {
+export default async function OrderConfirmationPage({ params }: Props) {
   const { code } = await params;
-  const { status: statusParam } = await searchParams;
 
   // --- Server-side auth check ---
   const cookieStore = await cookies();
@@ -59,8 +57,6 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   }
 
   const ppicContact = await getWhatsAppContact("aka_order_support");
-  const bankAccount = await getBankAccount();
-
   type RawOrder = {
     order_code: string;
     customer_name: string;
@@ -74,7 +70,6 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     midtrans_redirect_url: string | null;
     midtrans_order_id: string | null;
     created_at: string;
-    created_by: string | null;
     order_items: {
       product_name: string;
       sku: string | null;
@@ -89,7 +84,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   try {
     const { data } = await supabase
       .from("orders")
-      .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, created_by, order_items(product_name, sku, unit_price, quantity, product_id)")
+      .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id)")
       .eq("order_code", code)
       .is("deleted_at", null)
       .single();
@@ -98,15 +93,15 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     // Order may not exist yet or user not authorized — client will handle gracefully
   }
 
-  const isManualOrder = rawOrder?.created_by != null;
   const paymentFlow =
-    isManualOrder && rawOrder?.payment_method === "transfer"
+    rawOrder?.payment_method === "transfer"
       ? "manual_transfer"
-      : isManualOrder && rawOrder?.payment_method === "cod"
+      : rawOrder?.payment_method === "cod"
         ? "manual_cod"
         : "midtrans";
-
-  // created_by tidak diteruskan ke client — hanya dipakai untuk menentukan paymentFlow
+  const bankAccount = paymentFlow === "manual_transfer"
+    ? await getOwnedLegacyTransferBankAccount(code)
+    : null;
   const dbOrderSafe = rawOrder
     ? {
         order_code: rawOrder.order_code,
@@ -131,7 +126,6 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
       waNumber={ppicContact?.number ?? null}
       bankAccount={bankAccount}
       dbOrder={dbOrderSafe}
-      statusParam={statusParam ?? null}
       paymentFlow={paymentFlow}
     />
   );

@@ -1,12 +1,32 @@
 import midtransClient from "midtrans-client";
 
 const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
+const serverKey = (process.env.MIDTRANS_SERVER_KEY || "").trim();
+const clientKey = (process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "").trim();
 
 const snap = new midtransClient.Snap({
   isProduction,
-  serverKey: (process.env.MIDTRANS_SERVER_KEY || "").trim(),
-  clientKey: (process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "").trim(),
+  serverKey,
+  clientKey,
 });
+
+export interface MidtransConfigurationStatus {
+  isProduction: boolean;
+  hasServerKey: boolean;
+  hasClientKey: boolean;
+  isComplete: boolean;
+}
+
+export function getMidtransConfigurationStatus(): MidtransConfigurationStatus {
+  const hasServerKey = serverKey.length > 0;
+  const hasClientKey = clientKey.length > 0;
+  return {
+    isProduction,
+    hasServerKey,
+    hasClientKey,
+    isComplete: hasServerKey && hasClientKey,
+  };
+}
 
 export interface MidtransTransactionParams {
   orderCode: string;
@@ -24,6 +44,9 @@ export interface MidtransTransactionResult {
 export async function createMidtransTransaction(
   params: MidtransTransactionParams,
 ): Promise<MidtransTransactionResult> {
+  if (!getMidtransConfigurationStatus().isComplete) {
+    throw new Error("Konfigurasi Midtrans belum lengkap di environment server.");
+  }
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
   const parameter = {
@@ -49,9 +72,8 @@ export async function createMidtransTransaction(
 }
 
 export async function getMidtransStatus(orderId: string) {
+  if (!serverKey) {
+    throw new Error("MIDTRANS_SERVER_KEY belum dikonfigurasi di environment server.");
+  }
   return snap.transaction.status(orderId);
-}
-
-export function getSnapClientKey(): string {
-  return (process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "").trim();
 }

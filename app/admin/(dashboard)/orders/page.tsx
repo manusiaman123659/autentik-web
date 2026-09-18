@@ -33,8 +33,6 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
       <PageHeader
         title="Pesanan"
         description="Proses pesanan komponen: status pembayaran dan pengiriman"
-        actionLabel="Buat Pesanan Manual"
-        actionHref="/admin/orders/new"
       />
 
       {total === 0 && status === "all" ? (
@@ -42,8 +40,6 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
           icon={<ShoppingBag size={26} />}
           title="Belum ada pesanan"
           description="Pesanan akan muncul di sini setelah pembeli menyelesaikan checkout."
-          actionHref="/admin/orders/new"
-          actionLabel="Buat Pesanan Manual"
         />
       ) : (
         <OrdersListClient orders={orders} totalItems={total} page={page} pageSize={pageSize} activeStatus={status} />

@@ -26,7 +26,7 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
       {/* Background Slides with smooth fade */}
       {slides.map((slide, index) => (
         <div
-          key={index}
+          key={slide.key}
           className={`absolute inset-0 z-0 transition-opacity duration-1000 ease-in-out ${
             index === currentSlide
               ? "opacity-100 scale-100"
@@ -61,11 +61,9 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
       <div className="relative z-20 max-w-7xl mx-auto px-6 lg:px-12 w-full">
         {slides.map((slide, index) => {
           if (index !== currentSlide) return null;
-          const hasTitleOverride =
-            slide.titlePart1 && slide.titleHighlight && slide.titlePart2;
           return (
             <div
-              key={index}
+              key={slide.key}
               className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center animate-in fade-in slide-in-from-bottom-8 duration-700"
             >
               {/* Left Column: Text Content */}
@@ -77,20 +75,9 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
                 </div>
 
                 {/* Title */}
-                {hasTitleOverride ? (
-                  <h1 className="text-4xl sm:text-6xl lg:text-[76px] font-extrabold tracking-tight leading-[1.05] mb-6">
-                    {slide.titlePart1} <br />
-                    <span style={{ color: "#8ab4f8" }}>
-                      {slide.titleHighlight}
-                    </span>{" "}
-                    <br />
-                    {slide.titlePart2}
-                  </h1>
-                ) : (
-                  <h1 className="text-4xl sm:text-6xl lg:text-[76px] font-extrabold tracking-tight leading-[1.05] mb-6">
-                    {slide.productName}
-                  </h1>
-                )}
+                <h1 className="text-4xl sm:text-6xl lg:text-[76px] font-extrabold tracking-tight leading-[1.05] mb-6">
+                  {slide.productName}
+                </h1>
 
                 {/* Subtitle */}
                 <p className="text-base sm:text-lg text-slate-300 mb-10 leading-relaxed font-light max-w-xl">
@@ -99,13 +86,15 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
 
                 {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Link
-                    href={slide.ctaLink}
-                    className="inline-flex items-center justify-center bg-white text-[#0B1F3A] hover:bg-slate-100 h-13 px-8 text-base rounded-full font-bold shadow-xl transition-all transform hover:-translate-y-0.5"
-                  >
-                    {slide.ctaLabel}
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Link>
+                  {slide.ctaLink && (
+                    <Link
+                      href={slide.ctaLink}
+                      className="inline-flex items-center justify-center bg-white text-[#0B1F3A] hover:bg-slate-100 h-13 px-8 text-base rounded-full font-bold shadow-xl transition-all transform hover:-translate-y-0.5"
+                    >
+                      {slide.ctaLabel}
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={() => setRfqOpen(true)}
@@ -131,8 +120,8 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
                         priority
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-20">
-                        🔬
+                      <div className="absolute inset-0 flex items-center justify-center text-[#0EA5A0]">
+                        <Factory size={88} strokeWidth={1.25} aria-hidden="true" />
                       </div>
                     )}
                   </div>
@@ -140,7 +129,7 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
                   <div className="mt-4 flex items-center justify-between">
                     <div>
                       <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                        Portofolio Produk AKA
+                        {slide.isCompanyFallback ? "Profil Perusahaan" : "Portofolio Produk AKA"}
                       </span>
                       <h4 className="text-lg font-bold text-white leading-tight">
                         {slide.productName}
@@ -160,9 +149,9 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
       {/* Slide Indicators / Dots */}
       {slides.length > 1 && (
         <div className="absolute bottom-8 left-0 right-0 z-30 flex justify-center space-x-3">
-          {slides.map((_, index) => (
+          {slides.map((slide, index) => (
             <button
-              key={index}
+              key={slide.key}
               onClick={() => setCurrentSlide(index)}
               className={`transition-all duration-300 rounded-full cursor-pointer focus:outline-none ${
                 index === currentSlide

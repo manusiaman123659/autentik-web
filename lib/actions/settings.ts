@@ -39,10 +39,7 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
     return { success: false, message: "Gagal menyimpan pengaturan. " + error.message };
   }
 
-  await recordAudit("site_settings.updated", "site_settings", "store", {
-    ...parsed.data,
-    midtrans: { ...parsed.data.midtrans, clientKey: parsed.data.midtrans.clientKey ? "***" : "" },
-  });
+  await recordAudit("site_settings.updated", "site_settings", "store", parsed.data);
   revalidatePath("/admin/integrasi");
 
   return { success: true, message: "Pengaturan toko berhasil disimpan." };
@@ -110,19 +107,20 @@ export async function saveHeroSlides(input: unknown): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  for (const slide of parsed.data.slides) {
-    const { data: product } = await supabase
+  const productIds = parsed.data.slides.map((slide) => slide.productId);
+  if (productIds.length > 0) {
+    const { data: products, error: productsError } = await supabase
       .from("products")
       .select("id")
-      .eq("id", slide.productId)
+      .in("id", productIds)
       .eq("product_type", "b2b_system")
       .eq("is_active", true)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (!product) {
+      .eq("status", "published")
+      .is("deleted_at", null);
+    if (productsError || products?.length !== productIds.length) {
       return {
         success: false,
-        message: `Produk "${slide.productId}" tidak ditemukan, bukan tipe B2B, atau sedang nonaktif.`,
+        message: "Satu atau lebih produk tidak tersedia untuk Hero Homepage.",
       };
     }
   }

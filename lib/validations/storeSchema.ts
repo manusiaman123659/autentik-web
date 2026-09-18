@@ -42,23 +42,6 @@ export const orderStatusSchema = z
 
 export type OrderStatusFormData = z.infer<typeof orderStatusSchema>;
 
-export const manualOrderSchema = z.object({
-  customerName: z.string().min(2, "Nama pembeli minimal 2 karakter"),
-  customerEmail: z.string().email("Format email tidak valid").or(z.literal("")).default(""),
-  customerPhone: z.string().default(""),
-  address: z.string().min(8, "Alamat minimal 8 karakter"),
-  city: z.string().min(2, "Kota wajib diisi"),
-  province: z.string().min(2, "Provinsi wajib diisi"),
-  postalCode: z.string().default(""),
-  notes: z.string().default(""),
-  paymentMethod: z.enum(["transfer", "cod", "midtrans"]).default("transfer"),
-  items: z
-    .array(z.object({ productId: z.string().min(1), quantity: z.coerce.number().int().min(1) }))
-    .min(1, "Minimal 1 item pesanan"),
-});
-
-export type ManualOrderFormData = z.infer<typeof manualOrderSchema>;
-
 export const checkoutOrderSchema = z.object({
   customerName: z.string().min(2, "Nama pembeli minimal 2 karakter"),
   customerEmail: z.string().email("Format email tidak valid").or(z.literal("")).default(""),
@@ -94,11 +77,6 @@ export const storeSettingsSchema = z.object({
   currency: z.string().min(1, "Mata uang wajib diisi"),
   enableShipping: z.boolean().default(false),
   couriers: z.array(z.string()).default([]),
-  midtrans: z.object({
-    enabled: z.boolean().default(false),
-    sandbox: z.boolean().default(true),
-    clientKey: z.string().default(""),
-  }),
 });
 
 export type StoreSettingsFormData = z.infer<typeof storeSettingsSchema>;

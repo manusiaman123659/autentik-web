@@ -83,10 +83,8 @@ function buildSnapshotFromDb(db: DbOrder): OrderSnapshot {
   };
 }
 
-function isPaidStatus(paymentStatus?: string | null, orderStatus?: string | null): boolean {
-  const isPaid = paymentStatus === "paid" || paymentStatus === "settlement" || paymentStatus === "capture";
-  const isProgress = ["processing", "diproses", "shipped", "dikirim", "completed", "selesai"].includes(orderStatus || "");
-  return isPaid || isProgress;
+function isPaidStatus(paymentStatus?: string | null): boolean {
+  return paymentStatus === "paid" || paymentStatus === "settlement" || paymentStatus === "capture";
 }
 
 export default function OrderConfirmationClient({
@@ -94,14 +92,12 @@ export default function OrderConfirmationClient({
   waNumber,
   bankAccount,
   dbOrder,
-  statusParam,
   paymentFlow,
 }: {
   code: string;
   waNumber: string | null;
   bankAccount: { bankName: string; accountNumber: string; accountHolder: string } | null;
   dbOrder: DbOrder | null;
-  statusParam: string | null;
   paymentFlow: "manual_transfer" | "manual_cod" | "midtrans";
 }) {
   const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
@@ -176,8 +172,8 @@ export default function OrderConfirmationClient({
 
   const effectivePaymentStatus = livePaymentStatus ?? dbOrder?.payment_status;
   const effectiveOrderStatus = liveOrderStatus ?? dbOrder?.status;
-  const isPaid = isPaidStatus(statusParam) || isPaidStatus(effectivePaymentStatus, effectiveOrderStatus);
-  const isFailed = statusParam === "failed" || effectivePaymentStatus === "failed";
+  const isPaid = isPaidStatus(effectivePaymentStatus);
+  const isFailed = effectivePaymentStatus === "failed";
 
   if (!mounted) {
     return (

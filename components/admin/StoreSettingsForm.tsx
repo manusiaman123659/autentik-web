@@ -15,17 +15,12 @@ export default function StoreSettingsForm({ initial }: { initial: Record<string,
     const v = initial[key];
     return v === undefined || v === null ? fallback : v;
   };
-  const mid = (get("midtrans", {}) as Record<string, unknown>) ?? {};
-
   const [currency, setCurrency] = useState(String(get("currency", "IDR")));
   const [enableShipping, setEnableShipping] = useState(Boolean(get("enableShipping", false)));
   const [couriers, setCouriers] = useState<string[]>(
     Array.isArray(get("couriers", [])) ? (get("couriers", []) as string[]) : []
   );
   const [courierInput, setCourierInput] = useState("");
-  const [midtransEnabled, setMidtransEnabled] = useState(Boolean(mid.enabled));
-  const [midtransSandbox, setMidtransSandbox] = useState(Boolean(mid.sandbox));
-  const [midtransClientKey, setMidtransClientKey] = useState(String(mid.clientKey ?? ""));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
@@ -43,7 +38,6 @@ export default function StoreSettingsForm({ initial }: { initial: Record<string,
       currency,
       enableShipping,
       couriers,
-      midtrans: { enabled: midtransEnabled, sandbox: midtransSandbox, clientKey: midtransClientKey },
     });
     setBusy(false);
     if (!result.success) {
@@ -121,41 +115,6 @@ export default function StoreSettingsForm({ initial }: { initial: Record<string,
             </div>
           )}
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">Midtrans</h2>
-            <p className="text-xs text-slate-400">Integrasi pembayaran online (konfigurasi lanjutan).</p>
-          </div>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={midtransEnabled}
-              onChange={(e) => setMidtransEnabled(e.target.checked)}
-              className="w-4 h-4 rounded accent-[#0EA5A0]"
-            />
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Aktif</span>
-          </label>
-        </div>
-        {midtransEnabled && (
-          <div className="space-y-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={midtransSandbox}
-                onChange={(e) => setMidtransSandbox(e.target.checked)}
-                className="w-4 h-4 rounded accent-[#0EA5A0]"
-              />
-              <span className="text-sm text-slate-700 dark:text-slate-300">Mode sandbox (pengujian)</span>
-            </label>
-            <div>
-              <label className={labelClass}>Client Key</label>
-              <input className={inputClass} value={midtransClientKey} onChange={(e) => setMidtransClientKey(e.target.value)} placeholder="SB-Mid-client-xxxx" />
-            </div>
-          </div>
-        )}
       </section>
 
       <div className="flex justify-end pb-10">

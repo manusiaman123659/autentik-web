@@ -3,7 +3,9 @@ import { createClient } from "@/utils/supabase/server";
 import type { OrderStatus } from "@/lib/validations/storeSchema";
 import { ORDER_DEFAULT_PAGE_SIZE } from "@/lib/validations/storeSchema";
 import type { ComproSettings } from "@/lib/validations/comproSchema";
-import type { HeroSlideInput } from "@/lib/validations/heroSchema";
+import { heroSlidesReadSchema, type HeroSlideInput } from "@/lib/validations/heroSchema";
+import { getAdminUser } from "@/lib/admin";
+import { parseBankAccount, type BankAccount } from "@/lib/bank-account";
 
 export interface ProductRow {
   id: string;
@@ -187,11 +189,8 @@ export async function getHeroSlidesSettings(): Promise<HeroSlideInput[]> {
     .eq("key", "home_hero")
     .maybeSingle();
   if (error || !data) return [];
-  const value = (data as { value: unknown }).value;
-  if (!value || typeof value !== "object") return [];
-  const slides = (value as { slides?: unknown }).slides;
-  if (!Array.isArray(slides)) return [];
-  return slides as HeroSlideInput[];
+  const parsed = heroSlidesReadSchema.safeParse((data as { value: unknown }).value);
+  return parsed.success ? parsed.data.slides : [];
 }
 
 export async function getRecruitmentUrlSetting(): Promise<string> {
@@ -769,6 +768,23 @@ export async function getPartner(id: string): Promise<PartnerRow | null> {
   return data as PartnerRow;
 }
 
+export async function listEligibleHeroProducts(): Promise<ProductRow[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("product_type", "b2b_system")
+    .eq("is_active", true)
+    .eq("status", "published")
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    console.error("[admin-data] eligible hero products", error);
+    return [];
+  }
+  return (data ?? []) as ProductRow[];
+}
+
 export interface DistributionEntityRow {
   id: string;
   name: string;
@@ -821,7 +837,6 @@ export async function getStoreSettings(): Promise<Record<string, unknown>> {
       currency: "IDR",
       enableShipping: false,
       couriers: [],
-      midtrans: { enabled: false, sandbox: true, clientKey: "" },
     };
   }
   return (data as { value: Record<string, unknown> }).value;
@@ -879,4 +894,17 @@ export async function getShippingZones(): Promise<ShippingZoneWithRates[]> {
     ...z,
     rates: rateMap.get(z.id) ?? [],
   }));
+}
+
+export async function getAdminBankAccount(): Promise<BankAccount | null> {
+  const admin = await getAdminUser();
+  if (!admin) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "bank_account")
+    .maybeSingle();
+  if (error || !data) return null;
+  return parseBankAccount((data as { value: unknown }).value);
 }
