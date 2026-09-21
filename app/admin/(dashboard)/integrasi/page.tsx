@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getStoreSettings, getShippingZones, getHeroSlidesSettings, listEligibleHeroProducts } from "@/lib/admin-data";
+import { getStoreSettings, getShippingAdminData, getHeroSlidesSettings, listEligibleHeroProducts } from "@/lib/admin-data";
 import { PageHeader } from "@/components/admin/ui";
 import StoreSettingsForm from "@/components/admin/StoreSettingsForm";
 import ShippingRatesManager from "@/components/admin/ShippingRatesManager";
@@ -13,9 +13,11 @@ export const metadata: Metadata = {
 
 export default async function AdminIntegrasiPage() {
   const settings = await getStoreSettings();
-  const shippingZones = await getShippingZones();
+  const shippingData = await getShippingAdminData();
   const heroSlides = await getHeroSlidesSettings();
   const b2bProducts = await listEligibleHeroProducts();
+
+  const enableShipping = Boolean((settings as Record<string, unknown>)?.enableShipping);
 
   return (
     <div>
@@ -27,7 +29,7 @@ export default async function AdminIntegrasiPage() {
         <HeroSlidesForm initial={heroSlides} products={b2bProducts} />
         <PaymentGatewayStatus status={getMidtransConfigurationStatus()} />
         <StoreSettingsForm initial={settings} />
-        <ShippingRatesManager zones={shippingZones} />
+        <ShippingRatesManager initialData={shippingData} enableShipping={enableShipping} />
       </div>
     </div>
   );

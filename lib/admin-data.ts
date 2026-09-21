@@ -884,47 +884,174 @@ export interface ShippingZoneRow {
   updated_at: string;
 }
 
+export interface ShippingZoneRegionRow {
+  id: string;
+  zone_id: string;
+  province: string;
+  city: string | null;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface ShippingRateRow {
   id: string;
   zone_id: string;
   weight_from_g: number;
   weight_to_g: number;
   cost: number;
+  is_active?: boolean;
 }
 
-export interface ShippingZoneWithRates extends ShippingZoneRow {
+export interface ShippingZoneWithDetails extends ShippingZoneRow {
   rates: ShippingRateRow[];
+  regions: ShippingZoneRegionRow[];
 }
 
-export async function getShippingZones(): Promise<ShippingZoneWithRates[]> {
+export type ShippingZoneWithRates = ShippingZoneWithDetails;
+
+export interface ShippingAdminData {
+  shippingCoreReady: boolean;
+  testRateRpcReady: boolean;
+  zones: ShippingZoneWithDetails[];
+  unweightedProductsCount: number;
+}
+
+export async function countUnweightedStoreProducts(): Promise<number> {
   const supabase = await getSupabase();
-  const { data: zones, error } = await supabase
+  const { count, error } = await supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .eq("product_type", "sparepart")
+    .eq("is_store_visible", true)
+    .eq("is_active", true)
+    .is("deleted_at", null)
+    .or("weight_grams.is.null,weight_grams.lte.0");
+  if (error || count == null) return 0;
+  return count;
+}
+
+export async function getShippingAdminData(): Promise<ShippingAdminData> {
+  const supabase = await getSupabase();
+  const unweightedProductsCount = await countUnweightedStoreProducts();
+
+  // 1. Probe shipping core readiness (shipping_zone_regions table)
+  let shippingCoreReady = true;
+  const { error: probeError } = await supabase
+    .from("shipping_zone_regions")
+    .select("id")
+    .limit(1);
+
+  if (probeError) {
+    if (probeError.code === "42P01" || probeError.code === "PGRST205") {
+      shippingCoreReady = false;
+    } else {
+      console.error("[shipping] unexpected shipping_zone_regions probe error", probeError);
+    }
+  }
+
+  // 2. Probe staff test RPC readiness (test_shipping_rate function)
+  let testRateRpcReady = false;
+  const { error: testRateError } = await supabase.rpc("test_shipping_rate", {
+    p_province: "__readiness_probe__",
+    p_city: "__readiness_probe__",
+    p_total_weight_g: 1,
+  });
+
+  if (!testRateError || testRateError.code === "42501") {
+    testRateRpcReady = true;
+  } else if (
+    testRateError.code === "PGRST202" ||
+    (testRateError.code === "42883" &&
+      typeof testRateError.message === "string" &&
+      testRateError.message.includes("test_shipping_rate"))
+  ) {
+    testRateRpcReady = false;
+  } else {
+    // The RPC exists and was invoked by PostgREST, but an internal query or business logic errored
+    console.error("[shipping] test_shipping_rate probe returned internal error:", testRateError);
+    testRateRpcReady = true;
+  }
+
+
+
+  const { data: zones, error: zonesError } = await supabase
     .from("shipping_zones")
     .select("id, name, provinces, cities, sort_order, is_active, created_at, updated_at")
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
-  if (error || !zones) return [];
+
+  if (zonesError || !zones) {
+    return { shippingCoreReady, testRateRpcReady, zones: [], unweightedProductsCount };
+  }
 
   const zoneIds = (zones as ShippingZoneRow[]).map((z) => z.id);
-  if (zoneIds.length === 0) return [];
+  if (zoneIds.length === 0) {
+    return { shippingCoreReady, testRateRpcReady, zones: [], unweightedProductsCount };
+  }
 
-  const { data: rates } = await supabase
-    .from("shipping_rates")
-    .select("id, zone_id, weight_from_g, weight_to_g, cost")
-    .in("zone_id", zoneIds)
-    .order("weight_from_g", { ascending: true });
+  // Load rates
+  let ratesData: ShippingRateRow[] = [];
+  if (shippingCoreReady) {
+    const { data: rates } = await supabase
+      .from("shipping_rates")
+      .select("id, zone_id, weight_from_g, weight_to_g, cost, is_active")
+      .in("zone_id", zoneIds)
+      .order("weight_from_g", { ascending: true });
+    ratesData = (rates ?? []) as ShippingRateRow[];
+  } else {
+    // Pre-0045 fallback: shipping_rates might not have is_active column yet
+    const { data: rates } = await supabase
+      .from("shipping_rates")
+      .select("id, zone_id, weight_from_g, weight_to_g, cost")
+      .in("zone_id", zoneIds)
+      .order("weight_from_g", { ascending: true });
+    ratesData = ((rates ?? []) as ShippingRateRow[]).map((r) => ({ ...r, is_active: true }));
+  }
+
+  // Load regions (if core schema is ready)
+  let regionsData: ShippingZoneRegionRow[] = [];
+  if (shippingCoreReady) {
+    const { data: regions } = await supabase
+      .from("shipping_zone_regions")
+      .select("id, zone_id, province, city, is_active, created_at, updated_at")
+      .in("zone_id", zoneIds)
+      .order("province", { ascending: true })
+      .order("city", { ascending: true, nullsFirst: true });
+    regionsData = (regions ?? []) as ShippingZoneRegionRow[];
+  }
 
   const rateMap = new Map<string, ShippingRateRow[]>();
-  for (const r of (rates ?? []) as ShippingRateRow[]) {
+  for (const r of ratesData) {
     const list = rateMap.get(r.zone_id) ?? [];
     list.push(r);
     rateMap.set(r.zone_id, list);
   }
 
-  return (zones as ShippingZoneRow[]).map((z) => ({
+  const regionMap = new Map<string, ShippingZoneRegionRow[]>();
+  for (const reg of regionsData) {
+    const list = regionMap.get(reg.zone_id) ?? [];
+    list.push(reg);
+    regionMap.set(reg.zone_id, list);
+  }
+
+  const combinedZones: ShippingZoneWithDetails[] = (zones as ShippingZoneRow[]).map((z) => ({
     ...z,
     rates: rateMap.get(z.id) ?? [],
+    regions: regionMap.get(z.id) ?? [],
   }));
+
+  return {
+    shippingCoreReady,
+    testRateRpcReady,
+    zones: combinedZones,
+    unweightedProductsCount,
+  };
+}
+
+export async function getShippingZones(): Promise<ShippingZoneWithDetails[]> {
+  const data = await getShippingAdminData();
+  return data.zones;
 }
 
 export async function getAdminBankAccount(): Promise<BankAccount | null> {
