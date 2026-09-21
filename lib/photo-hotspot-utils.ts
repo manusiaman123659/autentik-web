@@ -51,8 +51,12 @@ export function computeContainedImageRect(
   const paddingLeft = parseFloat(style.paddingLeft) || 0;
 
   // The available space for object-fit: contain (after padding)
-  const availW = img.clientWidth - paddingLeft - paddingRight;
-  const availH = img.clientHeight - paddingTop - paddingBottom;
+  // Fallback to positioning container if img.clientWidth or img.clientHeight is 0 during early layout
+  const rawW = img.clientWidth || (img.parentElement ? img.parentElement.clientWidth : 0);
+  const rawH = img.clientHeight || (img.parentElement ? img.parentElement.clientHeight : 0);
+
+  const availW = rawW - paddingLeft - paddingRight;
+  const availH = rawH - paddingTop - paddingBottom;
 
   if (availW <= 0 || availH <= 0) return null;
 

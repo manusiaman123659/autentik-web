@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { Box, X } from "lucide-react";
+import { Box, X, Info } from "lucide-react";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import type { ProductPhotoHotspot } from "@/types";
 import { computeContainedImageRect, type ImageRect } from "@/lib/photo-hotspot-utils";
@@ -87,6 +87,13 @@ export default function ProductMediaTabs({
 
   // Patch 1: Compute image rect relative to container
   const [imageRect, setImageRect] = useState<ImageRect | null>(null);
+  const [prevActiveImage, setPrevActiveImage] = useState(activeImage);
+
+  // Invalidate stale imageRect during render when active image changes
+  if (activeImage !== prevActiveImage) {
+    setPrevActiveImage(activeImage);
+    setImageRect(null);
+  }
 
   const updateImageRect = useCallback(() => {
     const img = photoImgRef.current;
@@ -96,10 +103,10 @@ export default function ProductMediaTabs({
       setImageRect((prev) => {
         if (
           prev &&
-          prev.left === rect.left &&
-          prev.top === rect.top &&
-          prev.width === rect.width &&
-          prev.height === rect.height
+          Math.abs(prev.left - rect.left) < 0.5 &&
+          Math.abs(prev.top - rect.top) < 0.5 &&
+          Math.abs(prev.width - rect.width) < 0.5 &&
+          Math.abs(prev.height - rect.height) < 0.5
         ) {
           return prev;
         }
@@ -109,10 +116,74 @@ export default function ProductMediaTabs({
   }, []);
 
   useEffect(() => {
-    updateImageRect();
-    window.addEventListener("resize", updateImageRect);
-    return () => window.removeEventListener("resize", updateImageRect);
-  }, [updateImageRect]);
+    let isCancelled = false;
+
+    const checkAndMeasure = () => {
+      if (isCancelled) return;
+      const img = photoImgRef.current;
+      if (!img) return;
+      const rect = computeContainedImageRect(img);
+      if (rect) {
+        setImageRect((prev) => {
+          if (
+            prev &&
+            Math.abs(prev.left - rect.left) < 0.5 &&
+            Math.abs(prev.top - rect.top) < 0.5 &&
+            Math.abs(prev.width - rect.width) < 0.5 &&
+            Math.abs(prev.height - rect.height) < 0.5
+          ) {
+            return prev;
+          }
+          return rect;
+        });
+      }
+    };
+
+    const img = photoImgRef.current;
+    const container = containerRef.current;
+
+    // 1. Guard against preloaded/cached images
+    if (img) {
+      if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        checkAndMeasure();
+      } else if (typeof img.decode === "function") {
+        img
+          .decode()
+          .then(() => {
+            if (!isCancelled) checkAndMeasure();
+          })
+          .catch(() => {
+            if (!isCancelled) checkAndMeasure();
+          });
+      }
+      img.addEventListener("load", checkAndMeasure);
+    }
+
+    // 2. ResizeObserver on exact positioning container to catch layout shifts & mobile orientation changes
+    let observer: ResizeObserver | null = null;
+    if (container && typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(() => {
+        if (!isCancelled) checkAndMeasure();
+      });
+      observer.observe(container);
+    }
+
+    window.addEventListener("resize", checkAndMeasure);
+
+    // Initial measure attempt
+    checkAndMeasure();
+
+    return () => {
+      isCancelled = true;
+      if (img) {
+        img.removeEventListener("load", checkAndMeasure);
+      }
+      if (observer) {
+        observer.disconnect();
+      }
+      window.removeEventListener("resize", checkAndMeasure);
+    };
+  }, [activeImage, tab]);
 
   // Patch 5: Smart floating callout positioning
   const [calloutStyle, setCalloutStyle] = useState<React.CSSProperties>({});
@@ -236,6 +307,27 @@ export default function ProductMediaTabs({
     <div className="space-y-4">
       {tab === "foto" ? (
         <div className="space-y-3">
+          {/* User Guidance Banner — only shown when current active image has photo hotspots */}
+          {tab === "foto" && currentImageHotspots.length > 0 && (
+            <div
+              role="note"
+              aria-label="Petunjuk interaksi produk"
+              className="flex items-start gap-3 p-3.5 rounded-xl border border-[#0EA5A0]/25 bg-[#0EA5A0]/5 dark:bg-[#0EA5A0]/10 transition-colors"
+            >
+              <div className="p-1 rounded-lg bg-[#0EA5A0]/10 dark:bg-[#0EA5A0]/20 text-[#0EA5A0] shrink-0 mt-0.5">
+                <Info size={16} aria-hidden="true" />
+              </div>
+              <div className="space-y-0.5">
+                <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                  Jelajahi detail produk
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Ketuk atau klik titik interaktif pada gambar untuk melihat informasi setiap bagian produk.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Main Photo Container */}
           <div
             ref={containerRef}
@@ -302,14 +394,14 @@ export default function ProductMediaTabs({
                       {/* Pulsing ring */}
                       {isActive ? (
                         <>
-                          <span className="absolute w-8 h-8 rounded-full bg-red-500/40 animate-ping" />
+                          <span className="absolute w-8 h-8 rounded-full bg-red-500/40 animate-ping motion-reduce:animate-none" />
                           <div className="w-6 h-6 rounded-full bg-slate-900 border-2 border-red-500 shadow-xl shadow-red-500/40 flex items-center justify-center ring-4 ring-white dark:ring-slate-950">
-                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse motion-reduce:animate-none" />
                           </div>
                         </>
                       ) : (
                         <>
-                          <span className="absolute w-7 h-7 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-opacity" />
+                          <span className="absolute w-7 h-7 rounded-full bg-[#0EA5A0]/25 animate-ping opacity-60 motion-reduce:animate-none group-hover:opacity-100 transition-opacity" />
                           <div className="w-5 h-5 rounded-full bg-slate-900/90 border-2 border-white shadow-lg flex items-center justify-center transition-transform group-hover:scale-125 group-active:scale-95 ring-1 ring-black/20 dark:ring-white/10">
                             <span className="w-1.5 h-1.5 rounded-full bg-white" />
                           </div>
