@@ -12,6 +12,23 @@ import {
 } from "@/lib/validations/authSchema";
 import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
 import { createClient } from "@/utils/supabase/client";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
+
+function translateOAuthError(errorCode: string | null): string | null {
+  if (!errorCode) return null;
+  switch (errorCode) {
+    case "oauth_failed":
+      return "Login Google gagal atau dibatalkan. Silakan coba lagi.";
+    case "oauth_not_customer":
+      return "Akun ini tidak dapat digunakan untuk login customer.";
+    case "oauth_inactive":
+      return "Akun Anda sedang tidak aktif. Silakan hubungi customer support.";
+    case "oauth_profile_missing":
+      return "Profil akun tidak ditemukan. Silakan hubungi customer support atau coba daftar kembali.";
+    default:
+      return "Terjadi kesalahan saat memproses login Google.";
+  }
+}
 
 export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,7 +37,10 @@ export default function RegisterForm() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const customerRedirect = getSafeCustomerRedirect(searchParams.get("redirect"));
+  const requestedRedirect = searchParams.get("redirect");
+  const errorParam = searchParams.get("error");
+  const oauthErrorMsg = translateOAuthError(errorParam);
+  const customerRedirect = getSafeCustomerRedirect(requestedRedirect);
   const supabase = createClient();
 
   const {
@@ -87,15 +107,41 @@ export default function RegisterForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {errorMsg && (
+    <div className="space-y-6">
+      {oauthErrorMsg && (
         <div
           role="alert"
           className="px-4 py-3 rounded-xl text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900"
         >
-          {errorMsg}
+          {oauthErrorMsg}
         </div>
       )}
+
+      <GoogleAuthButton
+        mode="register"
+        redirect={requestedRedirect ?? undefined}
+      />
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white dark:bg-slate-900 px-3 text-slate-400 dark:text-slate-500 font-medium">
+            atau daftar dengan email
+          </span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {errorMsg && (
+          <div
+            role="alert"
+            className="px-4 py-3 rounded-xl text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900"
+          >
+            {errorMsg}
+          </div>
+        )}
 
       {successMsg && (
         <div
@@ -283,5 +329,6 @@ export default function RegisterForm() {
         )}
       </button>
     </form>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 # AKA Website — Current Project Status
 
-Last updated: 17 September 2026
+Last updated: 21 September 2026
 
 ## Stack
 
@@ -8,14 +8,17 @@ Last updated: 17 September 2026
 - React 19
 - TypeScript strict
 - Tailwind CSS
-- Supabase
+- Supabase / PostgreSQL
 - Midtrans
+
+---
 
 ## Business Source of Truth
 
 AKA = manufacturer.
 
 ### AKA
+
 - Product showcase untuk produk manufaktur.
 - Lima brand utama:
   - TALPHA
@@ -24,10 +27,18 @@ AKA = manufacturer.
   - ULLUN
   - EPAL
 - Marketplace AKA hanya menjual KOMPONEN.
+- Internal discriminator komponen tetap dapat menggunakan:
+  - `product_type = "sparepart"`
 - Komponen/commerce support → PPIC AKA.
 - RFQ tetap disimpan di AKA.
+- Produk manufaktur dapat memiliki:
+  - galeri foto
+  - 3D model
+  - 3D hotspot
+  - Photo Hotspot / hotspot pada gambar
 
 ### MIKA
+
 Menangani:
 - penjualan produk
 - sparepart
@@ -36,141 +47,231 @@ Menangani:
 - RFQ commercial follow-up
 
 Jangan hardcode nomor WhatsApp.
+
 Gunakan communication resolver existing.
 
-## Completed
+---
 
-- Task 1 Store terminology → Komponen
-- Task 2 COD removal for new orders
-- Task 3 Product/Store boundary
-- Task 4 WhatsApp communication routing
-- Task 5 Manufacturer homepage
-- Task 5.1 Homepage polish
-- Task 5.2 RFQ portal/modal fix
-- Task 6 Distributor/Sub-distributor network
-- Task 7 Research & Partnership
+# Completed
+
+- Task 1 — Store terminology → Komponen
+- Task 2 — COD removal for new orders
+- Task 3 — Product / Store boundary
+- Task 4 — WhatsApp communication routing
+- Task 5 — Manufacturer homepage
+- Task 5.1 — Homepage polish
+- Task 5.2 — RFQ portal/modal fix
+- Task 6 — Distributor / Sub-distributor network
+- Task 7 — Research & Partnership
 - Navbar redesign
-- Task 8A Auth & Checkout Security Hardening
+- Task 8A — Auth & Checkout Security Hardening
+- Task 8B — Hero Homepage + Payment Admin Cleanup
+- Task 8C — Shipping Safety Core
+- Task 8D — Shipping Admin UX + Uji Tarif
+- Interactive Photo Hotspot system
+- Photo Hotspot light/dark mode polish
+- Photo Hotspot callout responsive positioning
+- Photo Hotspot image `object-contain` fix
 
-## Distributor
+---
+
+# Distributor
 
 Public:
-- /distributors
+- `/distributors`
 
 Admin:
-- /admin/relasi → Jaringan Distribusi
+- `/admin/relasi`
+- menu: Jaringan Distribusi
 
 Verified initial entities:
 - PT Mitra Karya Analitika
 - CV Agra Prima Indonesia
 
-Do not classify Agra as sub-distributor without new evidence.
+Do not classify CV Agra Prima Indonesia as sub-distributor without new evidence.
 
-## Research & Partnership
+Customer routing to distributor/sub-distributor tetap dikendalikan melalui MIKA.
+
+---
+
+# Research & Partnership
 
 Public:
-- /research-partnership
+- `/research-partnership`
 
-Verified collaboration only.
-Trademark certificates are Trademark / Sertifikat Merek,
-NOT patents.
+Gunakan verified collaboration only.
 
-## Auth
+Verified collaboration yang digunakan:
+- BBSPJPPI Semarang
+- Teknologi Pertanian UNAND
+- Teknik Mesin UNAND
 
-public.profiles roles currently include:
+Trademark certificates:
+- TALPHA
+- ePal
+- CYLAB
+- ULLUN
+
+Harus disebut:
+- Trademark
+- Sertifikat Merek
+
+NOT:
+- Patent / Paten
+
+Jangan membuat data partnership, research, IP, atau patent yang belum diverifikasi.
+
+---
+
+# Product Media
+
+## 3D Product
+
+Produk manufaktur dapat memiliki:
+- `.glb`
+- orbit / rotate / zoom
+- hotspot 3D
+- title
+- description
+
+3D hanya untuk produk jadi/manufaktur yang memang memiliki asset.
+
+Tidak wajib untuk komponen Store.
+
+## Photo Hotspot
+
+Photo Hotspot merupakan sistem terpisah dari 3D hotspot.
+
+Public behavior:
+- hotspot ditampilkan pada gambar produk
+- posisi memakai koordinat persentase relatif terhadap actual rendered image
+- click hotspot → floating information card
+- card memiliki:
+  - title
+  - image
+  - description
+
+Admin:
+- hotspot dapat ditambahkan ke gambar produk tertentu
+- target image menggunakan URL gambar, bukan index gallery
+- reorder gallery tidak mengubah target hotspot
+- jika gambar target dihapus:
+  - hotspot tidak otomatis dihapus
+  - admin melihat orphan state
+  - public menyembunyikan orphan hotspot
+
+Callout image:
+- menggunakan `object-contain`
+- tidak boleh crop image yang diupload
+
+Photo Hotspot hanya untuk:
+- `product_type = "b2b_system"`
+
+Migration:
+- `0046_product_photo_hotspots.sql`
+
+Status:
+- applied / live
+- RLS dan RPC sudah diverifikasi
+
+---
+
+# Auth
+
+`public.profiles` roles currently include:
 - customer
 - admin
 - editor
 - legacy viewer may exist
 
-New public signup must be customer.
+New public signup:
+- MUST become `customer`
 
-Customer must never automatically become staff.
+Customer:
+- must never automatically become staff
 
-Admin/staff:
+Staff:
 - admin
 - editor
 
-## Payment
+Customer redirect:
+- hanya boleh menuju route customer Store yang aman
+- tidak boleh redirect ke admin/external URL
+
+Checkout:
+- wajib menggunakan authenticated user
+- ownership order harus diverifikasi server-side
+
+---
+
+# Payment
 
 Customer checkout:
 - Midtrans only
 
 New orders:
-- payment_method = midtrans
+- `payment_method = "midtrans"`
+- `payment_status = "pending"` saat dibuat
+
+Disabled for new orders:
+- COD
+- manual bank transfer
+- admin manual order creation
 
 Legacy:
 - COD / transfer records may remain readable
 
-Do not remove backward compatibility unless explicitly approved.
+Do not remove legacy compatibility unless explicitly approved.
 
 Midtrans credentials:
 - ENV only
-- never store secrets in CMS
+- never store secret/server key in CMS
+- admin integration UI hanya status/read-only configuration information
 
-## Database Migrations Applied Manually
+`payment_status`:
+- source of truth untuk status pembayaran
 
-Applied through:
-- 0042_distribution_entities.sql
-- 0043_auth_checkout_hardening.sql
+`orders.status`:
+- fulfillment / order progress
 
-IMPORTANT:
-Do not infer live DB migration status only from repository files.
-This section is the current manual deployment record.
+Financial order fields menjadi immutable setelah payment intent dimulai / payment tidak lagi pending.
 
-## Current Verification
+Protected fields:
+- subtotal
+- shipping_cost
+- total
+- shipping_total_weight_g
+- shipping_zone_id
+- shipping_rate_id
 
-Latest milestone:
-- npm run lint: PASS
-- npm run build: PASS
-- git diff --check: PASS
+---
 
-## Current Next Work
+# Shipping Architecture
 
-Task 8B:
-Hero Homepage + Payment Admin Cleanup.
+Shipping menggunakan tarif internal/manual.
 
-After that:
-Task 8C:
-Shipping Safety Core.
-
-Task 8D:
-Shipping Admin UX + Uji Tarif.
-
-Task 8E:
-Google OAuth Customer Login.
-
-Task 8F:
-Real shipping zones/rates after business approval from Pak Aang.
-
-## Shipping Business Rule
-
-Manual shipping rates.
+Tidak menggunakan:
+- JNE realtime API
+- J&T realtime API
+- third-party courier rate API
 
 Target model:
-Zone + Region + Weight Range + Rate.
 
-Shipping must FAIL CLOSED.
+`Zone + Region + Weight Range + Rate`
 
-Never interpret:
-- missing zone
-- missing rate
-- invalid weight
-- RPC error
-- cost = 0
+Tables:
+- `shipping_zones`
+- `shipping_zone_regions`
+- `shipping_rates`
 
-as free shipping.
+## Region Model
 
-Unconfigured shipping:
-block checkout before Midtrans and route customer to PPIC AKA.
+`shipping_zone_regions`
 
-## Agent Safety Rules
+Mode:
 
-- Repository source code is source of truth for implementation.
-- This document is orientation/business/deployment context.
-- If this document conflicts with current source code, report the conflict.
-- Do not guess missing database state.
-- Do not invent business data.
-- Do not edit unrelated features.
-- No automatic migration apply.
-- No automatic commit.
+### Province-wide
+
+```text
+province = "Jawa Tengah"
+city = NULL

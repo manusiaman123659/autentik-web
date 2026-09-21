@@ -10,7 +10,7 @@ export const metadata = {
 export default async function CustomerRegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ redirect?: string | string[] }>;
+  searchParams: Promise<{ redirect?: string | string[]; error?: string | string[] }>;
 }) {
   const rawRedirect = (await searchParams).redirect;
   const redirect = typeof rawRedirect === "string"
