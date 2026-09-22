@@ -49,10 +49,12 @@ export default function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const requestedRedirect = searchParams.get("redirect");
+  const requestedNext = searchParams.get("next");
+  const legacyRedirect = searchParams.get("redirect");
+  const requestedTarget = requestedNext ?? legacyRedirect;
   const errorParam = searchParams.get("error");
   const oauthErrorMsg = translateOAuthError(errorParam);
-  const customerRedirect = getSafeCustomerRedirect(requestedRedirect);
+  const customerRedirect = getSafeCustomerRedirect(requestedTarget);
   const supabase = createClient();
 
   const {
@@ -76,7 +78,7 @@ export default function LoginForm() {
         return;
       }
 
-      if (requestedRedirect) {
+      if (requestedTarget !== null) {
         router.push(customerRedirect);
       } else {
         const {
@@ -118,7 +120,7 @@ export default function LoginForm() {
 
       <GoogleAuthButton
         mode="login"
-        redirect={requestedRedirect ?? undefined}
+        redirect={requestedTarget ?? undefined}
       />
 
       <div className="relative">

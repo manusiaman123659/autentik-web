@@ -1,4 +1,5 @@
 import midtransClient from "midtrans-client";
+import { getCanonicalOrigin } from "@/lib/auth-redirect";
 
 const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
 const serverKey = (process.env.MIDTRANS_SERVER_KEY || "").trim();
@@ -37,7 +38,6 @@ export interface MidtransTransactionParams {
 }
 
 export interface MidtransTransactionResult {
-  token: string;
   redirect_url: string;
 }
 
@@ -47,7 +47,11 @@ export async function createMidtransTransaction(
   if (!getMidtransConfigurationStatus().isComplete) {
     throw new Error("Konfigurasi Midtrans belum lengkap di environment server.");
   }
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const finishUrl = new URL(
+    `/store/orders/${encodeURIComponent(params.orderCode)}`,
+    getCanonicalOrigin(),
+  );
+  finishUrl.searchParams.set("payment", "return");
 
   const parameter = {
     transaction_details: {
@@ -60,13 +64,12 @@ export async function createMidtransTransaction(
       phone: params.customerPhone || undefined,
     },
     callbacks: {
-      finish: `${siteUrl}/store/orders/${params.orderCode}?status=success`,
+      finish: finishUrl.toString(),
     },
   };
 
   const transaction = await snap.createTransaction(parameter);
   return {
-    token: transaction.token,
     redirect_url: transaction.redirect_url,
   };
 }

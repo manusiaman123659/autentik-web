@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Package,
   ChevronRight,
-  Search,
   Printer,
   CreditCard,
   XCircle,
@@ -14,8 +14,9 @@ import {
   Loader2,
   Clock,
   Circle,
+  RotateCcw,
 } from "lucide-react";
-import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
+import type { OrderSnapshot } from "@/lib/order-snapshot";
 import { formatRupiah } from "@/lib/format";
 import { regenerateMidtransPayment } from "@/lib/actions/checkout";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
@@ -50,20 +51,6 @@ type DbOrder = {
   order_items: DbOrderItem[];
 };
 
-function readSnapshot(code: string): OrderSnapshot | null {
-  try {
-    const raw = sessionStorage.getItem(orderSnapshotKey(code));
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== "object" || parsed === null) return null;
-    const s = parsed as OrderSnapshot;
-    if (typeof s.code !== "string" || !Array.isArray(s.items)) return null;
-    return s;
-  } catch {
-    return null;
-  }
-}
-
 function buildSnapshotFromDb(db: DbOrder): OrderSnapshot {
   return {
     code: db.order_code,
@@ -89,9 +76,8 @@ function buildSnapshotFromDb(db: DbOrder): OrderSnapshot {
   };
 }
 
-function isPaidStatus(paymentStatus?: string | null): boolean {
-  return paymentStatus === "paid" || paymentStatus === "settlement" || paymentStatus === "capture";
-}
+const TERMINAL_PAYMENT_STATUSES = new Set(["paid", "failed", "refunded"]);
+const VERIFICATION_TIMEOUT_MS = 60_000;
 
 export default function OrderConfirmationClient({
   code,
@@ -99,35 +85,53 @@ export default function OrderConfirmationClient({
   bankAccount,
   dbOrder,
   paymentFlow,
+  paymentReturn,
 }: {
   code: string;
   waNumber: string | null;
   bankAccount: { bankName: string; accountNumber: string; accountHolder: string } | null;
-  dbOrder: DbOrder | null;
+  dbOrder: DbOrder;
   paymentFlow: "manual_transfer" | "manual_cod" | "midtrans";
+  paymentReturn: boolean;
 }) {
-  const [snapshot, setSnapshot] = useState<OrderSnapshot | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const router = useRouter();
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [localInvoiceUrl, setLocalInvoiceUrl] = useState<string | null>(null);
-  const [livePaymentStatus, setLivePaymentStatus] = useState<string | null>(null);
-  const [liveOrderStatus, setLiveOrderStatus] = useState<string | null>(null);
-  const [livePaidAt, setLivePaidAt] = useState<string | null>(null);
+  const [livePayment, setLivePayment] = useState<{ orderCode: string; status: string } | null>(null);
+  const [liveOrder, setLiveOrder] = useState<{ orderCode: string; status: string } | null>(null);
+  const [livePaymentTime, setLivePaymentTime] = useState<{ orderCode: string; paidAt: string } | null>(null);
+  const [verificationTimedOut, setVerificationTimedOut] = useState(false);
+  const [verificationAttempt, setVerificationAttempt] = useState(0);
 
-  const effectiveInvoiceUrl = localInvoiceUrl ?? dbOrder?.midtrans_redirect_url ?? null;
+  const effectiveInvoiceUrl = localInvoiceUrl ?? dbOrder.midtrans_redirect_url ?? null;
+  const livePaymentStatus = livePayment?.orderCode === dbOrder.order_code ? livePayment.status : null;
+  const effectivePaymentStatus = TERMINAL_PAYMENT_STATUSES.has(dbOrder.payment_status)
+    ? dbOrder.payment_status
+    : livePaymentStatus ?? dbOrder.payment_status;
+  const effectiveOrderStatus = liveOrder?.orderCode === dbOrder.order_code ? liveOrder.status : dbOrder.status;
+  const livePaidAt = livePaymentTime?.orderCode === dbOrder.order_code ? livePaymentTime.paidAt : null;
+  const snapshot = {
+    ...buildSnapshotFromDb(dbOrder),
+    paymentStatus: effectivePaymentStatus,
+    status: effectiveOrderStatus,
+  };
+  const isPaid = effectivePaymentStatus === "paid";
+  const isFailed = effectivePaymentStatus === "failed";
+  const isRefunded = effectivePaymentStatus === "refunded";
+  const isPending = effectivePaymentStatus === "pending";
+  const isVerifyingReturn = paymentReturn && isPending && !verificationTimedOut;
 
+  // Keep automatic verification bounded; browser reconnects are allowed only inside this window.
   useEffect(() => {
-    const fromStorage = readSnapshot(code);
-    // Prefer sessionStorage if present; otherwise use DB data
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSnapshot(dbOrder ? buildSnapshotFromDb(dbOrder) : fromStorage);
-    setMounted(true);
-  }, [code, dbOrder]);
+    if (!code || TERMINAL_PAYMENT_STATUSES.has(dbOrder.payment_status)) return;
 
-  // Real-time SSE listener — polls order status every 2s
-  useEffect(() => {
-    if (!code) return;
-    const es = new EventSource(`/api/orders/${code}/status`);
+    let terminalReceived = false;
+    const es = new EventSource(`/api/orders/${encodeURIComponent(code)}/status`);
+    const timeout = window.setTimeout(() => {
+      es.close();
+      if (!terminalReceived) setVerificationTimedOut(true);
+    }, VERIFICATION_TIMEOUT_MS);
+
     es.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data) as {
@@ -136,27 +140,36 @@ export default function OrderConfirmationClient({
           paid_at?: string | null;
         };
         if (data.payment_status) {
-          setLivePaymentStatus(data.payment_status);
-          setSnapshot((prev) =>
-            prev ? { ...prev, paymentStatus: data.payment_status! } : prev,
-          );
+          setLivePayment({ orderCode: code, status: data.payment_status });
+          if (TERMINAL_PAYMENT_STATUSES.has(data.payment_status)) {
+            terminalReceived = true;
+            window.clearTimeout(timeout);
+            setVerificationTimedOut(false);
+            es.close();
+          }
         }
         if (data.status) {
-          setLiveOrderStatus(data.status);
-          setSnapshot((prev) =>
-            prev ? { ...prev, status: data.status! } : prev,
-          );
+          setLiveOrder({ orderCode: code, status: data.status });
         }
-        if (data.paid_at) setLivePaidAt(data.paid_at);
+        if (data.paid_at) setLivePaymentTime({ orderCode: code, paidAt: data.paid_at });
       } catch {
         // ignore parse errors
       }
     };
     es.onerror = () => {
-      // Biarkan EventSource auto-reconnect — jangan close di sini
+      // Native reconnect remains bounded by the verification timeout above.
     };
-    return () => es.close();
-  }, [code]);
+    return () => {
+      window.clearTimeout(timeout);
+      es.close();
+    };
+  }, [code, dbOrder.payment_status, verificationAttempt]);
+
+  const handleCheckAgain = () => {
+    setVerificationTimedOut(false);
+    setVerificationAttempt((attempt) => attempt + 1);
+    router.refresh();
+  };
 
   const handleRegenerateInvoice = async () => {
     setGeneratingInvoice(true);
@@ -176,60 +189,15 @@ export default function OrderConfirmationClient({
     }
   };
 
-  const effectivePaymentStatus = livePaymentStatus ?? dbOrder?.payment_status;
-  const effectiveOrderStatus = liveOrderStatus ?? dbOrder?.status;
-  const isPaid = isPaidStatus(effectivePaymentStatus);
-  const isFailed = effectivePaymentStatus === "failed";
-
-  if (!mounted) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center" style={{ backgroundColor: "var(--bg-primary)" }}>
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 mx-auto rounded-full border-2 border-[#0EA5A0] border-t-transparent animate-spin" />
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Memuat pesanan...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!snapshot) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center" style={{ backgroundColor: "var(--bg-primary)" }}>
-        <div className="text-center py-16 px-6 rounded-2xl border shadow-sm max-w-md w-full" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-          <Search size={40} className="mx-auto mb-4 opacity-30" />
-          <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
-            Detail pesanan tidak ditemukan
-          </h3>
-          <p className="text-xs text-slate-400 mt-1 font-light leading-relaxed">
-            Pesanan dengan kode <span className="font-mono font-semibold">{code}</span> belum dapat ditemukan.
-            Jika ini pesanan Anda, silakan hubungi tim kami.
-          </p>
-          <div className="mt-6 flex flex-col gap-2.5">
-            <Link
-              href="/store"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
-            >
-              Kembali ke Marketplace Komponen
-              <ChevronRight size={16} />
-            </Link>
-            <WhatsAppButton
-              number={waNumber}
-              label="Hubungi PPIC AKA"
-              message={`Halo PPIC AKA, saya membutuhkan bantuan untuk menemukan pesanan komponen dengan kode ${code}.`}
-              variant="button"
-              className="px-6 py-3 rounded-xl text-sm"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const paymentBadge = isPaid
     ? { label: "Pembayaran Berhasil", className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" }
     : isFailed
       ? { label: "Pembayaran Gagal", className: "bg-red-500/15 text-red-600 dark:text-red-400" }
-      : { label: "Menunggu Pembayaran", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" };
+      : isRefunded
+        ? { label: "Pembayaran Dikembalikan", className: "bg-slate-500/15 text-slate-600 dark:text-slate-300" }
+        : isVerifyingReturn
+          ? { label: "Memverifikasi Pembayaran", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" }
+          : { label: "Menunggu Pembayaran", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" };
 
   return (
     <>
@@ -238,22 +206,40 @@ export default function OrderConfirmationClient({
       {/* Header */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
-          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${isPaid ? "bg-emerald-500/15" : isFailed ? "bg-red-500/15" : "bg-emerald-500/15"}`}>
+          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${isPaid ? "bg-emerald-500/15" : isFailed ? "bg-red-500/15" : "bg-slate-500/15"}`}>
             {isFailed ? (
               <XCircle size={32} className="text-red-500" />
+            ) : isRefunded ? (
+              <RotateCcw size={30} className="text-slate-500" />
+            ) : isVerifyingReturn ? (
+              <Loader2 size={30} className="animate-spin text-[#0EA5A0]" />
+            ) : isPaid ? (
+              <CheckCircle2 size={32} className="text-emerald-500" />
             ) : (
-              <CheckCircle2 size={32} className={isPaid ? "text-emerald-500" : "text-emerald-500"} />
+              <Clock size={30} className="text-amber-500" />
             )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {isPaid ? "Pembayaran Berhasil" : isFailed ? "Pembayaran Gagal" : "Pesanan Berhasil Dibuat"}
+            {isPaid
+              ? "Pembayaran Berhasil"
+              : isFailed
+                ? "Pembayaran Gagal"
+                : isRefunded
+                  ? "Pembayaran Dikembalikan"
+                  : isVerifyingReturn
+                    ? "Sedang memverifikasi pembayaran..."
+                    : "Pesanan Berhasil Dibuat"}
           </h1>
           <p className="text-sm mt-2" style={{ color: "var(--text-secondary)" }}>
             {isPaid
               ? "Pembayaran Anda telah terkonfirmasi. Pesanan akan segera diproses."
               : isFailed
-                ? "Pembayaran tidak berhasil. Anda dapat mencoba membayar kembali."
-                : "Terima kasih, pesanan Anda telah kami terima dan akan segera diproses."}
+                ? "Pembayaran tidak berhasil. Hubungi tim kami untuk bantuan lanjutan."
+                : isRefunded
+                  ? "Dana pembayaran telah dikembalikan sesuai status pesanan."
+                  : isVerifyingReturn
+                    ? "Pembayaran sedang dikonfirmasi. Status akan diperbarui otomatis."
+                    : "Terima kasih, pesanan Anda telah kami terima dan akan segera diproses."}
           </p>
           <div className="inline-flex items-center gap-3 mt-5 px-5 py-2.5 rounded-xl border shadow-sm" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
@@ -450,9 +436,9 @@ export default function OrderConfirmationClient({
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Pesanan Anda telah dibayar dan akan segera diproses oleh tim kami.
             </p>
-            {(livePaidAt ?? dbOrder?.paid_at) && (
+            {(livePaidAt ?? dbOrder.paid_at) && (
               <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-                Dibayar pada: {new Date((livePaidAt ?? dbOrder!.paid_at)!).toLocaleString("id-ID")}
+                Dibayar pada: {new Date((livePaidAt ?? dbOrder.paid_at)!).toLocaleString("id-ID")}
               </p>
             )}
           </div>
@@ -463,19 +449,25 @@ export default function OrderConfirmationClient({
               <h2 className="text-base font-bold text-red-700 dark:text-red-400">Pembayaran Gagal</h2>
             </div>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              Pembayaran tidak berhasil. Anda dapat mencoba membayar kembali atau menghubungi tim kami.
+              Pembayaran tidak berhasil. Hubungi PPIC AKA agar pesanan dan stok dapat ditangani dengan aman.
             </p>
-            {paymentFlow === "midtrans" && effectiveInvoiceUrl && (
-              <a
-                href={effectiveInvoiceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
-              >
-                <CreditCard size={16} />
-                Bayar Sekarang
-              </a>
-            )}
+            <WhatsAppButton
+              number={waNumber}
+              label="Hubungi PPIC AKA"
+              message={`Halo PPIC AKA, pembayaran pesanan ${code} tercatat gagal. Mohon bantuan untuk tindak lanjut pesanan ini.`}
+              variant="button"
+              className="mt-3 px-5 py-2.5 rounded-xl text-sm"
+            />
+          </div>
+        ) : isRefunded ? (
+          <div className="rounded-2xl border shadow-sm p-6" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <RotateCcw size={18} className="text-slate-500" />
+              <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Pembayaran Dikembalikan</h2>
+            </div>
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              Status pembayaran tercatat sebagai refund. Hubungi tim kami jika Anda memerlukan rincian pengembalian dana.
+            </p>
           </div>
         ) : (
           /* Pending payment — branching per paymentFlow */
@@ -553,10 +545,45 @@ export default function OrderConfirmationClient({
 
             {paymentFlow === "midtrans" && (
               <>
-                <h2 className="text-base font-bold mb-1" style={{ color: "var(--text-primary)" }}>Instruksi Pembayaran</h2>
-                <p className="text-xs mt-1 mb-5" style={{ color: "var(--text-secondary)" }}>
-                  Selesaikan pembayaran menggunakan salah satu metode di bawah.
-                </p>
+                {paymentReturn && isPending ? (
+                  <div className="mb-5 rounded-xl border p-4" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+                    <div className="flex items-start gap-3">
+                      {verificationTimedOut ? (
+                        <Clock size={18} className="mt-0.5 shrink-0 text-amber-500" />
+                      ) : (
+                        <Loader2 size={18} className="mt-0.5 shrink-0 animate-spin text-[#0EA5A0]" />
+                      )}
+                      <div>
+                        <h2 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                          {verificationTimedOut ? "Pembayaran masih menunggu konfirmasi" : "Sedang memverifikasi pembayaran..."}
+                        </h2>
+                        <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
+                          {verificationTimedOut
+                            ? "Status belum berubah. Anda dapat memeriksanya kembali tanpa mengubah status pembayaran."
+                            : "Pembayaran sedang dikonfirmasi. Status akan diperbarui otomatis."}
+                        </p>
+                        {verificationTimedOut && (
+                          <button
+                            type="button"
+                            onClick={handleCheckAgain}
+                            className="mt-3 inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold transition-colors hover:border-[#0EA5A0] hover:text-[#0EA5A0]"
+                            style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
+                          >
+                            <RotateCcw size={14} />
+                            Periksa Lagi
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-base font-bold mb-1" style={{ color: "var(--text-primary)" }}>Instruksi Pembayaran</h2>
+                    <p className="text-xs mt-1 mb-5" style={{ color: "var(--text-secondary)" }}>
+                      Selesaikan pembayaran menggunakan salah satu metode di bawah.
+                    </p>
+                  </>
+                )}
 
                 {effectiveInvoiceUrl ? (
                   <a

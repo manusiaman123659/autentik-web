@@ -32,6 +32,15 @@ function toErrors(error: ZodError): Record<string, string> {
   return out;
 }
 
+function getErrorCategory(error: unknown): string {
+  if (error instanceof Error) return error.name || "Error";
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === "string" && code) return code;
+  }
+  return "unknown";
+}
+
 export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -129,7 +138,7 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     }
 
     if (totalAmount > 0) {
-      console.log("[CHECKOUT] Creating Midtrans transaction for:", orderCode, "Amount:", totalAmount);
+      console.log("[CHECKOUT] Creating Midtrans transaction", { orderCode });
 
       const transaction = await createMidtransTransaction({
         orderCode,
@@ -142,7 +151,7 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
         throw new Error("Midtrans tidak mengembalikan URL pembayaran.");
       }
 
-      console.log("[CHECKOUT] Transaction created successfully:", transaction.redirect_url);
+      console.log("[CHECKOUT] Midtrans transaction created", { orderCode });
 
       const supabaseAdmin = createAdminClient();
       const { data: updatedOrder, error: updateErr } = await supabaseAdmin
@@ -160,9 +169,12 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
         .maybeSingle();
 
       if (updateErr || !updatedOrder) {
-        console.error("[CHECKOUT] Failed to update order with Midtrans data:", updateErr);
+        logError("checkout.midtrans_persist", "Gagal menyimpan referensi transaksi Midtrans.", {
+          orderCode,
+          category: getErrorCategory(updateErr),
+        });
       } else {
-        console.log("[CHECKOUT] Order updated with Midtrans transaction data");
+        console.log("[CHECKOUT] Midtrans reference saved", { orderCode });
       }
 
       return {
@@ -184,8 +196,10 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       orderCode,
     };
   } catch (err) {
-    console.error("[CHECKOUT] Midtrans Transaction Failed:", err);
-    logError("checkout.midtrans_transaction", err, { orderCode });
+    logError("checkout.midtrans_transaction", "Pembuatan transaksi Midtrans gagal.", {
+      orderCode,
+      category: getErrorCategory(err),
+    });
     return {
       success: false,
       message: "Pesanan dibuat, tetapi link pembayaran Midtrans gagal dibuat. Silakan buka riwayat pesanan untuk mencoba kembali.",
@@ -252,7 +266,7 @@ export async function regenerateMidtransPayment(orderCode: string): Promise<Rege
 
     const customerEmail = (order.customer_email || "").trim() || `order_${orderCode}@autentik.co`;
 
-    console.log("[REGENERATE] Creating Midtrans transaction for:", orderCode, "Amount:", totalAmount);
+    console.log("[REGENERATE] Creating Midtrans transaction", { orderCode });
 
     const transaction = await createMidtransTransaction({
       orderCode,
@@ -262,7 +276,7 @@ export async function regenerateMidtransPayment(orderCode: string): Promise<Rege
       customerPhone: order.customer_phone,
     });
 
-    console.log("[REGENERATE] Transaction created successfully:", transaction.redirect_url);
+    console.log("[REGENERATE] Midtrans transaction created", { orderCode });
 
     const supabaseAdmin = createAdminClient();
     const { data: updatedOrder, error: updateErr } = await supabaseAdmin
@@ -280,7 +294,10 @@ export async function regenerateMidtransPayment(orderCode: string): Promise<Rege
       .maybeSingle();
 
     if (updateErr || !updatedOrder) {
-      console.error("[REGENERATE] Failed to update order:", updateErr);
+      logError("checkout.regenerate_midtrans_persist", "Gagal menyimpan referensi transaksi Midtrans.", {
+        orderCode,
+        category: getErrorCategory(updateErr),
+      });
       return { success: false, message: "Gagal menyimpan data pembayaran. Silakan coba lagi." };
     }
 
@@ -290,8 +307,10 @@ export async function regenerateMidtransPayment(orderCode: string): Promise<Rege
       redirectUrl: transaction.redirect_url,
     };
   } catch (err) {
-    console.error("[REGENERATE_MIDTRANS_ERROR]", err, { orderCode });
-    logError("checkout.regenerate_midtrans", err, { orderCode });
+    logError("checkout.regenerate_midtrans", "Regenerasi transaksi Midtrans gagal.", {
+      orderCode,
+      category: getErrorCategory(err),
+    });
     return { success: false, message: "Gagal membuat link pembayaran. Silakan coba lagi." };
   }
 }

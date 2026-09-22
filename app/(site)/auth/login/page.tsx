@@ -10,11 +10,16 @@ export const metadata = {
 export default async function CustomerLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ redirect?: string | string[]; error?: string | string[] }>;
+  searchParams: Promise<{
+    next?: string | string[];
+    redirect?: string | string[];
+    error?: string | string[];
+  }>;
 }) {
-  const rawRedirect = (await searchParams).redirect;
-  const redirect = typeof rawRedirect === "string"
-    ? getSafeCustomerRedirect(rawRedirect)
+  const query = await searchParams;
+  const rawTarget = query.next ?? query.redirect;
+  const redirect = typeof rawTarget === "string"
+    ? getSafeCustomerRedirect(rawTarget)
     : undefined;
   const registerHref = redirect
     ? `/auth/register?redirect=${encodeURIComponent(redirect)}`

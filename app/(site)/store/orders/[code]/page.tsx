@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import OrderConfirmationClient from "@/components/orders/OrderConfirmationClient";
 import { getWhatsAppContact, getOwnedLegacyTransferBankAccount } from "@/lib/public-data";
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ payment?: string | string[] }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -21,15 +22,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function OrderConfirmationPage({ params }: Props) {
-  const { code } = await params;
+export default async function OrderConfirmationPage({ params, searchParams }: Props) {
+  const [{ code }, query] = await Promise.all([params, searchParams]);
+  const paymentReturn = query.payment === "return";
 
   // --- Server-side auth check ---
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    redirect(`/auth/login?redirect=${encodeURIComponent(`/store/orders/${code}`)}`);
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    const orderPath = `/store/orders/${encodeURIComponent(code)}${paymentReturn ? "?payment=return" : ""}`;
+    redirect(`/auth/login?next=${encodeURIComponent(orderPath)}`);
   }
 
   // --- Rate limit check (per IP, max 20 lookups/menit) ---
@@ -83,19 +86,16 @@ export default async function OrderConfirmationPage({ params }: Props) {
     }[];
   };
 
-  let rawOrder: RawOrder | null = null;
+  const { data, error: orderError } = await supabase
+    .from("orders")
+    .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id, variant_label)")
+    .eq("order_code", code)
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+  const rawOrder = data as RawOrder | null;
 
-  try {
-    const { data } = await supabase
-      .from("orders")
-      .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id, variant_label)")
-      .eq("order_code", code)
-      .is("deleted_at", null)
-      .single();
-    rawOrder = data;
-  } catch {
-    // Order may not exist yet or user not authorized — client will handle gracefully
-  }
+  if (orderError || !rawOrder) notFound();
 
   const paymentFlow =
     rawOrder?.payment_method === "transfer"
@@ -106,26 +106,24 @@ export default async function OrderConfirmationPage({ params }: Props) {
   const bankAccount = paymentFlow === "manual_transfer"
     ? await getOwnedLegacyTransferBankAccount(code)
     : null;
-  const dbOrderSafe = rawOrder
-    ? {
-        order_code: rawOrder.order_code,
-        customer_name: rawOrder.customer_name,
-        status: rawOrder.status,
-        payment_status: rawOrder.payment_status,
-        payment_method: rawOrder.payment_method,
-        subtotal: rawOrder.subtotal,
-        shipping_cost: rawOrder.shipping_cost,
-        shipping_total_weight_g: rawOrder.shipping_total_weight_g,
-        shipping_zone_id: rawOrder.shipping_zone_id,
-        shipping_rate_id: rawOrder.shipping_rate_id,
-        total: rawOrder.total,
-        paid_at: rawOrder.paid_at,
-        midtrans_redirect_url: rawOrder.midtrans_redirect_url,
-        midtrans_order_id: rawOrder.midtrans_order_id,
-        created_at: rawOrder.created_at,
-        order_items: rawOrder.order_items,
-      }
-    : null;
+  const dbOrderSafe = {
+    order_code: rawOrder.order_code,
+    customer_name: rawOrder.customer_name,
+    status: rawOrder.status,
+    payment_status: rawOrder.payment_status,
+    payment_method: rawOrder.payment_method,
+    subtotal: rawOrder.subtotal,
+    shipping_cost: rawOrder.shipping_cost,
+    shipping_total_weight_g: rawOrder.shipping_total_weight_g,
+    shipping_zone_id: rawOrder.shipping_zone_id,
+    shipping_rate_id: rawOrder.shipping_rate_id,
+    total: rawOrder.total,
+    paid_at: rawOrder.paid_at,
+    midtrans_redirect_url: rawOrder.midtrans_redirect_url,
+    midtrans_order_id: rawOrder.midtrans_order_id,
+    created_at: rawOrder.created_at,
+    order_items: rawOrder.order_items,
+  };
 
   return (
     <OrderConfirmationClient
@@ -134,6 +132,7 @@ export default async function OrderConfirmationPage({ params }: Props) {
       bankAccount={bankAccount}
       dbOrder={dbOrderSafe}
       paymentFlow={paymentFlow}
+      paymentReturn={paymentReturn}
     />
   );
 }

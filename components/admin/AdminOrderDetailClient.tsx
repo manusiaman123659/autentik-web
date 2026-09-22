@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Card, statusTone, formatRupiah } from "@/components/admin/ui";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/validations/storeSchema";
+import { createClient } from "@/utils/supabase/client";
 
 interface Props {
   orderId: string;
@@ -19,7 +20,7 @@ interface Props {
 }
 
 export default function AdminOrderDetailClient({
-  orderCode,
+  orderId,
   initialPaymentStatus,
   initialOrderStatus,
   paymentMethod,
@@ -35,28 +36,32 @@ export default function AdminOrderDetailClient({
   const [livePaidAt, setLivePaidAt] = useState(paidAt);
 
   useEffect(() => {
-    if (!orderCode || paymentStatus === "paid") return;
+    if (!orderId) return;
 
-    const es = new EventSource(`/api/orders/${orderCode}/status`);
-
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.payment_status && data.payment_status !== paymentStatus) {
-          setPaymentStatus(data.payment_status);
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`order_admin_${orderId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` },
+        (payload) => {
+          const data = payload.new as {
+            payment_status?: string;
+            status?: string;
+            paid_at?: string | null;
+          };
+          if (data.payment_status) setPaymentStatus(data.payment_status);
           if (data.status) setOrderStatus(data.status);
-          if (data.paid_at) setLivePaidAt(data.paid_at);
+          if (data.paid_at !== undefined) setLivePaidAt(data.paid_at);
           router.refresh();
-        }
-      } catch {
-        // ignore parse errors
-      }
-    };
+        },
+      )
+      .subscribe();
 
     return () => {
-      es.close();
+      void supabase.removeChannel(channel);
     };
-  }, [orderCode, paymentStatus, router]);
+  }, [orderId, router]);
 
   return (
     <Card>

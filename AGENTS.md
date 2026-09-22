@@ -70,7 +70,7 @@ Barang diterima
 ## Real-Time Updates
 Dua mekanisme untuk update otomatis di admin:
 
-1. **SSE (Server-Sent Events)** — endpoint `app/api/orders/[code]/status/route.ts` polling DB setiap 2 detik. Dipakai di `components/admin/AdminOrderDetailClient.tsx` untuk halaman detail order. Auto-close saat `payment_status` mencapai terminal (`paid`/`completed`/`failed`).
+1. **SSE (Server-Sent Events)** — endpoint customer-only `app/api/orders/[code]/status/route.ts` memvalidasi auth + ownership lalu polling DB setiap 2 detik. Auto-close saat `payment_status` mencapai terminal (`paid`/`failed`/`refunded`). Detail order admin memakai Supabase Realtime terfilter berdasarkan order ID.
 
 2. **Supabase Realtime** — subscription langsung ke tabel `orders`:
    - `components/admin/OrdersListClient.tsx` — list orders auto-update saat ada perubahan.
