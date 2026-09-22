@@ -27,6 +27,7 @@ Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT
 - `MIDTRANS_SERVER_KEY` — Midtrans payment gateway server key (server-only)
 - `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY` — Midtrans payment gateway client key (public)
 - `MIDTRANS_IS_PRODUCTION` — `"false"` untuk sandbox, `"true"` untuk production
+- `MIKA_INTEGRATION_SECRET` — bearer secret server-only untuk API sinkronisasi produk AKA → MIKA; jangan gunakan prefix `NEXT_PUBLIC_`, jangan simpan di CMS, dan jangan log nilainya
 - Semua di `.env.local` (sudah di-gitignore); tidak ada key yang di-commit. Lihat `.env.example` untuk template.
 
 ## Gotcha Next.js 16 di repo ini
@@ -101,6 +102,16 @@ Situs publik **sudah membaca dari Supabase** lewat `lib/public-data.ts` (lapisan
 - **SearchModal** — query anon client-side (browser Supabase client) utk produk b2b `published`+`is_active` dan karir `open`; RLS menegakkan filter publik.
 - **Sisa statis**: `solutions` (`lib/data/solutions.ts`), konteks AI (`lib/ai/*`). `industries.ts` & `projects.ts` **sudah dihapus** (dead code). `lib/data/news.ts` **tetap dipertahankan** meski halaman `/news` sudah tidak ada — dipakai `scripts/build-seed.ts` untuk seed tabel `articles` (dormant); jangan hapus. `lib/data/team.ts` tetap dipertahankan sebagai fallback statis untuk Tim Kami.
 - Pola: fungsi di `lib/public-data.ts` beri fallback ke array statis `lib/data/*` bila Supabase error; katalog/karir/home memakai `export const dynamic = "force-dynamic"`.
+
+### API Sinkronisasi Produk AKA → MIKA
+- Namespace versioned server-to-server: `/api/integrations/mika/v1/products`, `/api/integrations/mika/v1/products/[id]`, dan `/api/integrations/mika/v1/brands`.
+- Auth memakai `Authorization: Bearer <MIKA_INTEGRATION_SECRET>` dengan perbandingan digest SHA-256 constant-time. Secret hanya ada di environment server; MIKA tidak menerima akses Supabase atau kredensial admin.
+- API v1 memakai full reconciliation dengan keyset cursor `products.id`, bukan delta timestamp. Migration untuk fitur ini: **0**.
+- Scope produk tepat: `product_type = 'b2b_system'` dan `brand_id` salah satu `talpha/autentik/cylab/ullun/epal`; fallback nama merek hanya berlaku bila `brand_id IS NULL`. `sparepart`, Mytekna, varian commerce, harga, dan stok tidak diekspos.
+- Produk aktif harus `status='published'`, `is_active=true`, dan `deleted_at IS NULL`. Draft/inactive/soft-delete yang masih eligible dikirim sebagai tombstone minimal; hard-delete dideteksi MIKA lewat ID yang hilang setelah snapshot lengkap.
+- Dokumen teknis hanya dikirim bila `requires_lead=false`; hotspot dan dokumen lead-gated tidak masuk API v1. URL root-relative dinormalisasi ke canonical HTTPS origin, dan URL berbahaya/malformed dihilangkan.
+- Reconciliation MIKA: upsert semua halaman berdasarkan `aka_product_id`, ikuti `next_cursor` sampai `has_more=false`, lalu baru tandai ID lama yang tidak terlihat sebagai inactive. Bila satu halaman gagal, jangan lakukan missing-row deactivation.
+- Rate limit in-memory bersifat best-effort/per-instance: valid 120/5 menit, invalid 20/5 menit. Semua respons `private, no-store`, `Vary: Authorization`; limiter bukan pengganti bearer authentication.
 
 ### Customer Auth & E-Commerce Flow
 Sistem autentikasi customer terpisah dari admin, mengalir dari store → auth → checkout → order:
@@ -244,7 +255,7 @@ Komponen viewer 3D produk (`components/product/Product3DViewer.tsx`) dengan hots
 ## Directory structure
 - `app/(site)/` — halaman publik: home, about, products, store (listing, detail, cart, checkout, orders), careers, contact, services, custom-request, auth (login, register)
 - `app/admin/(dashboard)/` — 14 admin sections (orders, sparepart, stok, produk, compro, merek, karir, relasi, inquiry, lead, rfq, akses-staff, integrasi, riwayat)
-- `app/api/` — API routes: chat (Gemini), contact, newsletter, orders SSE, rfq, webhooks midtrans
+- `app/api/` — API routes: chat (Gemini), contact, careers proxy, orders SSE, rfq, webhook Midtrans, dan integrasi produk MIKA v1
 - `components/admin/` — komponen admin UI (reuse primitives dari `ui.tsx`); termasuk `AdminOrderDetailClient.tsx` (SSE real-time), `OrdersListClient.tsx` (Supabase Realtime), `RecentOrdersWidget.tsx` (dashboard widget real-time)
 - `components/auth/` — `AdminNavButton` (admin login/logout), `CustomerAuthButton` (customer profile dropdown + wishlist badge), `CustomerAuthGuard` (session check + redirect)
 - `components/cart/` — `CartProvider` (localStorage cart context, variant-aware: `CartItem` with `variant_id`/`variant_label`, `isSameItem` dedupe), `AddToCartButton` (2 variant: card/detail, accepts `selectedVariant`/`hasVariants` props), `CartClient` (cart page UI, displays variant_label)

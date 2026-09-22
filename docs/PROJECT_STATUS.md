@@ -68,6 +68,7 @@ Gunakan communication resolver existing.
 - Task 8B — Hero Homepage + Payment Admin Cleanup
 - Task 8C — Shipping Safety Core
 - Task 8D — Shipping Admin UX + Uji Tarif
+- Task 9B-A — AKA → MIKA Product Sync API v1 (full reconciliation, zero migration)
 - Interactive Photo Hotspot system
 - Photo Hotspot light/dark mode polish
 - Photo Hotspot callout responsive positioning
@@ -173,6 +174,46 @@ Migration:
 Status:
 - applied / live
 - RLS dan RPC sudah diverifikasi
+
+---
+
+# AKA → MIKA Product Sync API
+
+Server-to-server endpoints:
+
+- `GET /api/integrations/mika/v1/products`
+- `GET /api/integrations/mika/v1/products/[id]`
+- `GET /api/integrations/mika/v1/brands`
+
+Authentication:
+
+- bearer secret dari `MIKA_INTEGRATION_SECRET`
+- server-only, tidak disimpan di CMS dan tidak dikirim ke browser
+- MIKA tidak mendapat service-role key, password database, atau akun admin AKA
+
+Scope produk:
+
+- hanya `product_type = 'b2b_system'`
+- hanya brand `talpha`, `autentik`, `cylab`, `ullun`, `epal`
+- free-text brand hanya menjadi fallback bila `brand_id IS NULL`
+- Store Komponen, Mytekna, harga, stok, marketplace SKU, fulfillment commerce, dan varian tidak disinkronkan
+
+Status:
+
+- active bila published + active + tidak soft-deleted
+- draft/inactive/soft-deleted dikirim sebagai tombstone minimal
+- hard-deleted dideteksi melalui full snapshot reconciliation
+
+Reconciliation contract:
+
+1. MIKA memulai satu sync run.
+2. Ambil halaman pertama dan upsert berdasarkan `aka_product_id`.
+3. Pertahankan seluruh field komersial milik MIKA.
+4. Ikuti `next_cursor` sampai `has_more=false`.
+5. Hanya setelah semua halaman berhasil, tandai ID AKA lama yang tidak terlihat sebagai inactive.
+6. Jika satu halaman gagal, jangan menjalankan missing-row deactivation.
+
+API v1 sengaja tidak menyediakan delta timestamp karena lifecycle timestamp/delete produk belum cukup andal. Migration Task 9B-A: **0**.
 
 ---
 
