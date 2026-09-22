@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useForm, useWatch } from "react-hook-form";
@@ -12,6 +12,7 @@ import { checkoutFormSchema, type CheckoutFormData } from "@/lib/validations/sto
 import { submitCheckout } from "@/lib/actions/checkout";
 import { formatRupiah } from "@/lib/format";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
+import { getDirectBuyItem, clearDirectBuyItem, type DirectBuyItem } from "@/lib/direct-buy";
 import { createClient as createSupabaseClient } from "@/utils/supabase/client";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import {
@@ -28,7 +29,44 @@ const labelClass = "block text-xs font-semibold mb-1.5 uppercase tracking-wide";
 
 export default function CheckoutClient({ waNumber }: { waNumber?: string | null }) {
   const router = useRouter();
-  const { items, hydrated, subtotal, totalItems, clearCart } = useCart();
+  const searchParams = useSearchParams();
+  const isDirectMode = searchParams.get("mode") === "direct";
+
+  const { items: cartItems, hydrated: cartHydrated, subtotal: cartSubtotal, totalItems: cartTotalItems, clearCart } = useCart();
+  const [directItem, setDirectItem] = useState<DirectBuyItem | null>(null);
+  const [directChecked, setDirectChecked] = useState(false);
+
+  useEffect(() => {
+    if (isDirectMode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDirectItem(getDirectBuyItem());
+      setDirectChecked(true);
+    }
+  }, [isDirectMode]);
+
+  const hydrated = isDirectMode ? directChecked : cartHydrated;
+
+  const activeItems = useMemo(() => {
+    if (isDirectMode) {
+      return directItem ? [directItem] : [];
+    }
+    return cartItems;
+  }, [isDirectMode, directItem, cartItems]);
+
+  const subtotal = useMemo(() => {
+    if (isDirectMode) {
+      return directItem ? directItem.price * directItem.quantity : 0;
+    }
+    return cartSubtotal;
+  }, [isDirectMode, directItem, cartSubtotal]);
+
+  const totalItems = useMemo(() => {
+    if (isDirectMode) {
+      return directItem ? directItem.quantity : 0;
+    }
+    return cartTotalItems;
+  }, [isDirectMode, directItem, cartTotalItems]);
+
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
   const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
@@ -47,19 +85,19 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
 
   const city = useWatch({ control, name: "city" });
   const province = useWatch({ control, name: "province" });
-  const quoteRequestKey = JSON.stringify({
-    items: items.map((item) => ({
+  const quoteRequestKey = useMemo(() => JSON.stringify({
+    items: activeItems.map((item) => ({
       product_id: item.id,
       quantity: item.quantity,
       variant_id: item.variant_id ?? null,
     })),
     city: city?.trim().toLocaleLowerCase("id-ID") ?? "",
     province: province?.trim().toLocaleLowerCase("id-ID") ?? "",
-  });
+  }), [activeItems, city, province]);
 
   useEffect(() => {
     let cancelled = false;
-    if (!city?.trim() || !province?.trim() || items.length === 0) {
+    if (!city?.trim() || !province?.trim() || activeItems.length === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setShippingQuote(null);
       setQuotedRequestKey("");
@@ -70,7 +108,7 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
     const timer = setTimeout(async () => {
       setEstimating(true);
       const { data, error } = await supabase.rpc("get_shipping_quote", {
-        p_items: items.map((item) => ({
+        p_items: activeItems.map((item) => ({
           product_id: item.id,
           quantity: item.quantity,
           variant_id: item.variant_id ?? null,
@@ -97,7 +135,7 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [city, province, items, quoteRequestKey]);
+  }, [city, province, activeItems, quoteRequestKey]);
 
   // Auto-fill dari profil user yang sudah login
   useEffect(() => {
@@ -127,14 +165,18 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
     );
   }
 
-  if (items.length === 0) {
+  if (activeItems.length === 0) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center" style={{ backgroundColor: "var(--bg-primary)" }}>
         <div className="text-center py-16 px-6 rounded-2xl border shadow-sm max-w-md w-full" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
           <Package size={40} className="mx-auto mb-4 opacity-30" />
-          <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Keranjang Anda kosong</h3>
+          <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
+            {isDirectMode ? "Item Beli Langsung Kosong" : "Keranjang Anda kosong"}
+          </h3>
           <p className="text-xs text-slate-400 mt-1 font-light">
-            Tambahkan komponen terlebih dahulu sebelum melanjutkan ke checkout.
+            {isDirectMode
+              ? "Sesi beli langsung telah berakhir atau belum ada item yang dipilih."
+              : "Tambahkan komponen terlebih dahulu sebelum melanjutkan ke checkout."}
           </p>
           <Link
             href="/store"
@@ -160,7 +202,7 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
     try {
       const result = await submitCheckout({
         ...data,
-        items: items.map((i) => ({ productId: i.id, quantity: i.quantity, variantId: i.variant_id ?? null })),
+        items: activeItems.map((i) => ({ productId: i.id, quantity: i.quantity, variantId: i.variant_id ?? null })),
       });
 
       if (!result.success || !result.orderCode) {
@@ -184,7 +226,7 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
         createdAt: new Date().toISOString(),
         status: "pending",
         paymentStatus: "pending",
-        items: items.map((i) => ({
+        items: activeItems.map((i) => ({
           id: i.id,
           slug: i.slug,
           name: i.name,
@@ -208,9 +250,13 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
         // Abaikan jika sessionStorage penuh/blokir; halaman konfirmasi tetap tampil via URL.
       }
 
-      clearCart();
+      if (isDirectMode) {
+        clearDirectBuyItem();
+      } else {
+        clearCart();
+      }
 
-        // If Midtrans returned a redirect URL, redirect to payment page
+      // If Midtrans returned a redirect URL, redirect to payment page
       if (result.redirectUrl) {
         window.location.replace(result.redirectUrl);
         return;
@@ -256,8 +302,11 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
             <div className="text-sm" style={{ color: "var(--text-primary)" }}>
               <p className="font-semibold">Pesanan belum berhasil dibuat.</p>
               <p className="mt-0.5 text-xs" style={{ color: "var(--text-secondary)" }}>{serverError}</p>
-              <Link href="/store/cart" className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-[#0EA5A0] hover:underline">
-                Kembali ke Keranjang untuk menyesuaikan
+              <Link
+                href={isDirectMode && activeItems[0] ? `/store/${activeItems[0].slug}` : "/store/cart"}
+                className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-[#0EA5A0] hover:underline"
+              >
+                Kembali ke {isDirectMode ? "Produk" : "Keranjang"} untuk menyesuaikan
                 <ChevronRight size={12} />
               </Link>
             </div>
@@ -369,8 +418,8 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
             <div className="lg:sticky lg:top-20 rounded-2xl border shadow-sm p-6" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
               <h2 className="text-base font-bold mb-5" style={{ color: "var(--text-primary)" }}>Ringkasan Pesanan</h2>
               <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
-                {items.map((item) => (
-                  <div key={item.id} className="flex gap-3">
+                {activeItems.map((item) => (
+                  <div key={item.key ?? `${item.id}::${item.variant_id ?? "default"}`} className="flex gap-3">
                     <div className="w-14 h-14 rounded-lg flex items-center justify-center overflow-hidden border flex-shrink-0" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
                       {item.image_url ? (
                         <Image src={item.image_url} alt={item.name} width={56} height={56} className="object-contain w-full h-full p-1" />
@@ -380,6 +429,11 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold leading-snug line-clamp-2" style={{ color: "var(--text-primary)" }}>{item.name}</p>
+                      {item.variant_label && (
+                        <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[#0EA5A0]/10 text-[#0EA5A0]">
+                          Varian: {item.variant_label}
+                        </span>
+                      )}
                       <p className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
                         {item.quantity} × {formatRupiah(item.price)}
                       </p>
@@ -456,12 +510,12 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
                 />
               </div>
               <Link
-                href="/store/cart"
+                href={isDirectMode && activeItems[0] ? `/store/${activeItems[0].slug}` : "/store/cart"}
                 className="inline-flex items-center gap-1.5 text-xs mt-3 hover:text-[#14B8A6] transition-colors"
                 style={{ color: "var(--text-secondary)" }}
               >
                 <ArrowLeft size={13} />
-                Kembali ke Keranjang
+                {isDirectMode ? "Kembali ke Produk" : "Kembali ke Keranjang"}
               </Link>
             </div>
           </div>

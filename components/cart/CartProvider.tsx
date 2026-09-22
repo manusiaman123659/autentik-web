@@ -10,6 +10,7 @@ import {
 } from "react";
 
 export interface CartItem {
+  key: string;
   id: string;
   variant_id: string | null;
   variant_label: string | null;
@@ -20,6 +21,10 @@ export interface CartItem {
   price: number;
   stock: number;
   quantity: number;
+}
+
+export function getCartItemKey(productId: string, variantId?: string | null): string {
+  return `${productId}::${variantId ?? "default"}`;
 }
 
 export interface CartItemInput {
@@ -41,8 +46,8 @@ interface CartContextValue {
   totalItems: number;
   subtotal: number;
   addItem: (product: CartItemInput, quantity?: number) => void;
-  removeItem: (id: string, variantId?: string | null) => void;
-  updateQty: (id: string, quantity: number, variantId?: string | null) => void;
+  removeItem: (keyOrId: string, variantId?: string | null) => void;
+  updateQty: (keyOrId: string, quantity: number, variantId?: string | null) => void;
   clearCart: () => void;
 }
 
@@ -56,19 +61,44 @@ function readStorage(): CartItem[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (x): x is CartItem =>
+
+    const map = new Map<string, CartItem>();
+    for (const x of parsed) {
+      if (
         typeof x === "object" &&
         x !== null &&
-        typeof (x as CartItem).id === "string" &&
-        typeof (x as CartItem).slug === "string" &&
-        typeof (x as CartItem).name === "string" &&
-        typeof (x as CartItem).brand === "string" &&
-        typeof (x as CartItem).price === "number" &&
-        typeof (x as CartItem).stock === "number" &&
-        typeof (x as CartItem).quantity === "number" &&
-        (x as CartItem).quantity >= 1
-    );
+        typeof x.id === "string" &&
+        typeof x.slug === "string" &&
+        typeof x.name === "string" &&
+        typeof x.brand === "string" &&
+        typeof x.price === "number" &&
+        typeof x.stock === "number" &&
+        typeof x.quantity === "number" &&
+        x.quantity >= 1
+      ) {
+        const variantId = typeof x.variant_id === "string" && x.variant_id ? x.variant_id : null;
+        const key = typeof x.key === "string" && x.key.includes("::") ? x.key : getCartItemKey(x.id, variantId);
+        const existing = map.get(key);
+        if (existing) {
+          existing.quantity = Math.min(existing.stock, existing.quantity + x.quantity);
+        } else {
+          map.set(key, {
+            key,
+            id: x.id,
+            variant_id: variantId,
+            variant_label: typeof x.variant_label === "string" ? x.variant_label : null,
+            slug: x.slug,
+            name: x.name,
+            brand: x.brand,
+            image_url: x.image_url ?? null,
+            price: x.price,
+            stock: x.stock,
+            quantity: x.quantity,
+          });
+        }
+      }
+    }
+    return Array.from(map.values());
   } catch {
     return [];
   }
@@ -78,10 +108,6 @@ export function useCart() {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error("useCart must be used within <CartProvider>");
   return ctx;
-}
-
-function isSameItem(a: { id: string; variant_id: string | null }, b: { id: string; variant_id: string | null }): boolean {
-  return a.id === b.id && a.variant_id === b.variant_id;
 }
 
 export default function CartProvider({
@@ -113,7 +139,10 @@ export default function CartProvider({
       if (stock < 1 || product.price == null) return prev;
       const variantId = product.variant_id ?? null;
       const variantLabel = product.variant_label ?? null;
+      const key = getCartItemKey(product.id, variantId);
+
       const item: CartItem = {
+        key,
         id: product.id,
         variant_id: variantId,
         variant_label: variantLabel,
@@ -126,34 +155,50 @@ export default function CartProvider({
         quantity: 1,
       };
       const qty = Math.max(1, Math.min(stock, quantity));
-      const existing = prev.find((i) => isSameItem(i, item));
-      if (existing) {
-        return prev.map((i) =>
-          isSameItem(i, item)
-            ? {
-                ...i,
-                price: item.price,
-                stock: item.stock,
-                quantity: Math.min(item.stock, i.quantity + qty),
-              }
-            : i
-        );
+
+      // If a valid variant is selected, clean up any conflicting legacy unselected (null) variant of the same product
+      let baseList = prev;
+      if (variantId !== null) {
+        baseList = prev.filter((i) => !(i.id === product.id && i.variant_id === null));
       }
-      return [...prev, { ...item, quantity: qty }];
+
+      const existingIndex = baseList.findIndex((i) => i.key === key);
+      if (existingIndex >= 0) {
+        const existing = baseList[existingIndex];
+        const nextList = [...baseList];
+        nextList[existingIndex] = {
+          ...existing,
+          price: item.price,
+          stock: item.stock,
+          quantity: Math.min(item.stock, existing.quantity + qty),
+        };
+        return nextList;
+      }
+      return [...baseList, { ...item, quantity: qty }];
     });
   }, []);
 
-  const removeItem = useCallback((id: string, variantId?: string | null) => {
-    setItems((prev) => prev.filter((i) => !isSameItem(i, { id, variant_id: variantId ?? null })));
+  const removeItem = useCallback((keyOrId: string, variantId?: string | null) => {
+    setItems((prev) =>
+      prev.filter((i) => {
+        if (keyOrId.includes("::")) {
+          return i.key !== keyOrId;
+        }
+        return !(i.id === keyOrId && i.variant_id === (variantId ?? null));
+      })
+    );
   }, []);
 
-  const updateQty = useCallback((id: string, quantity: number, variantId?: string | null) => {
+  const updateQty = useCallback((keyOrId: string, quantity: number, variantId?: string | null) => {
     setItems((prev) =>
-      prev.map((i) =>
-        isSameItem(i, { id, variant_id: variantId ?? null })
+      prev.map((i) => {
+        const matches = keyOrId.includes("::")
+          ? i.key === keyOrId
+          : i.id === keyOrId && i.variant_id === (variantId ?? null);
+        return matches
           ? { ...i, quantity: Math.max(1, Math.min(i.stock, quantity)) }
-          : i
-      )
+          : i;
+      })
     );
   }, []);
 

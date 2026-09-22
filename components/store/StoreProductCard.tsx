@@ -130,7 +130,16 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
       {/* CTA */}
       <div className="px-2.5 pb-2.5">
         {isReady ? (
-          <AddToCartButton product={product} variant="card" />
+          product.has_active_variants ? (
+            <Link
+              href={`/store/${product.slug}`}
+              className="w-full flex-shrink-0 flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold transition-colors rounded-sm border border-[#0EA5A0] text-[#0EA5A0] hover:bg-[#0EA5A0]/10 text-center"
+            >
+              Pilih Varian
+            </Link>
+          ) : (
+            <AddToCartButton product={product} variant="card" />
+          )
         ) : (
           <ProductFulfillmentCta
             fulfillmentType={fulfillment}

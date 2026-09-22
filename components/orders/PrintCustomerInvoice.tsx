@@ -115,7 +115,7 @@ export default function PrintCustomerInvoice({ snapshot, bankAccount, showBankTr
           </thead>
           <tbody>
             {snapshot.items.map((item, idx) => (
-              <tr key={item.id} className="break-inside-avoid">
+              <tr key={`${item.id}::${item.variant_label ?? idx}`} className="break-inside-avoid">
                 <td className="border border-slate-300 px-3 py-2 text-center text-slate-600">
                   {idx + 1}
                 </td>

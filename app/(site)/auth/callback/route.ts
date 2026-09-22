@@ -2,9 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
+import { getSafeCustomerRedirect, getCanonicalOrigin } from "@/lib/auth-redirect";
 
 export async function GET(request: NextRequest) {
+  // Audit log request origin and proxy headers safely (NO cookies, tokens, or codes)
+  console.log("[OAuth Callback] Origin & proxy headers:", {
+    nextUrlOrigin: request.nextUrl.origin,
+    host: request.headers.get("host"),
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    forwardedProto: request.headers.get("x-forwarded-proto"),
+  });
+
+  const canonicalOrigin = getCanonicalOrigin(request.nextUrl.origin);
+  const redirect = (path: string) => NextResponse.redirect(new URL(path, canonicalOrigin));
+
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next");
@@ -19,9 +30,7 @@ export async function GET(request: NextRequest) {
     if (oauthError) {
       console.warn("[OAuth Callback] Provider error:", oauthError, oauthErrorDesc);
     }
-    return NextResponse.redirect(
-      new URL("/auth/login?error=oauth_failed", request.url)
-    );
+    return redirect("/auth/login?error=oauth_failed");
   }
 
   const cookieStore = await cookies();
@@ -31,9 +40,7 @@ export async function GET(request: NextRequest) {
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
   if (exchangeError) {
     console.error("[OAuth Callback] exchangeCodeForSession error:", exchangeError.message);
-    return NextResponse.redirect(
-      new URL("/auth/login?error=oauth_failed", request.url)
-    );
+    return redirect("/auth/login?error=oauth_failed");
   }
 
   // 2. Fetch authenticated user from trusted server source
@@ -45,9 +52,7 @@ export async function GET(request: NextRequest) {
   if (userError || !user) {
     console.error("[OAuth Callback] getUser error after exchange:", userError?.message);
     await supabase.auth.signOut();
-    return NextResponse.redirect(
-      new URL("/auth/login?error=oauth_failed", request.url)
-    );
+    return redirect("/auth/login?error=oauth_failed");
   }
 
   // 3. Load profile from database (created synchronously by handle_new_user trigger)
@@ -61,36 +66,28 @@ export async function GET(request: NextRequest) {
   if (profileError) {
     console.error("[OAuth Callback] Database error fetching profile:", user.id, profileError.message);
     await supabase.auth.signOut();
-    return NextResponse.redirect(
-      new URL("/auth/login?error=oauth_failed", request.url)
-    );
+    return redirect("/auth/login?error=oauth_failed");
   }
 
   // 3B. Profile record genuinely not found -> fail closed
   if (!profile) {
     console.warn("[OAuth Callback] Profile not found for authenticated user:", user.id);
     await supabase.auth.signOut();
-    return NextResponse.redirect(
-      new URL("/auth/login?error=oauth_profile_missing", request.url)
-    );
+    return redirect("/auth/login?error=oauth_profile_missing");
   }
 
   // 4. Inactive account verification
   if (!profile.is_active) {
     console.warn("[OAuth Callback] Inactive account attempted login:", user.id);
     await supabase.auth.signOut();
-    return NextResponse.redirect(
-      new URL("/auth/login?error=oauth_inactive", request.url)
-    );
+    return redirect("/auth/login?error=oauth_inactive");
   }
 
   // 5. Customer role authorization (Strict fail-closed: reject admin, editor, viewer, unknown)
   if (profile.role !== "customer") {
     console.warn(`[OAuth Callback] Non-customer role '${profile.role}' attempted customer login:`, user.id);
     await supabase.auth.signOut();
-    return NextResponse.redirect(
-      new URL("/auth/login?error=oauth_not_customer", request.url)
-    );
+    return redirect("/auth/login?error=oauth_not_customer");
   }
 
   // 6. Staff email collision guard:
@@ -112,27 +109,21 @@ export async function GET(request: NextRequest) {
       if (staffCollisionError) {
         console.error("[OAuth Callback] Staff collision query error:", staffCollisionError.message);
         await supabase.auth.signOut();
-        return NextResponse.redirect(
-          new URL("/auth/login?error=oauth_failed", request.url)
-        );
+        return redirect("/auth/login?error=oauth_failed");
       }
 
       if (staffCollision && staffCollision.length > 0) {
         console.warn("[OAuth Callback] Active staff email collision detected for:", user.email);
         await supabase.auth.signOut();
-        return NextResponse.redirect(
-          new URL("/auth/login?error=oauth_not_customer", request.url)
-        );
+        return redirect("/auth/login?error=oauth_not_customer");
       }
     } catch (adminClientError) {
       console.error("[OAuth Callback] Failed to initialize admin client for collision check:", adminClientError);
       await supabase.auth.signOut();
-      return NextResponse.redirect(
-        new URL("/auth/login?error=oauth_failed", request.url)
-      );
+      return redirect("/auth/login?error=oauth_failed");
     }
   }
 
   // 7. Successful authentication and authorization -> redirect to safe customer route
-  return NextResponse.redirect(new URL(safeNext, request.url));
+  return redirect(safeNext);
 }

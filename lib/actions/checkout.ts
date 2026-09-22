@@ -77,11 +77,24 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
 
   if (error) {
     logError("checkout.create_order", error, { userId: user.id });
+    const errText = error.message || "";
+    let customerMessage = "Pesanan belum dapat dibuat. Periksa kembali keranjang dan data pengiriman Anda.";
+    if (errText.includes(SHIPPING_UNAVAILABLE_MESSAGE)) {
+      customerMessage = SHIPPING_UNAVAILABLE_MESSAGE;
+    } else if (errText.includes("memerlukan pemilihan varian")) {
+      customerMessage = "Salah satu produk memerlukan pemilihan varian. Silakan pilih varian terlebih dahulu.";
+    } else if (
+      errText.includes("Stok varian") ||
+      errText.includes("Stok produk") ||
+      errText.includes("tidak mencukupi") ||
+      errText.includes("tidak dapat dibeli") ||
+      errText.includes("belum memiliki harga jual")
+    ) {
+      customerMessage = errText;
+    }
     return {
       success: false,
-      message: error.message.includes(SHIPPING_UNAVAILABLE_MESSAGE)
-        ? SHIPPING_UNAVAILABLE_MESSAGE
-        : "Pesanan belum dapat dibuat. Periksa kembali keranjang dan data pengiriman Anda.",
+      message: customerMessage,
     };
   }
 

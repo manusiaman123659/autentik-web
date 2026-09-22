@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import {
   ChevronRight,
   CheckCircle2,
+  Check,
 } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/format";
 import { createClient } from "@/utils/supabase/client";
 import { useCart } from "@/components/cart/CartProvider";
+import { setDirectBuyItem, type DirectBuyItem } from "@/lib/direct-buy";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
@@ -97,22 +99,30 @@ export default function StoreProductDetail({
   const features: string[] = (product.features ?? []).map(String);
 
   async function handleBuyNow(qty: number) {
-    addItem(
-      {
-        ...product,
-        price: effectivePrice,
-        stock: effectiveStock,
-        variant_id: selectedVariant?.id ?? null,
-        variant_label: selectedVariant?.label ?? null,
-      },
-      qty
-    );
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push(`/auth/login?redirect=${encodeURIComponent("/store/checkout")}`);
+    if (hasVariants && !selectedVariant) {
       return;
     }
-    router.push("/store/checkout");
+    const directItem: DirectBuyItem = {
+      key: `${product.id}::${selectedVariant?.id ?? "default"}`,
+      id: product.id,
+      variant_id: selectedVariant?.id ?? null,
+      variant_label: selectedVariant?.label ?? null,
+      slug: product.slug,
+      name: product.name,
+      brand: product.brand,
+      image_url: product.image_url ?? null,
+      price: effectivePrice ?? 0,
+      stock: effectiveStock ?? 0,
+      quantity: qty,
+    };
+    setDirectBuyItem(directItem);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push(`/auth/login?redirect=${encodeURIComponent("/store/checkout?mode=direct")}`);
+      return;
+    }
+    router.push("/store/checkout?mode=direct");
   }
 
   return (
@@ -293,29 +303,44 @@ export default function StoreProductDetail({
             {/* Variant selector — mobile */}
             {hasVariants && (
               <div className="lg:hidden">
-                <h3 className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                  Pilih Varian
-                </h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {productVariants.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => setSelectedVariant(v)}
-                      className={`px-2.5 py-1.5 rounded-sm border text-[10px] font-medium transition-colors ${
-                        selectedVariant?.id === v.id
-                          ? "border-[#0EA5A0] bg-[#0EA5A0]/10 text-[#0EA5A0]"
-                          : v.stock === 0
-                            ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-50"
-                            : "border-[var(--border-subtle)] hover:border-[#0EA5A0]/50"
-                      }`}
-                      disabled={v.stock === 0}
-                      style={selectedVariant?.id !== v.id ? { color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" } : undefined}
-                    >
-                      {v.label}
-                      {v.stock === 0 && " (Habis)"}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                    Pilih Varian
+                  </h3>
+                  {selectedVariant && (
+                    <span className="text-[11px] font-semibold text-[#0EA5A0]">
+                      {selectedVariant.label}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {productVariants.map((v) => {
+                    const isSelected = selectedVariant?.id === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setSelectedVariant(v)}
+                        aria-pressed={isSelected}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs transition-all ${
+                          isSelected
+                            ? "border-[#0EA5A0] bg-[#0EA5A0]/15 text-[#0EA5A0] font-semibold ring-1 ring-[#0EA5A0] shadow-xs"
+                            : v.stock === 0
+                              ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-50"
+                              : "border-[var(--border-subtle)] hover:border-[#0EA5A0]/60 hover:bg-[#0EA5A0]/5"
+                        }`}
+                        disabled={v.stock === 0}
+                        style={!isSelected ? { color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" } : undefined}
+                      >
+                        {isSelected && <Check size={13} className="text-[#0EA5A0] flex-shrink-0" />}
+                        <span>{v.label}</span>
+                        {v.price_override != null && v.price_override !== product.price && (
+                          <span className="text-[10px] opacity-80">({formatRupiah(v.price_override)})</span>
+                        )}
+                        {v.stock === 0 && <span className="text-[10px] text-red-500">(Habis)</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -414,29 +439,44 @@ export default function StoreProductDetail({
             {/* Variant selector — desktop */}
             {hasVariants && (
               <div className="hidden lg:block rounded-sm border p-4" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-                <h3 className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                  Pilih Varian
-                </h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {productVariants.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => setSelectedVariant(v)}
-                      className={`px-2.5 py-1.5 rounded-sm border text-[10px] font-medium transition-colors ${
-                        selectedVariant?.id === v.id
-                          ? "border-[#0EA5A0] bg-[#0EA5A0]/10 text-[#0EA5A0]"
-                          : v.stock === 0
-                            ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-50"
-                            : "border-[var(--border-subtle)] hover:border-[#0EA5A0]/50"
-                      }`}
-                      disabled={v.stock === 0}
-                      style={selectedVariant?.id !== v.id ? { color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" } : undefined}
-                    >
-                      {v.label}
-                      {v.stock === 0 && " (Habis)"}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                    Pilih Varian
+                  </h3>
+                  {selectedVariant && (
+                    <span className="text-[11px] font-semibold text-[#0EA5A0]">
+                      {selectedVariant.label}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {productVariants.map((v) => {
+                    const isSelected = selectedVariant?.id === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setSelectedVariant(v)}
+                        aria-pressed={isSelected}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs transition-all ${
+                          isSelected
+                            ? "border-[#0EA5A0] bg-[#0EA5A0]/15 text-[#0EA5A0] font-semibold ring-1 ring-[#0EA5A0] shadow-xs"
+                            : v.stock === 0
+                              ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-50"
+                              : "border-[var(--border-subtle)] hover:border-[#0EA5A0]/60 hover:bg-[#0EA5A0]/5"
+                        }`}
+                        disabled={v.stock === 0}
+                        style={!isSelected ? { color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" } : undefined}
+                      >
+                        {isSelected && <Check size={13} className="text-[#0EA5A0] flex-shrink-0" />}
+                        <span>{v.label}</span>
+                        {v.price_override != null && v.price_override !== product.price && (
+                          <span className="text-[10px] opacity-80">({formatRupiah(v.price_override)})</span>
+                        )}
+                        {v.stock === 0 && <span className="text-[10px] text-red-500">(Habis)</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}

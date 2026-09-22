@@ -39,6 +39,7 @@ export interface ProductRow {
   seo_description?: string | null;
   related_ids?: string[] | null;
   deleted_at?: string | null;
+  has_active_variants?: boolean;
 }
 
 export interface OrderRow {
@@ -504,7 +505,7 @@ export async function listStoreProducts(): Promise<ProductRow[]> {
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("products")
-    .select("*")
+    .select("*, product_variants(id, is_active, stock, deleted_at)")
     .eq("product_type", "sparepart")
     .eq("is_store_visible", true)
     .is("deleted_at", null)
@@ -513,7 +514,18 @@ export async function listStoreProducts(): Promise<ProductRow[]> {
     console.error("[admin-data] store products", error);
     return [];
   }
-  return (data ?? []) as ProductRow[];
+  type StoreVariantInfo = { id: string; is_active: boolean; stock: number; deleted_at: string | null };
+  type StoreProductWithVariants = ProductRow & { product_variants?: StoreVariantInfo[] | null };
+
+  return ((data ?? []) as unknown as StoreProductWithVariants[]).map((p) => {
+    const activeVariants = Array.isArray(p.product_variants)
+      ? p.product_variants.filter((v) => v.is_active && !v.deleted_at)
+      : [];
+    return {
+      ...p,
+      has_active_variants: activeVariants.length > 0,
+    };
+  });
 }
 
 export async function getProduct(id: string): Promise<ProductRow | null> {

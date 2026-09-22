@@ -16,11 +16,11 @@ import { useCart } from "@/components/cart/CartProvider";
 import { formatRupiah } from "@/lib/format";
 
 function QtyStepper({
-  id,
+  itemKey,
   quantity,
   stock,
 }: {
-  id: string;
+  itemKey: string;
   quantity: number;
   stock: number;
 }) {
@@ -29,7 +29,7 @@ function QtyStepper({
     <div className="inline-flex items-center rounded-lg border" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
       <button
         type="button"
-        onClick={() => updateQty(id, quantity - 1)}
+        onClick={() => updateQty(itemKey, quantity - 1)}
         disabled={quantity <= 1}
         aria-label="Kurangi jumlah"
         className="w-9 h-9 flex items-center justify-center disabled:opacity-40 transition-colors"
@@ -42,7 +42,7 @@ function QtyStepper({
       </span>
       <button
         type="button"
-        onClick={() => updateQty(id, quantity + 1)}
+        onClick={() => updateQty(itemKey, quantity + 1)}
         disabled={quantity >= stock}
         aria-label="Tambah jumlah"
         className="w-9 h-9 flex items-center justify-center disabled:opacity-40 transition-colors"
@@ -133,7 +133,7 @@ export default function CartClient() {
 
               {items.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.key}
                   className="rounded-2xl border shadow-sm p-4 sm:p-5 flex gap-4"
                   style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
                 >
@@ -164,13 +164,18 @@ export default function CartClient() {
                         <p className="text-[11px] font-semibold uppercase tracking-wider mt-1" style={{ color: "var(--text-muted)" }}>
                           {item.brand}
                         </p>
+                        {item.variant_label ? (
+                          <p className="text-xs font-semibold text-[#0EA5A0] mt-0.5">
+                            Varian: {item.variant_label}
+                          </p>
+                        ) : null}
                         <p className="text-sm font-semibold mt-1.5" style={{ color: "var(--text-primary)" }}>
                           {formatRupiah(item.price)}
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.key)}
                         aria-label={`Hapus ${item.name} dari keranjang`}
                         className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors flex-shrink-0"
                       >
@@ -179,7 +184,7 @@ export default function CartClient() {
                     </div>
 
                     <div className="flex items-center justify-between flex-wrap gap-3">
-                      <QtyStepper id={item.id} quantity={item.quantity} stock={item.stock} />
+                      <QtyStepper itemKey={item.key} quantity={item.quantity} stock={item.stock} />
                       <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
                         {formatRupiah(item.price * item.quantity)}
                       </p>
