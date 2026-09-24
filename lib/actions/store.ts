@@ -6,6 +6,7 @@ import type { ZodError } from "zod";
 import { getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 import {
+  manualOrderRefundSchema,
   orderStatusSchema,
   stockUpdateSchema,
 } from "@/lib/validations/storeSchema";
@@ -128,6 +129,45 @@ export async function deleteOrder(orderId: string): Promise<ActionResult> {
   revalidatePath("/admin");
 
   return { success: true, message: "Pesanan berhasil diarsipkan." };
+}
+
+export async function recordManualOrderRefund(orderId: string, input: unknown): Promise<ActionResult> {
+  const admin = await getAdminUser();
+  if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
+
+  const parsed = manualOrderRefundSchema.safeParse({
+    ...(typeof input === "object" && input !== null ? input : {}),
+    orderId,
+  });
+  if (!parsed.success) {
+    return { success: false, message: "Periksa kembali isian.", errors: toErrors(parsed.error) };
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+  const { data: recorded, error } = await supabase.rpc("record_manual_order_refund", {
+    p_order_id: parsed.data.orderId,
+    p_reference: parsed.data.reference || null,
+    p_note: parsed.data.note || null,
+  });
+
+  if (error) {
+    logError("action.record_manual_order_refund", error.message, {
+      orderId: parsed.data.orderId,
+      code: error.code,
+    });
+    return {
+      success: false,
+      message: "Pengembalian dana tidak dapat dicatat. Muat ulang pesanan dan coba lagi.",
+    };
+  }
+
+  revalidateOrderPaths(parsed.data.orderId);
+  if (recorded !== true) {
+    return { success: true, message: "Pengembalian dana sudah tercatat sebelumnya." };
+  }
+
+  return { success: true, message: "Pengembalian dana berhasil dicatat." };
 }
 
 export async function restoreOrder(orderId: string): Promise<ActionResult> {

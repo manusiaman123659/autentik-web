@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Badge, Card, statusTone, formatRupiah } from "@/components/admin/ui";
+import ManualOrderRefundForm from "@/components/admin/ManualOrderRefundForm";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/validations/storeSchema";
 import { createClient } from "@/utils/supabase/client";
 
@@ -22,6 +23,7 @@ interface Props {
 
 export default function AdminOrderDetailClient({
   orderId,
+  orderCode,
   initialPaymentStatus,
   initialOrderStatus,
   paymentMethod,
@@ -122,6 +124,13 @@ export default function AdminOrderDetailClient({
               Lihat Halaman Pembayaran →
             </a>
           </div>
+        )}
+        {paymentStatus === "paid" && orderStatus === "cancelled" && (
+          <ManualOrderRefundForm
+            orderId={orderId}
+            orderCode={orderCode}
+            onRecorded={() => setPaymentStatus("refunded")}
+          />
         )}
       </div>
     </Card>

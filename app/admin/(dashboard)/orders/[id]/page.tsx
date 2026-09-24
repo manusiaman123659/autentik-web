@@ -86,6 +86,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         </Card>
 
         <AdminOrderDetailClient
+          key={`${order.id}-${order.payment_status}-${order.status}`}
           orderId={order.id}
           orderCode={order.order_code}
           initialPaymentStatus={order.payment_status ?? ""}

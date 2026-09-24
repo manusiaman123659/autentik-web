@@ -41,6 +41,19 @@ export const orderStatusSchema = z
 
 export type OrderStatusFormData = z.infer<typeof orderStatusSchema>;
 
+export const manualOrderRefundSchema = z
+  .object({
+    orderId: z.string().uuid("ID pesanan tidak valid"),
+    reference: z.string().trim().max(120, "Referensi maksimal 120 karakter").default(""),
+    note: z.string().trim().max(500, "Catatan maksimal 500 karakter").default(""),
+  })
+  .refine((value) => value.reference.length > 0 || value.note.length > 0, {
+    message: "Isi referensi atau catatan pengembalian dana",
+    path: ["reference"],
+  });
+
+export type ManualOrderRefundFormData = z.input<typeof manualOrderRefundSchema>;
+
 export const checkoutOrderSchema = z.object({
   customerName: z.string().min(2, "Nama pembeli minimal 2 karakter"),
   customerEmail: z.string().email("Format email tidak valid").or(z.literal("")).default(""),

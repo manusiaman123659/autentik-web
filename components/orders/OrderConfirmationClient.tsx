@@ -263,7 +263,7 @@ export default function OrderConfirmationClient({
                 : isFailed
                   ? "Pembayaran tidak berhasil. Hubungi tim kami untuk bantuan lanjutan."
                   : isRefunded
-                    ? "Dana pembayaran telah dikembalikan sesuai status pesanan."
+                    ? "Pengembalian dana telah dicatat oleh tim kami."
                     : isVerifyingReturn
                       ? "Pembayaran sedang dikonfirmasi. Status akan diperbarui otomatis."
                       : "Terima kasih, pesanan Anda telah kami terima dan akan segera diproses."}
@@ -300,7 +300,7 @@ export default function OrderConfirmationClient({
           const orderSteps: OrderStep[] = effectiveOrderStatus === "cancelled"
             ? [
                 { key: "created", label: "Pesanan Dibuat", done: true },
-                ...(isPaid ? [{ key: "payment", label: "Pembayaran Diterima", done: true }] : []),
+                ...(isPaid || isRefunded ? [{ key: "payment", label: "Pembayaran Diterima", done: true }] : []),
                 { key: "cancelled", label: "Dibatalkan", done: true, cancelled: true },
               ]
             : [
@@ -533,7 +533,7 @@ export default function OrderConfirmationClient({
               <h2 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Pembayaran Dikembalikan</h2>
             </div>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              Status pembayaran tercatat sebagai refund. Hubungi tim kami jika Anda memerlukan rincian pengembalian dana.
+              Pengembalian dana untuk pembayaran pesanan ini telah dicatat selesai. Jika dana belum diterima, silakan hubungi PPIC AKA untuk informasi lebih lanjut.
             </p>
           </div>
         ) : (
