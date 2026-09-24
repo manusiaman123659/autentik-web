@@ -8,7 +8,6 @@ import { createClient } from "@/utils/supabase/server";
 import {
   orderStatusSchema,
   stockUpdateSchema,
-  type OrderStatus,
 } from "@/lib/validations/storeSchema";
 import { recordAudit } from "@/lib/audit";
 import { logError } from "@/lib/logger";
@@ -22,14 +21,6 @@ function toErrors(error: ZodError): Record<string, string> {
   }
   return out;
 }
-
-const NORMAL_ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
-  pending: ["pending", "processing"],
-  processing: ["processing", "shipped"],
-  shipped: ["shipped", "completed"],
-  completed: ["completed"],
-  cancelled: ["cancelled"],
-};
 
 function revalidateOrderPaths(id: string) {
   revalidatePath("/admin/orders");
@@ -80,55 +71,24 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
     return { success: true, message: "Pesanan dibatalkan dan stok berhasil dikembalikan." };
   }
 
-  const { data: currentOrder, error: currentError } = await supabase
-    .from("orders")
-    .select("status")
-    .eq("id", id)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  if (currentError) {
-    logError("action.update_order.read_current", currentError.message, {
-      orderId: id,
-      code: currentError.code,
-    });
-    return { success: false, message: "Status pesanan tidak dapat diperiksa. Silakan coba lagi." };
-  }
-  if (!currentOrder) {
-    return { success: false, message: "Pesanan tidak ditemukan atau sudah diarsipkan." };
-  }
-
-  const currentStatus = currentOrder.status as OrderStatus;
-  if (!NORMAL_ORDER_TRANSITIONS[currentStatus]?.includes(data.status)) {
-    return {
-      success: false,
-      message: "Perubahan status pesanan tidak diizinkan. Muat ulang halaman untuk melihat status terbaru.",
-    };
-  }
-
-  const patch: Record<string, unknown> = {
-    status: data.status,
-    tracking_courier: data.trackingCourier || null,
-    tracking_number: data.trackingNumber || null,
-  };
-
-  const { data: updatedOrder, error } = await supabase
-    .from("orders")
-    .update(patch as never)
-    .eq("id", id)
-    .eq("status", currentStatus)
-    .is("deleted_at", null)
-    .select("id")
-    .maybeSingle();
+  const { data: updated, error } = await supabase.rpc("update_order_fulfillment", {
+    p_order_id: id,
+    p_status: data.status,
+    p_tracking_courier: data.trackingCourier || null,
+    p_tracking_number: data.trackingNumber || null,
+  });
   if (error) {
-    logError("action.update_order", error.message, { orderId: id, code: error.code });
+    logError("action.update_order_fulfillment", error.message, {
+      orderId: id,
+      code: error.code,
+    });
     return { success: false, message: "Gagal memperbarui status pesanan. Silakan coba lagi." };
   }
-  if (!updatedOrder) {
+  if (updated !== true) {
     revalidateOrderPaths(id);
     return {
       success: false,
-      message: "Status pesanan telah berubah. Muat ulang halaman sebelum mencoba kembali.",
+      message: "Pesanan tidak ditemukan. Muat ulang halaman sebelum mencoba kembali.",
     };
   }
 

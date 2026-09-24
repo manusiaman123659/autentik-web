@@ -79,6 +79,23 @@ function buildSnapshotFromDb(db: DbOrder): OrderSnapshot {
 const TERMINAL_PAYMENT_STATUSES = new Set(["paid", "failed", "refunded"]);
 const VERIFICATION_TIMEOUT_MS = 60_000;
 
+function getPaidOrderDescription(status: string): string {
+  switch (status) {
+    case "pending":
+      return "Pesanan Anda telah dibayar dan akan segera diproses oleh tim kami.";
+    case "processing":
+      return "Pembayaran Anda telah terkonfirmasi dan pesanan sedang diproses oleh tim kami.";
+    case "shipped":
+      return "Pembayaran Anda telah terkonfirmasi dan pesanan telah dikirim.";
+    case "completed":
+      return "Pembayaran Anda telah terkonfirmasi dan pesanan telah selesai.";
+    case "cancelled":
+      return "Pembayaran Anda telah tercatat, tetapi pesanan telah dibatalkan.";
+    default:
+      return "Pembayaran Anda telah terkonfirmasi.";
+  }
+}
+
 export default function OrderConfirmationClient({
   code,
   waNumber,
@@ -434,7 +451,7 @@ export default function OrderConfirmationClient({
               <h2 className="text-base font-bold text-emerald-700 dark:text-emerald-400">Pembayaran Terkonfirmasi</h2>
             </div>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              Pesanan Anda telah dibayar dan akan segera diproses oleh tim kami.
+              {getPaidOrderDescription(effectiveOrderStatus)}
             </p>
             {(livePaidAt ?? dbOrder.paid_at) && (
               <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
