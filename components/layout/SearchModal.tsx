@@ -57,6 +57,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         .eq("product_type", "b2b_system")
         .eq("status", "published")
         .eq("is_active", true)
+        .is("deleted_at", null)
         .order("sort_order", { ascending: true }),
       supabase
         .from("careers")

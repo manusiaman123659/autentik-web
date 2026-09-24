@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Archive } from "lucide-react";
 import { deleteProduct } from "@/lib/actions/products";
 import { useToast } from "@/components/admin/Toast";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
@@ -39,13 +39,13 @@ export default function DeleteProductButton({
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 hover:border-red-300 dark:hover:border-red-700 transition-colors"
       >
-        <Trash2 size={13} />
-        Hapus
+        <Archive size={13} />
+        Arsipkan Produk
       </button>
       {open && (
         <ConfirmDialog
-          title={`Hapus ${name ? `"${name}"` : "item ini"}?`}
-          description="Apakah Anda yakin? Data yang dihapus tidak dapat dipulihkan."
+          title={`Arsipkan ${name ? `"${name}"` : "produk ini"}?`}
+          description="Produk akan diarsipkan dan tidak lagi tampil di halaman publik."
           onConfirm={handleConfirm}
           onCancel={() => setOpen(false)}
           busy={busy}

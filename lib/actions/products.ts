@@ -327,24 +327,24 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: existing } = await supabase
+  const { data: archived, error } = await supabase
     .from("products")
-    .select("brochure_url, model_3d_url")
+    .update({ deleted_at: new Date().toISOString() })
     .eq("id", id)
+    .is("deleted_at", null)
+    .select("id")
     .maybeSingle();
-
-  const { error } = await supabase.from("products").delete().eq("id", id);
   if (error) {
-    console.error("[action] delete product", error);
-    return { success: false, message: "Gagal menghapus produk. " + error.message };
+    console.error("[action] archive product", { code: error.code, message: error.message });
+    return { success: false, message: "Gagal mengarsipkan produk. Silakan coba lagi." };
   }
 
-  // Remove the brochure/model files so they do not orphan in the bucket.
-  await removeStorageObjectIfAny(supabase, existing?.brochure_url, "brochure on product delete");
-  await removeStorageObjectIfAny(supabase, existing?.model_3d_url, "3d model on product delete");
+  if (!archived) {
+    return { success: false, message: "Produk tidak ditemukan atau sudah diarsipkan." };
+  }
 
-  await recordAudit("product.deleted", "product", id, { id });
+  await recordAudit("product.archived", "product", id, { id });
   revalidateProductRoutes();
 
-  return { success: true, message: "Produk berhasil dihapus." };
+  return { success: true, message: "Produk berhasil diarsipkan." };
 }

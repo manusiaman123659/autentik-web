@@ -36,7 +36,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .from("products")
         .select("slug, updated_at")
         .eq("product_type", "sparepart")
-        .eq("is_store_visible", true),
+        .eq("is_store_visible", true)
+        .is("deleted_at", null),
       supabase.from("careers").select("slug, updated_at"),
     ]);
 
