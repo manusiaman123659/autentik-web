@@ -5,7 +5,11 @@ import { cookies } from "next/headers";
 import type { ZodError } from "zod";
 import { getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
-import { orderStatusSchema, stockUpdateSchema } from "@/lib/validations/storeSchema";
+import {
+  orderStatusSchema,
+  stockUpdateSchema,
+  type OrderStatus,
+} from "@/lib/validations/storeSchema";
 import { recordAudit } from "@/lib/audit";
 import { logError } from "@/lib/logger";
 import type { ActionResult } from "./products";
@@ -17,6 +21,21 @@ function toErrors(error: ZodError): Record<string, string> {
     if (!out[key]) out[key] = issue.message;
   }
   return out;
+}
+
+const NORMAL_ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+  pending: ["pending", "processing"],
+  processing: ["processing", "shipped"],
+  shipped: ["shipped", "completed"],
+  completed: ["completed"],
+  cancelled: ["cancelled"],
+};
+
+function revalidateOrderPaths(id: string) {
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/orders/" + id);
+  revalidatePath("/admin/stok");
+  revalidatePath("/admin");
 }
 
 export async function updateOrderStatus(id: string, input: unknown): Promise<ActionResult> {
@@ -31,46 +50,90 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
-
-  const patch: Record<string, unknown> = {
-    status: data.status,
-    tracking_courier: data.trackingCourier || null,
-    tracking_number: data.trackingNumber || null,
-    cancel_reason: data.cancelReason || null,
-  };
-
   const audit: Record<string, unknown> = { status: data.status };
 
-  // Cancel => restore stok atomik via RPC (guard anti double-restore di DB).
-  // status/cancel_reason sudah di-set RPC dalam satu transaksi; patch biasa
-  // tetap jalan untuk field tracking/opsional (idempotent).
-  let stockRestored = false;
+  // Cancellation is authoritative in the RPC so status and stock remain atomic.
   if (data.status === "cancelled") {
     const { data: restored, error: rpcError } = await supabase.rpc("cancel_order", {
       p_order_id: id,
       p_cancel_reason: data.cancelReason || null,
     });
     if (rpcError) {
-      logError("action.cancel_order", rpcError);
-      return { success: false, message: "Gagal membatalkan pesanan dan mengembalikan stok. " + rpcError.message };
+      logError("action.cancel_order", rpcError.message, {
+        orderId: id,
+        code: rpcError.code,
+      });
+      return {
+        success: false,
+        message: "Pesanan tidak dapat dibatalkan. Pastikan status dan referensi stok pesanan masih valid.",
+      };
     }
-    stockRestored = restored === true;
+
+    if (restored !== true) {
+      revalidateOrderPaths(id);
+      return { success: true, message: "Pesanan sudah dibatalkan. Stok tidak diubah kembali." };
+    }
+
+    await recordAudit("order.status_changed", "order", id, audit);
+    await recordAudit("order.stock_restored", "order", id, { order_id: id, restored: true });
+    revalidateOrderPaths(id);
+    return { success: true, message: "Pesanan dibatalkan dan stok berhasil dikembalikan." };
   }
 
-  const { error } = await supabase.from("orders").update(patch as never).eq("id", id);
+  const { data: currentOrder, error: currentError } = await supabase
+    .from("orders")
+    .select("status")
+    .eq("id", id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (currentError) {
+    logError("action.update_order.read_current", currentError.message, {
+      orderId: id,
+      code: currentError.code,
+    });
+    return { success: false, message: "Status pesanan tidak dapat diperiksa. Silakan coba lagi." };
+  }
+  if (!currentOrder) {
+    return { success: false, message: "Pesanan tidak ditemukan atau sudah diarsipkan." };
+  }
+
+  const currentStatus = currentOrder.status as OrderStatus;
+  if (!NORMAL_ORDER_TRANSITIONS[currentStatus]?.includes(data.status)) {
+    return {
+      success: false,
+      message: "Perubahan status pesanan tidak diizinkan. Muat ulang halaman untuk melihat status terbaru.",
+    };
+  }
+
+  const patch: Record<string, unknown> = {
+    status: data.status,
+    tracking_courier: data.trackingCourier || null,
+    tracking_number: data.trackingNumber || null,
+  };
+
+  const { data: updatedOrder, error } = await supabase
+    .from("orders")
+    .update(patch as never)
+    .eq("id", id)
+    .eq("status", currentStatus)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
   if (error) {
-    logError("action.update_order", error);
-    return { success: false, message: "Gagal memperbarui pesanan. " + error.message };
+    logError("action.update_order", error.message, { orderId: id, code: error.code });
+    return { success: false, message: "Gagal memperbarui status pesanan. Silakan coba lagi." };
+  }
+  if (!updatedOrder) {
+    revalidateOrderPaths(id);
+    return {
+      success: false,
+      message: "Status pesanan telah berubah. Muat ulang halaman sebelum mencoba kembali.",
+    };
   }
 
   await recordAudit("order.status_changed", "order", id, audit);
-  if (data.status === "cancelled" && stockRestored) {
-    await recordAudit("order.stock_restored", "order", id, { order_id: id, restored: true });
-  }
-  revalidatePath("/admin/orders");
-  revalidatePath("/admin/orders/" + id);
-  revalidatePath("/admin/stok");
-  revalidatePath("/admin");
+  revalidateOrderPaths(id);
 
   return { success: true, message: "Status pesanan diperbarui." };
 }

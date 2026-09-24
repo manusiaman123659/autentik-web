@@ -4,9 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Save } from "lucide-react";
 import { updateOrderStatus } from "@/lib/actions/store";
-import { ORDER_STATUSES, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/validations/storeSchema";
+import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/validations/storeSchema";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
 import { useToast } from "@/components/admin/Toast";
+
+const ORDER_STATUS_OPTIONS: Record<OrderStatus, readonly OrderStatus[]> = {
+  pending: ["pending", "processing", "cancelled"],
+  processing: ["processing", "shipped", "cancelled"],
+  shipped: ["shipped", "completed"],
+  completed: ["completed"],
+  cancelled: ["cancelled"],
+};
 
 export default function OrderStatusForm({
   orderId,
@@ -28,6 +36,8 @@ export default function OrderStatusForm({
   const [cancelReason, setCancelReason] = useState(initial.cancelReason);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const statusOptions = ORDER_STATUS_OPTIONS[initial.status];
+  const isTerminal = initial.status === "completed" || initial.status === "cancelled";
 
   const handleSubmit = async () => {
     setBusy(true);
@@ -53,17 +63,24 @@ export default function OrderStatusForm({
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        {ORDER_STATUSES.map((s) => (
+        {statusOptions.map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => setStatus(s)}
+            disabled={isTerminal}
             className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${toneFor(s)}`}
           >
             {ORDER_STATUS_LABELS[s]}
           </button>
         ))}
       </div>
+
+      {isTerminal && (
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
+          Status ini bersifat terminal dan tidak dapat diubah melalui alur rutin.
+        </p>
+      )}
 
       {status === "shipped" && (
         <div className="grid sm:grid-cols-2 gap-4">
@@ -95,7 +112,7 @@ export default function OrderStatusForm({
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={busy}
+        disabled={busy || isTerminal}
         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0C8C87] transition-colors disabled:opacity-60"
       >
         {busy ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}

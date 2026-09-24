@@ -111,6 +111,11 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                 <p className="text-xs text-slate-400">
                   {it.sku ?? "—"} × {it.quantity}
                 </p>
+                {it.variant_label && (
+                  <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Varian: {it.variant_label}
+                  </p>
+                )}
               </div>
               <span className="text-sm font-semibold text-slate-900 dark:text-white shrink-0">
                 {formatRupiah(it.unit_price * it.quantity)}
@@ -126,6 +131,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         </div>
         <div className="p-5">
           <OrderStatusForm
+            key={`${order.id}-${order.status}`}
             orderId={order.id}
             initial={{
               status: order.status,

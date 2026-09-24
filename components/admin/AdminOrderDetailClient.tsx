@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertTriangle } from "lucide-react";
 import { Badge, Card, statusTone, formatRupiah } from "@/components/admin/ui";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/validations/storeSchema";
 import { createClient } from "@/utils/supabase/client";
@@ -69,6 +70,14 @@ export default function AdminOrderDetailClient({
         <h2 className="text-sm font-bold text-slate-900 dark:text-white">Ringkasan Pembayaran</h2>
       </div>
       <div className="p-5 space-y-3 text-sm">
+        {paymentStatus === "paid" && orderStatus === "cancelled" && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <p className="text-xs font-semibold leading-relaxed">
+              Pembayaran diterima untuk pesanan yang telah dibatalkan. Perlu penanganan pembayaran atau refund secara manual.
+            </p>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-slate-500 dark:text-slate-400">Metode</span>
           <span className="font-medium text-slate-900 dark:text-white uppercase">{paymentMethod ?? "—"}</span>

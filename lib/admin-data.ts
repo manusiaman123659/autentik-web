@@ -73,6 +73,8 @@ export interface OrderItemRow {
   id: string;
   order_id: string;
   product_id?: string | null;
+  variant_id?: string | null;
+  variant_label?: string | null;
   product_name: string;
   sku?: string | null;
   variant?: Record<string, unknown> | null;
