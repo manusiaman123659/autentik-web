@@ -32,7 +32,7 @@ function verifySignature(
   return expectedSignature === incomingSignature;
 }
 
-export async function POST(request: NextRequest) {
+async function processNotification(request: NextRequest) {
   const rawBody = await request.text();
 
   // --- Parse body ---
@@ -121,16 +121,35 @@ export async function POST(request: NextRequest) {
     isPaid,
     transactionStatus,
     rpcResult,
-    error: rpcError ? { message: rpcError.message, code: rpcError.code } : null,
+    error: rpcError ? { code: rpcError.code } : null,
   });
 
   if (rpcError) {
     logError("webhook.midtrans.rpc_failed", {
       orderCode,
       isPaid,
-      rpcError: rpcError.message,
+      transactionStatus,
+      errorCode: rpcError.code,
     });
+    return NextResponse.json(
+      { received: false, error: "Temporary processing failure" },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ received: true }, { status: 200 });
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    return await processNotification(request);
+  } catch (error) {
+    logError("webhook.midtrans.unexpected_error", {
+      errorType: error instanceof Error ? error.name : "UnknownError",
+    });
+    return NextResponse.json(
+      { received: false, error: "Temporary processing failure" },
+      { status: 500 },
+    );
+  }
 }
