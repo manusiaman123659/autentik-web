@@ -10,9 +10,11 @@ import ConfirmDialog from "@/components/admin/ConfirmDialog";
 export default function OrderDeleteButton({
   orderId,
   orderCode,
+  disabled = false,
 }: {
   orderId: string;
   orderCode: string;
+  disabled?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -35,7 +37,9 @@ export default function OrderDeleteButton({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors"
+        disabled={disabled}
+        title={disabled ? "Selesaikan rekonsiliasi pembayaran sebelum mengarsipkan pesanan." : undefined}
+        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Trash2 size={15} />
         Hapus Pesanan

@@ -27,6 +27,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   ]);
   if (!data) notFound();
   const { order, items } = data;
+  const needsPaymentReconciliation = order.status === "cancelled" && order.payment_status === "paid";
   const bankAccount = order.payment_method === "transfer"
     ? await getAdminBankAccount()
     : null;
@@ -149,11 +150,21 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         </div>
         <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-            Hapus pesanan ini secara permanen. Hanya pesanan berstatus{" "}
-            <span className="font-semibold text-slate-700 dark:text-slate-200">Dibatalkan</span> yang
-            bisa dihapus — stok otomatis dikembalikan saat dibatalkan.
+            {needsPaymentReconciliation
+              ? "Pesanan belum dapat diarsipkan dari halaman ini sampai rekonsiliasi pembayaran selesai."
+              : (
+                <>
+                  Hapus pesanan ini secara permanen. Hanya pesanan berstatus{" "}
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">Dibatalkan</span> yang
+                  bisa dihapus — stok otomatis dikembalikan saat dibatalkan.
+                </>
+              )}
           </p>
-          <OrderDeleteButton orderId={order.id} orderCode={order.order_code} />
+          <OrderDeleteButton
+            orderId={order.id}
+            orderCode={order.order_code}
+            disabled={needsPaymentReconciliation}
+          />
         </div>
       </Card>
       </div>

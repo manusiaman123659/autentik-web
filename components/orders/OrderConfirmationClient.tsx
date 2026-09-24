@@ -15,6 +15,7 @@ import {
   Clock,
   Circle,
   RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import type { OrderSnapshot } from "@/lib/order-snapshot";
 import { formatRupiah } from "@/lib/format";
@@ -136,6 +137,7 @@ export default function OrderConfirmationClient({
   const isFailed = effectivePaymentStatus === "failed";
   const isRefunded = effectivePaymentStatus === "refunded";
   const isPending = effectivePaymentStatus === "pending";
+  const needsPaymentFollowUp = isPaid && effectiveOrderStatus === "cancelled";
   const isVerifyingReturn = paymentReturn && isPending && !verificationTimedOut;
 
   // Keep automatic verification bounded; browser reconnects are allowed only inside this window.
@@ -206,15 +208,17 @@ export default function OrderConfirmationClient({
     }
   };
 
-  const paymentBadge = isPaid
-    ? { label: "Pembayaran Berhasil", className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" }
-    : isFailed
-      ? { label: "Pembayaran Gagal", className: "bg-red-500/15 text-red-600 dark:text-red-400" }
-      : isRefunded
-        ? { label: "Pembayaran Dikembalikan", className: "bg-slate-500/15 text-slate-600 dark:text-slate-300" }
-        : isVerifyingReturn
-          ? { label: "Memverifikasi Pembayaran", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" }
-          : { label: "Menunggu Pembayaran", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" };
+  const paymentBadge = needsPaymentFollowUp
+    ? { label: "Pembayaran Tercatat", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" }
+    : isPaid
+      ? { label: "Pembayaran Berhasil", className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" }
+      : isFailed
+        ? { label: "Pembayaran Gagal", className: "bg-red-500/15 text-red-600 dark:text-red-400" }
+        : isRefunded
+          ? { label: "Pembayaran Dikembalikan", className: "bg-slate-500/15 text-slate-600 dark:text-slate-300" }
+          : isVerifyingReturn
+            ? { label: "Memverifikasi Pembayaran", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" }
+            : { label: "Menunggu Pembayaran", className: "bg-amber-500/15 text-amber-600 dark:text-amber-400" };
 
   return (
     <>
@@ -223,8 +227,10 @@ export default function OrderConfirmationClient({
       {/* Header */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
-          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${isPaid ? "bg-emerald-500/15" : isFailed ? "bg-red-500/15" : "bg-slate-500/15"}`}>
-            {isFailed ? (
+          <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${needsPaymentFollowUp ? "bg-amber-500/15" : isPaid ? "bg-emerald-500/15" : isFailed ? "bg-red-500/15" : "bg-slate-500/15"}`}>
+            {needsPaymentFollowUp ? (
+              <AlertTriangle size={32} className="text-amber-500" />
+            ) : isFailed ? (
               <XCircle size={32} className="text-red-500" />
             ) : isRefunded ? (
               <RotateCcw size={30} className="text-slate-500" />
@@ -237,26 +243,30 @@ export default function OrderConfirmationClient({
             )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {isPaid
-              ? "Pembayaran Berhasil"
-              : isFailed
-                ? "Pembayaran Gagal"
-                : isRefunded
-                  ? "Pembayaran Dikembalikan"
-                  : isVerifyingReturn
-                    ? "Sedang memverifikasi pembayaran..."
-                    : "Pesanan Berhasil Dibuat"}
+            {needsPaymentFollowUp
+              ? "Pesanan Dibatalkan"
+              : isPaid
+                ? "Pembayaran Berhasil"
+                : isFailed
+                  ? "Pembayaran Gagal"
+                  : isRefunded
+                    ? "Pembayaran Dikembalikan"
+                    : isVerifyingReturn
+                      ? "Sedang memverifikasi pembayaran..."
+                      : "Pesanan Berhasil Dibuat"}
           </h1>
           <p className="text-sm mt-2" style={{ color: "var(--text-secondary)" }}>
-            {isPaid
-              ? "Pembayaran Anda telah terkonfirmasi. Pesanan akan segera diproses."
-              : isFailed
-                ? "Pembayaran tidak berhasil. Hubungi tim kami untuk bantuan lanjutan."
-                : isRefunded
-                  ? "Dana pembayaran telah dikembalikan sesuai status pesanan."
-                  : isVerifyingReturn
-                    ? "Pembayaran sedang dikonfirmasi. Status akan diperbarui otomatis."
-                    : "Terima kasih, pesanan Anda telah kami terima dan akan segera diproses."}
+            {needsPaymentFollowUp
+              ? "Pembayaran Anda telah tercatat, tetapi pesanan telah dibatalkan dan tidak akan dilanjutkan ke proses pemenuhan."
+              : isPaid
+                ? "Pembayaran Anda telah terkonfirmasi. Pesanan akan segera diproses."
+                : isFailed
+                  ? "Pembayaran tidak berhasil. Hubungi tim kami untuk bantuan lanjutan."
+                  : isRefunded
+                    ? "Dana pembayaran telah dikembalikan sesuai status pesanan."
+                    : isVerifyingReturn
+                      ? "Pembayaran sedang dikonfirmasi. Status akan diperbarui otomatis."
+                      : "Terima kasih, pesanan Anda telah kami terima dan akan segera diproses."}
           </p>
           <div className="inline-flex items-center gap-3 mt-5 px-5 py-2.5 rounded-xl border shadow-sm" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
@@ -286,13 +296,20 @@ export default function OrderConfirmationClient({
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         {/* Order Progress Tracker */}
         {(() => {
-          const orderSteps = [
-            { key: "created", label: "Pesanan Dibuat", done: true },
-            { key: "payment", label: "Pembayaran Diterima", done: isPaid },
-            { key: "processing", label: "Diproses", done: ["processing", "shipped", "completed"].includes(effectiveOrderStatus || "") },
-            { key: "shipped", label: "Dikirim", done: ["shipped", "completed"].includes(effectiveOrderStatus || "") },
-            { key: "completed", label: "Selesai", done: effectiveOrderStatus === "completed" },
-          ];
+          type OrderStep = { key: string; label: string; done: boolean; cancelled?: boolean };
+          const orderSteps: OrderStep[] = effectiveOrderStatus === "cancelled"
+            ? [
+                { key: "created", label: "Pesanan Dibuat", done: true },
+                ...(isPaid ? [{ key: "payment", label: "Pembayaran Diterima", done: true }] : []),
+                { key: "cancelled", label: "Dibatalkan", done: true, cancelled: true },
+              ]
+            : [
+                { key: "created", label: "Pesanan Dibuat", done: true },
+                { key: "payment", label: "Pembayaran Diterima", done: isPaid },
+                { key: "processing", label: "Diproses", done: ["processing", "shipped", "completed"].includes(effectiveOrderStatus || "") },
+                { key: "shipped", label: "Dikirim", done: ["shipped", "completed"].includes(effectiveOrderStatus || "") },
+                { key: "completed", label: "Selesai", done: effectiveOrderStatus === "completed" },
+              ];
           const currentIdx = orderSteps.findIndex((s) => !s.done);
 
           return (
@@ -309,18 +326,22 @@ export default function OrderConfirmationClient({
                       {idx > 0 && (
                         <div
                           className="absolute top-4 right-1/2 w-full h-0.5 -z-0"
-                          style={{ backgroundColor: orderSteps[idx - 1].done ? "#0EA5A0" : "var(--border-subtle)" }}
+                          style={{ backgroundColor: step.cancelled ? "#EF4444" : orderSteps[idx - 1].done ? "#0EA5A0" : "var(--border-subtle)" }}
                         />
                       )}
                       {/* Circle */}
                       <div className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors ${
-                        step.done
+                        step.cancelled
+                          ? "bg-red-500 border-red-500"
+                          : step.done
                           ? "bg-[#0EA5A0] border-[#0EA5A0]"
                           : isCurrent
                             ? "border-[#0EA5A0] bg-white dark:bg-slate-900 animate-pulse"
                             : "border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900"
                       }`}>
-                        {step.done ? (
+                        {step.cancelled ? (
+                          <XCircle size={16} className="text-white" />
+                        ) : step.done ? (
                           <CheckCircle2 size={16} className="text-white" />
                         ) : isCurrent ? (
                           <Clock size={14} className="text-[#0EA5A0]" />
@@ -330,7 +351,11 @@ export default function OrderConfirmationClient({
                       </div>
                       {/* Label */}
                       <p className={`text-[11px] mt-2 text-center font-medium leading-tight ${
-                        step.done || isCurrent ? "text-[#0EA5A0]" : "text-gray-400 dark:text-gray-500"
+                        step.cancelled
+                          ? "text-red-600 dark:text-red-400"
+                          : step.done || isCurrent
+                            ? "text-[#0EA5A0]"
+                            : "text-gray-400 dark:text-gray-500"
                       }`}>
                         {step.label}
                       </p>
@@ -349,13 +374,17 @@ export default function OrderConfirmationClient({
                       {/* Icon + connector */}
                       <div className="flex flex-col items-center">
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 flex-shrink-0 transition-colors ${
-                          step.done
+                          step.cancelled
+                            ? "bg-red-500 border-red-500"
+                            : step.done
                             ? "bg-[#0EA5A0] border-[#0EA5A0]"
                             : isCurrent
                               ? "border-[#0EA5A0] bg-white dark:bg-slate-900 animate-pulse"
                               : "border-gray-300 dark:border-gray-600 bg-white dark:bg-slate-900"
                         }`}>
-                          {step.done ? (
+                          {step.cancelled ? (
+                            <XCircle size={14} className="text-white" />
+                          ) : step.done ? (
                             <CheckCircle2 size={14} className="text-white" />
                           ) : isCurrent ? (
                             <Clock size={12} className="text-[#0EA5A0]" />
@@ -366,14 +395,18 @@ export default function OrderConfirmationClient({
                         {!isLast && (
                           <div
                             className="w-0.5 flex-1 min-h-[20px]"
-                            style={{ backgroundColor: step.done ? "#0EA5A0" : "var(--border-subtle)" }}
+                            style={{ backgroundColor: orderSteps[idx + 1]?.cancelled ? "#EF4444" : step.done ? "#0EA5A0" : "var(--border-subtle)" }}
                           />
                         )}
                       </div>
                       {/* Label */}
                       <div className="pb-5">
                         <p className={`text-sm font-medium leading-tight ${
-                          step.done || isCurrent ? "text-[#0EA5A0]" : "text-gray-400 dark:text-gray-500"
+                          step.cancelled
+                            ? "text-red-600 dark:text-red-400"
+                            : step.done || isCurrent
+                              ? "text-[#0EA5A0]"
+                              : "text-gray-400 dark:text-gray-500"
                         }`}>
                           {step.label}
                         </p>
@@ -444,7 +477,24 @@ export default function OrderConfirmationClient({
         </div>
 
         {/* Payment section — conditional based on paymentFlow and status */}
-        {isPaid ? (
+        {needsPaymentFollowUp ? (
+          <div className="rounded-2xl border border-amber-200 dark:border-amber-800 shadow-sm p-6 bg-amber-50/50 dark:bg-amber-950/20">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle size={18} className="text-amber-500" />
+              <h2 className="text-base font-bold text-amber-700 dark:text-amber-400">Tindak Lanjut Pembayaran</h2>
+            </div>
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              Pembayaran Anda telah tercatat, tetapi pesanan telah dibatalkan dan tidak akan dilanjutkan. Hubungi PPIC AKA untuk tindak lanjut pembayaran.
+            </p>
+            <WhatsAppButton
+              number={waNumber}
+              label="Hubungi PPIC AKA"
+              message={`Halo PPIC AKA, pembayaran pesanan ${code} telah tercatat tetapi pesanannya dibatalkan. Mohon bantuan untuk tindak lanjut.`}
+              variant="button"
+              className="mt-3 px-5 py-2.5 rounded-xl text-sm"
+            />
+          </div>
+        ) : isPaid ? (
           <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-sm p-6 bg-emerald-50/50 dark:bg-emerald-950/20">
             <div className="flex items-center gap-2 mb-3">
               <CheckCircle2 size={18} className="text-emerald-500" />

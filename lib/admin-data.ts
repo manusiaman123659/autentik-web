@@ -296,15 +296,17 @@ export async function getRecentMessages(limit = 5): Promise<ContactMessageRow[]>
   return (data ?? []) as ContactMessageRow[];
 }
 
+export type OrderListFilter = OrderStatus | "all" | "reconciliation";
+
 export interface ListOrdersParams {
-  status?: OrderStatus | "all";
+  status?: OrderListFilter;
   page?: number; // 1-based
   pageSize?: number; // default ORDER_DEFAULT_PAGE_SIZE
 }
 
 export async function listOrders(params: ListOrdersParams = {}): Promise<{ orders: OrderRow[]; total: number }> {
   const supabase = await getSupabase();
-  const status = params.status && params.status !== "all" ? params.status : undefined;
+  const status = params.status ?? "all";
   const pageSize = params.pageSize ?? ORDER_DEFAULT_PAGE_SIZE;
   const page = Math.max(1, params.page ?? 1);
 
@@ -312,9 +314,13 @@ export async function listOrders(params: ListOrdersParams = {}): Promise<{ order
     .from("orders")
     .select("*", { count: "exact" })
     .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .range((page - 1) * pageSize, page * pageSize - 1);
-  if (status) query = query.eq("status", status);
+    .order("created_at", { ascending: false });
+  if (status === "reconciliation") {
+    query = query.eq("status", "cancelled").eq("payment_status", "paid");
+  } else if (status !== "all") {
+    query = query.eq("status", status);
+  }
+  query = query.range((page - 1) * pageSize, page * pageSize - 1);
 
   const { data, error, count } = await query;
   if (error) {

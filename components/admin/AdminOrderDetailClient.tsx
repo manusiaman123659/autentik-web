@@ -73,9 +73,12 @@ export default function AdminOrderDetailClient({
         {paymentStatus === "paid" && orderStatus === "cancelled" && (
           <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
             <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-            <p className="text-xs font-semibold leading-relaxed">
-              Pembayaran diterima untuk pesanan yang telah dibatalkan. Perlu penanganan pembayaran atau refund secara manual.
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs font-bold">Perlu Rekonsiliasi Pembayaran</p>
+              <p className="text-xs leading-relaxed">
+                Pesanan telah dibatalkan, tetapi pembayaran masih tercatat sebagai berhasil. Lakukan pengecekan dan penanganan refund atau rekonsiliasi secara manual.
+              </p>
+            </div>
           </div>
         )}
         <div className="flex justify-between">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, ChevronRight, Loader2, ArrowLeft, Package } from "lucide-react";
+import { AlertTriangle, ShoppingBag, ChevronRight, Loader2, ArrowLeft, Package } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { formatRupiah } from "@/lib/format";
 import {
@@ -131,6 +131,7 @@ export default function OrderHistoryList() {
               const firstItem = order.order_items?.[0]?.product_name ?? "";
               const statusLabel = ORDER_STATUS_LABELS[order.status as OrderStatus] ?? order.status;
               const paymentLabel = PAYMENT_STATUS_LABELS[order.payment_status] ?? order.payment_status;
+              const needsPaymentFollowUp = order.status === "cancelled" && order.payment_status === "paid";
 
               return (
                 <Link
@@ -158,6 +159,12 @@ export default function OrderHistoryList() {
                       <p className="text-[11px] mt-1 truncate" style={{ color: "var(--text-secondary)" }}>
                         {firstItem}{itemCount > 1 ? ` +${itemCount - 1} lainnya` : ""}
                       </p>
+                      {needsPaymentFollowUp && (
+                        <p className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                          <AlertTriangle size={11} />
+                          Perlu tindak lanjut pembayaran
+                        </p>
+                      )}
                       <p className="text-[10px] mt-0.5" style={{ color: "var(--text-muted, var(--text-secondary))" }}>
                         {new Date(order.created_at).toLocaleDateString("id-ID", {
                           day: "2-digit",

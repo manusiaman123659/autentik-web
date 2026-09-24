@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ShoppingBag } from "lucide-react";
-import { listOrders } from "@/lib/admin-data";
+import { listOrders, type OrderListFilter } from "@/lib/admin-data";
 import { ORDER_STATUSES, ORDER_PAGE_SIZES, ORDER_DEFAULT_PAGE_SIZE, type OrderStatus } from "@/lib/validations/storeSchema";
 import { PageHeader, EmptyState } from "@/components/admin/ui";
 import OrdersListClient from "@/components/admin/OrdersListClient";
@@ -16,7 +16,11 @@ type Props = {
 export default async function AdminOrdersPage({ searchParams }: Props) {
   const params = await searchParams;
 
-  const status = ORDER_STATUSES.includes(params.status as OrderStatus) ? (params.status as OrderStatus) : "all";
+  const status: OrderListFilter = params.status === "reconciliation"
+    ? "reconciliation"
+    : ORDER_STATUSES.includes(params.status as OrderStatus)
+      ? (params.status as OrderStatus)
+      : "all";
   const pageSize = (ORDER_PAGE_SIZES as readonly number[]).includes(Number(params.pageSize)) ? Number(params.pageSize) : ORDER_DEFAULT_PAGE_SIZE;
   let page = Number.isInteger(Number(params.page)) && Number(params.page) > 0 ? Number(params.page) : 1;
 
