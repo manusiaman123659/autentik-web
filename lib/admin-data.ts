@@ -482,15 +482,18 @@ export async function listAudit(limit = 100): Promise<AuditRow[]> {
 
 export async function listProductsByType(
   productType: "b2b_system" | "sparepart",
-  query?: string
+  query?: string,
+  options: { includeArchived?: boolean } = {}
 ): Promise<ProductRow[]> {
   const supabase = await getSupabase();
   let builder = supabase
     .from("products")
     .select("*")
-    .eq("product_type", productType)
-    .is("deleted_at", null)
-    .order("sort_order", { ascending: true });
+    .eq("product_type", productType);
+  if (!options.includeArchived) {
+    builder = builder.is("deleted_at", null);
+  }
+  builder = builder.order("sort_order", { ascending: true });
   if (query && query.trim()) {
     const q = `%${query.trim()}%`;
     builder = builder.or(`name.ilike.${q},slug.ilike.${q},brand.ilike.${q}`);

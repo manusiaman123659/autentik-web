@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import type { ZodError } from "zod";
 import { getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
-import { productSchema, type VariantRow } from "@/lib/validations/productSchema";
+import { productIdSchema, productSchema, type VariantRow } from "@/lib/validations/productSchema";
 import { recordAudit } from "@/lib/audit";
 
 export interface ActionResult {
@@ -347,4 +347,49 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   revalidateProductRoutes();
 
   return { success: true, message: "Produk berhasil diarsipkan." };
+}
+
+export async function restoreProduct(id: string): Promise<ActionResult> {
+  const admin = await getAdminUser();
+  if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
+
+  const parsedId = productIdSchema.safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, message: "ID produk tidak valid." };
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: restored, error } = await supabase
+    .from("products")
+    .update({ deleted_at: null })
+    .eq("id", parsedId.data)
+    .not("deleted_at", "is", null)
+    .select("id, slug, product_type")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[action] restore product", { code: error.code, message: error.message });
+    return { success: false, message: "Gagal memulihkan produk. Silakan coba lagi." };
+  }
+
+  if (!restored) {
+    return { success: false, message: "Produk tidak ditemukan atau sudah aktif." };
+  }
+
+  await recordAudit("product.restored", "product", restored.id, {
+    id: restored.id,
+    type: restored.product_type,
+  });
+  revalidateProductRoutes();
+  revalidatePath("/products");
+  revalidatePath("/store");
+  revalidatePath(
+    restored.product_type === "sparepart"
+      ? `/store/${restored.slug}`
+      : `/products/${restored.slug}`
+  );
+
+  return { success: true, message: "Produk berhasil dipulihkan." };
 }

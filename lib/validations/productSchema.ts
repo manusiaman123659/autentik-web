@@ -18,6 +18,8 @@ export interface VariantRow {
   variant_group: string;
 }
 
+export const productIdSchema = z.string().trim().min(1).max(200);
+
 const baseProduct = z.object({
   id: z.string().optional(),
   slug: z
