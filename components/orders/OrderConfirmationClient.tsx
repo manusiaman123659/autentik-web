@@ -138,6 +138,7 @@ export default function OrderConfirmationClient({
   const isRefunded = effectivePaymentStatus === "refunded";
   const isPending = effectivePaymentStatus === "pending";
   const needsPaymentFollowUp = isPaid && effectiveOrderStatus === "cancelled";
+  const isCancelledFailed = isFailed && effectiveOrderStatus === "cancelled";
   const isVerifyingReturn = paymentReturn && isPending && !verificationTimedOut;
 
   // Keep automatic verification bounded; browser reconnects are allowed only inside this window.
@@ -245,28 +246,32 @@ export default function OrderConfirmationClient({
           <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
             {needsPaymentFollowUp
               ? "Pesanan Dibatalkan"
-              : isPaid
-                ? "Pembayaran Berhasil"
-                : isFailed
-                  ? "Pembayaran Gagal"
-                  : isRefunded
-                    ? "Pembayaran Dikembalikan"
-                    : isVerifyingReturn
-                      ? "Sedang memverifikasi pembayaran..."
-                      : "Pesanan Berhasil Dibuat"}
+              : isCancelledFailed
+                ? "Pesanan Dibatalkan"
+                : isPaid
+                  ? "Pembayaran Berhasil"
+                  : isFailed
+                    ? "Pembayaran Gagal"
+                    : isRefunded
+                      ? "Pembayaran Dikembalikan"
+                      : isVerifyingReturn
+                        ? "Sedang memverifikasi pembayaran..."
+                        : "Pesanan Berhasil Dibuat"}
           </h1>
           <p className="text-sm mt-2" style={{ color: "var(--text-secondary)" }}>
             {needsPaymentFollowUp
               ? "Pembayaran Anda telah tercatat, tetapi pesanan telah dibatalkan dan tidak akan dilanjutkan ke proses pemenuhan."
-              : isPaid
-                ? "Pembayaran Anda telah terkonfirmasi. Pesanan akan segera diproses."
-                : isFailed
-                  ? "Pembayaran tidak berhasil. Hubungi tim kami untuk bantuan lanjutan."
-                  : isRefunded
-                    ? "Pengembalian dana telah dicatat oleh tim kami."
-                    : isVerifyingReturn
-                      ? "Pembayaran sedang dikonfirmasi. Status akan diperbarui otomatis."
-                      : "Terima kasih, pesanan Anda telah kami terima dan akan segera diproses."}
+              : isCancelledFailed
+                ? "Pembayaran tidak berhasil dan pesanan telah dibatalkan. Pesanan tidak akan dilanjutkan ke proses pemenuhan."
+                : isPaid
+                  ? "Pembayaran Anda telah terkonfirmasi. Pesanan akan segera diproses."
+                  : isFailed
+                    ? "Pembayaran tidak berhasil. Hubungi tim kami untuk bantuan lanjutan."
+                    : isRefunded
+                      ? "Pengembalian dana telah dicatat oleh tim kami."
+                      : isVerifyingReturn
+                        ? "Pembayaran sedang dikonfirmasi. Status akan diperbarui otomatis."
+                        : "Terima kasih, pesanan Anda telah kami terima dan akan segera diproses."}
           </p>
           <div className="inline-flex items-center gap-3 mt-5 px-5 py-2.5 rounded-xl border shadow-sm" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
@@ -516,7 +521,9 @@ export default function OrderConfirmationClient({
               <h2 className="text-base font-bold text-red-700 dark:text-red-400">Pembayaran Gagal</h2>
             </div>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              Pembayaran tidak berhasil. Hubungi PPIC AKA agar pesanan dan stok dapat ditangani dengan aman.
+              {isCancelledFailed
+                ? "Pembayaran tidak berhasil dan pesanan ini telah dibatalkan. Hubungi PPIC AKA jika Anda memerlukan bantuan lebih lanjut."
+                : "Pembayaran tidak berhasil. Hubungi PPIC AKA agar pesanan dapat ditangani dengan aman."}
             </p>
             <WhatsAppButton
               number={waNumber}

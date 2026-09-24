@@ -108,6 +108,7 @@ export function statusTone(status?: string | null) {
       return "amber";
     case "cancelled":
     case "closed":
+    case "failed":
       return "red";
     case "shipped":
       return "blue";

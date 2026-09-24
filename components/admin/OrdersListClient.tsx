@@ -141,7 +141,7 @@ export default function OrdersListClient({ orders, totalItems, page, pageSize, a
                     </Td>
                     <Td className="font-semibold">{formatRupiah(o.total)}</Td>
                     <Td>
-                      <Badge tone={o.payment_status === "paid" ? "green" : o.payment_status === "refunded" ? "red" : "amber"}>
+                      <Badge tone={o.payment_status === "paid" ? "green" : o.payment_status === "failed" || o.payment_status === "refunded" ? "red" : "amber"}>
                         {o.payment_status ?? "pending"}
                       </Badge>
                     </Td>

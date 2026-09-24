@@ -113,7 +113,7 @@ export default function AdminOrderDetailClient({
             <span className="font-medium text-slate-900 dark:text-white text-xs">{new Date(livePaidAt).toLocaleString("id-ID")}</span>
           </div>
         )}
-        {midtransRedirectUrl && (
+        {midtransRedirectUrl && orderStatus !== "cancelled" && (
           <div className="pt-2">
             <a
               href={midtransRedirectUrl}
