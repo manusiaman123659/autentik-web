@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { getSafeCustomerRedirect, getCanonicalOrigin } from "@/lib/auth-redirect";
+import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
+import { getCanonicalOrigin } from "@/lib/public-url";
 
 export async function GET(request: NextRequest) {
   // Audit log request origin and proxy headers safely (NO cookies, tokens, or codes)

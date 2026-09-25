@@ -1,9 +1,7 @@
 import type { MetadataRoute } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
-
-const baseUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") || "http://localhost:3000";
+import { getCanonicalOrigin } from "@/lib/public-url";
 
 const STATIC_ROUTES: { path: string; priority: number }[] = [
   { path: "/", priority: 1 },
@@ -19,6 +17,7 @@ const STATIC_ROUTES: { path: string; priority: number }[] = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = getCanonicalOrigin();
   const today = new Date();
 
   const cookieStore = await cookies();

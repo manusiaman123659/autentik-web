@@ -23,6 +23,7 @@ import MikaJobCard from "@/components/careers/MikaJobCard";
 import ShareJobButton from "@/components/careers/ShareJobButton";
 import JsonLd from "@/components/seo/JsonLd";
 import type { MikaJobDetail } from "@/types/mika-career";
+import { getSafeExternalUrl } from "@/lib/public-url";
 
 export const dynamic = "force-dynamic";
 
@@ -177,7 +178,7 @@ export default async function JobDetailPage({ params }: Props) {
       : undefined,
   };
 
-  const applyUrl = mikaJob.apply_url || recruitmentUrl || "/contact";
+  const applyUrl = getSafeExternalUrl(mikaJob.apply_url) || recruitmentUrl || "/contact";
   const isExpiringSoon = mikaJob.deadline_info.days_remaining <= 7 && !mikaJob.deadline_info.is_expired;
 
   const deadlineFormatted = new Date(mikaJob.deadline).toLocaleDateString("id-ID", {

@@ -27,6 +27,7 @@ import {
   legacyCareersToMikaJobs,
 } from "@/lib/api/mika-career";
 import type { MikaJob, MikaJobQueryParams, MikaJobsResponse } from "@/types/mika-career";
+import { getSafeExternalUrl } from "@/lib/public-url";
 
 export type { ProductRow };
 
@@ -376,8 +377,7 @@ export async function getRecruitmentUrl(): Promise<string | null> {
     .maybeSingle();
   if (error || !data) return null;
   const value = (data as { value: unknown }).value as { url?: string } | null;
-  const url = typeof value?.url === "string" ? value.url.trim() : "";
-  return url || null;
+  return getSafeExternalUrl(value?.url);
 }
 
 async function getWhatsAppSettingValue(): Promise<unknown | null> {

@@ -1,8 +1,8 @@
 import type { ProductRow } from "@/lib/admin-data";
 import type { CareerPosition } from "@/lib/data/careers";
+import { getCanonicalOrigin } from "@/lib/public-url";
 
-const baseUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") || "http://localhost:3000";
+const baseUrl = getCanonicalOrigin();
 
 const COMPANY = {
   name: "PT Autentik Karya Analitika",

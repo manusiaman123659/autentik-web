@@ -4,6 +4,7 @@ import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationSchema } from "@/lib/seo/jsonLd";
+import { getCanonicalOrigin } from "@/lib/public-url";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -11,11 +12,10 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = getCanonicalOrigin();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  alternates: { canonical: "/" },
   title: "PT Autentik Karya Analitika | Smart Technology is Yours",
   description:
     "Solusi penyedia produk industri dengan teknologi IoT. PT Autentik Karya Analitika memproduksi dan memasarkan IoT Quality Monitoring Devices berbasis kebutuhan industri dan teknologi IoT.",
@@ -26,7 +26,6 @@ export const metadata: Metadata = {
     type: "website",
     locale: "id_ID",
     siteName: "PT Autentik Karya Analitika",
-    url: "/",
   },
 };
 

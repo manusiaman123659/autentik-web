@@ -7,17 +7,31 @@ import type {
   MikaJobQueryParams,
   MikaJobsResponse,
 } from "@/types/mika-career";
+import { getSafeExternalUrl, isNgrokHostname } from "@/lib/public-url";
 
-const DEFAULT_API_BASE_URL = "https://heat-germicide-clasp.ngrok-free.dev/api/v1";
+export function getMikaApiBaseUrl(): string | null {
+  const configured = process.env.MIKA_API_BASE_URL?.trim();
+  if (!configured) return null;
 
-export const MIKA_API_DEFAULT_HEADERS: HeadersInit = {
-  Accept: "application/json",
-  "ngrok-skip-browser-warning": "true",
-};
+  const safeUrl = getSafeExternalUrl(configured);
+  if (!safeUrl) return null;
 
-export function getMikaApiBaseUrl(): string {
-  const envUrl = process.env.MIKA_API_BASE_URL;
-  return envUrl?.trim() ? envUrl.replace(/\/+$/, "") : DEFAULT_API_BASE_URL;
+  const parsed = new URL(safeUrl);
+  if (parsed.search || parsed.hash) return null;
+
+  const path = parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/+$/, "");
+  return `${parsed.origin}${path}`;
+}
+
+function getMikaApiHeaders(baseUrl: string): HeadersInit {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  const hostname = new URL(baseUrl).hostname;
+
+  if (process.env.NODE_ENV !== "production" && isNgrokHostname(hostname)) {
+    headers["ngrok-skip-browser-warning"] = "true";
+  }
+
+  return headers;
 }
 
 const emptyMeta = (params: MikaJobQueryParams = {}) => ({
@@ -148,13 +162,23 @@ export async function getMikaJobs(params: MikaJobQueryParams = {}): Promise<Mika
     searchParams.set("employment_type", params.employment_type.trim());
   }
 
+  const baseUrl = getMikaApiBaseUrl();
+  if (!baseUrl) {
+    return {
+      success: false,
+      data: [],
+      meta: emptyMeta(params),
+      message: "Mika Career API sedang tidak tersedia",
+    };
+  }
+
   const queryString = searchParams.toString();
-  const url = `${getMikaApiBaseUrl()}/jobs${queryString ? `?${queryString}` : ""}`;
+  const url = `${baseUrl}/jobs${queryString ? `?${queryString}` : ""}`;
 
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers: MIKA_API_DEFAULT_HEADERS,
+      headers: getMikaApiHeaders(baseUrl),
       signal: AbortSignal.timeout(4000),
       next: { revalidate: 60 },
     });
@@ -194,12 +218,14 @@ export async function getMikaJobs(params: MikaJobQueryParams = {}): Promise<Mika
 
 export async function getMikaJobDetail(id: number | string): Promise<MikaJobDetail | null> {
   if (!/^\d+$/.test(String(id))) return null;
-  const url = `${getMikaApiBaseUrl()}/jobs/${id}`;
+  const baseUrl = getMikaApiBaseUrl();
+  if (!baseUrl) return null;
+  const url = `${baseUrl}/jobs/${id}`;
 
   try {
     const response = await fetch(url, {
       method: "GET",
-      headers: MIKA_API_DEFAULT_HEADERS,
+      headers: getMikaApiHeaders(baseUrl),
       signal: AbortSignal.timeout(4000),
       next: { revalidate: 60 },
     });
@@ -223,9 +249,10 @@ export async function getMikaJobDetail(id: number | string): Promise<MikaJobDeta
 
 export async function getMikaDepartments(): Promise<MikaDepartment[]> {
   const baseUrl = getMikaApiBaseUrl();
+  if (!baseUrl) return [];
   try {
     const response = await fetch(`${baseUrl}/departments`, {
-      headers: MIKA_API_DEFAULT_HEADERS,
+      headers: getMikaApiHeaders(baseUrl),
       signal: AbortSignal.timeout(3000),
       next: { revalidate: 300 },
     });
@@ -239,7 +266,7 @@ export async function getMikaDepartments(): Promise<MikaDepartment[]> {
 
   try {
     const response = await fetch(`${baseUrl}/jobs?per_page=50`, {
-      headers: MIKA_API_DEFAULT_HEADERS,
+      headers: getMikaApiHeaders(baseUrl),
       signal: AbortSignal.timeout(3000),
       next: { revalidate: 300 },
     });
@@ -254,9 +281,11 @@ export async function getMikaDepartments(): Promise<MikaDepartment[]> {
 }
 
 export async function getMikaCompanies(): Promise<MikaCompany[]> {
+  const baseUrl = getMikaApiBaseUrl();
+  if (!baseUrl) return [];
   try {
-    const response = await fetch(`${getMikaApiBaseUrl()}/jobs?per_page=100`, {
-      headers: MIKA_API_DEFAULT_HEADERS,
+    const response = await fetch(`${baseUrl}/jobs?per_page=100`, {
+      headers: getMikaApiHeaders(baseUrl),
       signal: AbortSignal.timeout(4000),
       next: { revalidate: 300 },
     });
