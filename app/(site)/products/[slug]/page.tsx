@@ -19,6 +19,12 @@ import TechnicalDocsSection from "@/components/product/TechnicalDocsSection";
 import RfqButton from "@/components/product/RfqButton";
 import JsonLd from "@/components/seo/JsonLd";
 import { productSchema } from "@/lib/seo/jsonLd";
+import { createAdminClient } from "@/utils/supabase/admin";
+import {
+  isPublicTechnicalDocumentProduct,
+  toPublicTechnicalDocument,
+  type PublicTechnicalDocument,
+} from "@/lib/public-technical-document";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -67,14 +73,7 @@ export default async function ProductDetailPage({ params }: Props) {
   const product = toPublicProduct(row);
   const mikaContact = await getWhatsAppContact("mika_product_sales");
 
-  let documents: Array<{
-    id: string;
-    title: string;
-    file_type: string;
-    file_url: string;
-    file_size_kb: number | null;
-    requires_lead: boolean;
-  }> = [];
+  let documents: PublicTechnicalDocument[] = [];
 
   let hotspots: Array<{
     id: string;
@@ -100,12 +99,18 @@ export default async function ProductDetailPage({ params }: Props) {
     const { createClient } = await import("@/utils/supabase/server");
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
-    const { data: docs } = await supabase
-      .from("technical_documents")
-      .select("id, title, file_type, file_url, file_size_kb, requires_lead")
-      .eq("product_id", row.id)
-      .order("created_at", { ascending: true });
-    documents = docs ?? [];
+    if (isPublicTechnicalDocumentProduct(row)) {
+      const { data: docs, error: docsError } = await createAdminClient()
+        .from("technical_documents")
+        .select("id, title, file_type, file_url, storage_path, file_size_kb, requires_lead")
+        .eq("product_id", row.id)
+        .order("created_at", { ascending: true });
+      if (!docsError) {
+        documents = (docs ?? [])
+          .map(toPublicTechnicalDocument)
+          .filter((doc): doc is PublicTechnicalDocument => doc !== null);
+      }
+    }
 
     const { data: hotspotRows } = await supabase
       .from("product_hotspots")

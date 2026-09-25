@@ -63,7 +63,7 @@ type ProductDocumentRow = {
   id: string;
   title: string;
   file_type: string;
-  file_url: string;
+  file_url: string | null;
   file_size_kb: number | null;
   requires_lead: boolean;
 };

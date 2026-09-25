@@ -4,15 +4,7 @@ import { useState } from "react";
 import { FileText, FileDown, HardDrive, Shield, Download, Lock } from "lucide-react";
 import { FILE_TYPE_LABELS, type FileType } from "@/lib/validations/rfqSchema";
 import GatedDownloadModal from "./GatedDownloadModal";
-
-interface TechDoc {
-  id: string;
-  title: string;
-  file_type: string;
-  file_url: string;
-  file_size_kb: number | null;
-  requires_lead: boolean;
-}
+import type { PublicTechnicalDocument } from "@/lib/public-technical-document";
 
 const FILE_ICONS: Record<string, typeof FileText> = {
   datasheet: FileText,
@@ -22,13 +14,13 @@ const FILE_ICONS: Record<string, typeof FileText> = {
   software_firmware: HardDrive,
 };
 
-export default function TechnicalDocsSection({ documents }: { documents: TechDoc[] }) {
+export default function TechnicalDocsSection({ documents }: { documents: PublicTechnicalDocument[] }) {
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<TechDoc | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<Extract<PublicTechnicalDocument, { requires_lead: true }> | null>(null);
 
   if (documents.length === 0) return null;
 
-  function handleDownload(doc: TechDoc) {
+  function handleDownload(doc: PublicTechnicalDocument) {
     if (doc.requires_lead) {
       setSelectedDoc(doc);
       setModalOpen(true);

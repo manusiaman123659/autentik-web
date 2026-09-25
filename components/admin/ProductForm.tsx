@@ -23,6 +23,7 @@ import {
 import { upsertProduct } from "@/lib/actions/products";
 import { upsertTechnicalDocument, deleteTechnicalDocument } from "@/lib/actions/technicalDocuments";
 import TechnicalDocsManager from "@/components/admin/TechnicalDocsManager";
+import type { TechDocItem } from "@/components/admin/TechnicalDocsManager";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
 import { createClient } from "@/utils/supabase/client";
 import { clickToImagePercent, computeContainedImageRect } from "@/lib/photo-hotspot-utils";
@@ -38,15 +39,6 @@ import { useToast } from "@/components/admin/Toast";
 interface FeatureInput {
   label: string;
   value: string;
-}
-
-interface TechDocItem {
-  id?: string;
-  title: string;
-  fileType: string;
-  fileUrl: string;
-  fileSizeKb: number | null;
-  requiresLead: boolean;
 }
 
 export interface HotspotItem {
@@ -332,10 +324,12 @@ export default function ProductForm({
       title: d.title,
       fileType: d.file_type,
       fileUrl: d.file_url,
+      storagePath: d.storage_path,
       fileSizeKb: d.file_size_kb,
       requiresLead: d.requires_lead,
     })),
   );
+  const [documentsUploading, setDocumentsUploading] = useState(false);
   const [hotspots, setHotspots] = useState<HotspotItem[]>(initialHotspots);
   const [editingHotspot, setEditingHotspot] = useState<HotspotItem | null>(null);
   const [isPlacingHotspot, setIsPlacingHotspot] = useState(false);
@@ -635,6 +629,16 @@ export default function ProductForm({
   }, [recalcMarkerPositions]);
 
   const handleSubmit = async () => {
+    if (documentsUploading) {
+      toast("error", "Tunggu hingga unggahan dokumen selesai.");
+      return;
+    }
+    if (documents.some((doc) => (doc.id || doc.title.trim() || doc.fileUrl || doc.storagePath)
+      && (!doc.title.trim()
+        || !(doc.requiresLead ? doc.storagePath && !doc.fileUrl : doc.fileUrl && !doc.storagePath)))) {
+      toast("error", "Unggah ulang dokumen sesuai jenis aksesnya sebelum menyimpan.");
+      return;
+    }
     setSaving(true);
     setErrors({});
 
@@ -678,8 +682,8 @@ export default function ProductForm({
     };
 
     const result = await upsertProduct(payload, variantsPayload, hotspotsPayload, photoHotspotsPayload);
-    setSaving(false);
     if (!result.success) {
+      setSaving(false);
       setErrors(result.errors ?? {});
       return;
     }
@@ -696,30 +700,48 @@ export default function ProductForm({
 
     const productId = form.id || (result as { productId?: string }).productId;
     if (productId && !isSparepart) {
-      const existingIds = initialDocuments.map((d) => d.id).filter(Boolean);
-      const currentIds = documents.filter((d) => d.id).map((d) => d.id);
+      try {
+        const existingIds = initialDocuments.map((d) => d.id).filter(Boolean);
+        const currentIds = documents.filter((d) => d.id).map((d) => d.id);
 
-      for (const docId of existingIds) {
-        if (!currentIds.includes(docId)) {
-          await deleteTechnicalDocument(docId!, productId);
+        for (const docId of existingIds) {
+          if (!currentIds.includes(docId)) {
+            const deletion = await deleteTechnicalDocument(docId!, productId);
+            if (!deletion.success) {
+              setSaving(false);
+              toast("error", deletion.message);
+              return;
+            }
+          }
         }
-      }
 
-      for (const doc of documents) {
-        if (doc.title.trim() && doc.fileUrl) {
-          await upsertTechnicalDocument({
-            id: doc.id,
-            productId,
-            title: doc.title,
-            fileType: doc.fileType,
-            fileUrl: doc.fileUrl,
-            fileSizeKb: doc.fileSizeKb ?? undefined,
-            requiresLead: doc.requiresLead,
-          });
+        for (const doc of documents) {
+          if (doc.title.trim() && (doc.fileUrl || doc.storagePath)) {
+            const saved = await upsertTechnicalDocument({
+              id: doc.id,
+              productId,
+              title: doc.title,
+              fileType: doc.fileType,
+              fileUrl: doc.fileUrl,
+              storagePath: doc.storagePath,
+              fileSizeKb: doc.fileSizeKb ?? undefined,
+              requiresLead: doc.requiresLead,
+            });
+            if (!saved.success) {
+              setSaving(false);
+              toast("error", saved.message);
+              return;
+            }
+          }
         }
+      } catch {
+        setSaving(false);
+        toast("error", "Dokumen belum dapat disimpan. Silakan coba lagi.");
+        return;
       }
     }
 
+    setSaving(false);
     router.push(isSparepart ? "/admin/sparepart" : "/admin/produk");
     router.refresh();
   };
@@ -1534,6 +1556,7 @@ onChange={(e) => set("description", e.target.value)}
             productId={form.id}
             documents={documents}
             onChange={setDocuments}
+            onUploadingChange={setDocumentsUploading}
           />
         </section>
       )}
@@ -1879,7 +1902,7 @@ onChange={(e) => set("description", e.target.value)}
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={saving}
+          disabled={saving || documentsUploading}
           className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0C8C87] transition-colors disabled:opacity-60"
         >
 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}

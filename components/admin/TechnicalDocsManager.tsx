@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { Loader2, Plus, Trash2, FileText, FileDown, Shield, HardDrive } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
@@ -10,11 +10,12 @@ import {
   type FileType,
 } from "@/lib/validations/rfqSchema";
 
-interface TechDocItem {
+export interface TechDocItem {
   id?: string;
   title: string;
   fileType: string;
-  fileUrl: string;
+  fileUrl: string | null;
+  storagePath: string | null;
   fileSizeKb: number | null;
   requiresLead: boolean;
 }
@@ -22,7 +23,8 @@ interface TechDocItem {
 interface TechnicalDocsManagerProps {
   productId: string;
   documents: TechDocItem[];
-  onChange: (docs: TechDocItem[]) => void;
+  onChange: Dispatch<SetStateAction<TechDocItem[]>>;
+  onUploadingChange: (uploading: boolean) => void;
 }
 
 const FILE_ICONS: Record<string, typeof FileText> = {
@@ -37,27 +39,38 @@ export default function TechnicalDocsManager({
   productId,
   documents,
   onChange,
+  onUploadingChange,
 }: TechnicalDocsManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetRef = useRef<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
   function addDocument() {
-    onChange([
-      ...documents,
-      { title: "", fileType: "datasheet", fileUrl: "", fileSizeKb: null, requiresLead: true },
+    onChange((prev) => [
+      ...prev,
+      { title: "", fileType: "datasheet", fileUrl: null, storagePath: null, fileSizeKb: null, requiresLead: true },
     ]);
   }
 
   function updateDocument(index: number, field: keyof TechDocItem, value: string | boolean | number | null) {
-    const updated = documents.map((doc, i) =>
-      i === index ? { ...doc, [field]: value } : doc,
-    );
-    onChange(updated);
+    onChange((prev) => prev.map((doc, i) => i === index ? { ...doc, [field]: value } : doc));
   }
 
   function removeDocument(index: number) {
-    onChange(documents.filter((_, i) => i !== index));
+    onChange((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function toggleLead(index: number, checked: boolean) {
+    const doc = documents[index];
+    if (doc.fileUrl || doc.storagePath) {
+      setUploadError(checked
+        ? "Dokumen harus diunggah ulang sebagai dokumen privat sebelum akses lead diaktifkan."
+        : "Dokumen harus diunggah ulang sebagai dokumen publik sebelum akses lead dinonaktifkan.");
+      return;
+    }
+    setUploadError("");
+    updateDocument(index, "requiresLead", checked);
   }
 
   async function handleFileUpload(index: number, file: File | undefined) {
@@ -70,6 +83,7 @@ export default function TechnicalDocsManager({
     }
 
     setUploading(true);
+    onUploadingChange(true);
     try {
       const supabase = createClient();
       const { data: sessionData } = await supabase.auth.getSession();
@@ -79,29 +93,38 @@ export default function TechnicalDocsManager({
       }
 
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const path = `documents/${productId}/${Date.now()}-${safeName}`;
+      const path = `documents/${productId}/${crypto.randomUUID()}-${safeName}`;
+      const bucket = documents[index].requiresLead ? "technical-documents" : "media";
 
       const { error: uploadErr } = await supabase.storage
-        .from("media")
-        .upload(path, file, { contentType: file.type });
+        .from(bucket)
+        .upload(path, file, { contentType: file.type || "application/octet-stream" });
 
       if (uploadErr) {
         setUploadError("Gagal mengunggah: " + uploadErr.message);
         return;
       }
 
-      const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-      updateDocument(index, "fileUrl", urlData.publicUrl);
-      updateDocument(index, "fileSizeKb", Math.round(file.size / 1024));
+      const publicUrl = bucket === "media"
+        ? supabase.storage.from("media").getPublicUrl(path).data.publicUrl
+        : null;
+      onChange((prev) => prev.map((doc, i) => i === index ? {
+        ...doc,
+        fileUrl: publicUrl,
+        storagePath: bucket === "technical-documents" ? path : null,
+        fileSizeKb: Math.round(file.size / 1024),
+      } : doc));
     } catch {
       setUploadError("Terjadi kesalahan saat mengunggah file.");
     } finally {
       setUploading(false);
+      onUploadingChange(false);
     }
   }
 
   return (
     <div className="space-y-4">
+      <fieldset disabled={uploading} className="space-y-4">
       {documents.map((doc, index) => {
         const Icon = FILE_ICONS[doc.fileType] ?? FileText;
         return (
@@ -154,7 +177,7 @@ export default function TechnicalDocsManager({
 
             <div>
               <label className={labelClass}>File</label>
-              {doc.fileUrl ? (
+              {doc.fileUrl || doc.storagePath ? (
                 <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <FileText size={18} className="text-[#0EA5A0] flex-shrink-0" />
@@ -168,19 +191,20 @@ export default function TechnicalDocsManager({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <a
+                    {doc.fileUrl ? <a
                       href={doc.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs font-semibold text-[#0EA5A0] hover:underline"
                     >
                       Lihat
-                    </a>
+                    </a> : <span className="text-xs font-semibold text-[#0EA5A0]">File privat siap</span>}
                     <button
                       type="button"
                       onClick={() => {
-                        updateDocument(index, "fileUrl", "");
-                        updateDocument(index, "fileSizeKb", null);
+                        onChange((prev) => prev.map((item, i) => i === index ? {
+                          ...item, fileUrl: null, storagePath: null, fileSizeKb: null,
+                        } : item));
                       }}
                       className="text-xs font-semibold text-red-500 hover:underline"
                     >
@@ -191,7 +215,10 @@ export default function TechnicalDocsManager({
               ) : (
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    uploadTargetRef.current = index;
+                    fileInputRef.current?.click();
+                  }}
                   disabled={uploading}
                   className="w-full rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-[#0EA5A0] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-60"
                 >
@@ -214,7 +241,7 @@ export default function TechnicalDocsManager({
               <input
                 type="checkbox"
                 checked={doc.requiresLead}
-                onChange={(e) => updateDocument(index, "requiresLead", e.target.checked)}
+                onChange={(e) => toggleLead(index, e.target.checked)}
                 className="rounded border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]"
               />
               <span className="text-xs text-slate-600 dark:text-slate-300">
@@ -232,9 +259,10 @@ export default function TechnicalDocsManager({
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          const lastIndex = documents.length - 1;
-          if (lastIndex >= 0 && !documents[lastIndex].fileUrl) {
-            void handleFileUpload(lastIndex, file);
+          const index = uploadTargetRef.current;
+          uploadTargetRef.current = null;
+          if (index !== null && documents[index] && !documents[index].fileUrl && !documents[index].storagePath) {
+            void handleFileUpload(index, file);
           }
           e.target.value = "";
         }}
@@ -250,6 +278,7 @@ export default function TechnicalDocsManager({
       </button>
 
       <FieldError message={uploadError} />
+      </fieldset>
     </div>
   );
 }

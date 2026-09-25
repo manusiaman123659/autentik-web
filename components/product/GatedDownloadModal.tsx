@@ -25,6 +25,7 @@ export default function GatedDownloadModal({
     phoneNumber: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -43,26 +44,29 @@ export default function GatedDownloadModal({
     e.preventDefault();
     setSubmitting(true);
     setErrors({});
+    setFormError("");
 
-    const result = await submitDocLeadAndGetUrl({ ...form, documentId });
+    try {
+      const result = await submitDocLeadAndGetUrl({ ...form, documentId });
+      if (!result.success || !result.fileUrl) {
+        setErrors(result.errors ?? {});
+        setFormError(result.message || "Dokumen tidak dapat diakses saat ini. Silakan coba lagi.");
+        return;
+      }
 
-    if (!result.success) {
-      setErrors(result.errors ?? {});
+      setSubmitted(true);
+      window.location.assign(result.fileUrl);
+    } catch {
+      setFormError("Dokumen tidak dapat diakses saat ini. Silakan coba lagi.");
+    } finally {
       setSubmitting(false);
-      return;
-    }
-
-    setSubmitted(true);
-    setSubmitting(false);
-
-    if (result.fileUrl) {
-      window.open(result.fileUrl, "_blank");
     }
   }
 
   function handleClose() {
     setForm({ fullName: "", workEmail: "", companyName: "", phoneNumber: "" });
     setErrors({});
+    setFormError("");
     setSubmitted(false);
     onClose();
   }
@@ -97,7 +101,7 @@ export default function GatedDownloadModal({
               Terima kasih!
             </h3>
             <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-              Download untuk <strong>{documentTitle}</strong> akan dimulai secara otomatis. Jika tidak, file akan terbuka di tab baru.
+              Dokumen <strong>{documentTitle}</strong> sedang dibuka untuk diunduh.
             </p>
             <button
               onClick={handleClose}
@@ -120,6 +124,7 @@ export default function GatedDownloadModal({
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {formError && <p role="alert" className="text-xs text-red-500">{formError}</p>}
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
                   Nama Lengkap *

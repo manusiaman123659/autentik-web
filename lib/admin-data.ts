@@ -150,7 +150,8 @@ export interface TechDocRow {
   product_id: string;
   title: string;
   file_type: string;
-  file_url: string;
+  file_url: string | null;
+  storage_path: string | null;
   file_size_kb: number | null;
   requires_lead: boolean;
   created_at: string;
