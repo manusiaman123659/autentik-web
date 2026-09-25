@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { getAdminUser } from "@/lib/admin";
 import { recordAudit } from "@/lib/audit";
 import { docDownloadLeadSchema, type DocDownloadLeadFormData } from "@/lib/validations/rfqSchema";
@@ -56,7 +57,7 @@ export async function submitDocLeadAndGetUrl(
     return { success: false, message: "Dokumen tidak ditemukan." };
   }
 
-  const { error: leadError } = await supabase.from("document_download_leads").insert({
+  const { error: leadError } = await createAdminClient().from("document_download_leads").insert({
     document_id: parsed.data.documentId,
     full_name: parsed.data.fullName,
     work_email: parsed.data.workEmail,

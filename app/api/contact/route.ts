@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { contactOrCustomSchema } from "@/lib/validations/contactSchema";
-import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { LimitedJsonBodyError, readJsonBodyWithLimit } from "@/lib/limited-json-body";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -38,10 +37,7 @@ export async function POST(request: NextRequest) {
     const productName = "productName" in parsed.data ? (parsed.data.productName ?? null) : null;
     const productSlug = "productSlug" in parsed.data ? (parsed.data.productSlug ?? null) : null;
 
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-
-    const { error } = await supabase.from("contact_messages").insert({
+    const { error } = await createAdminClient().from("contact_messages").insert({
       full_name: fullName,
       email,
       company,

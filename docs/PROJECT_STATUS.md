@@ -76,6 +76,14 @@ Gunakan communication resolver existing.
 
 ---
 
+## Public form insert hardening (0055E2)
+
+- Contact, RFQ, dan lead dokumen kini memakai server-only service-role untuk INSERT. Migrasi `0056_restrict_public_form_inserts.sql` disiapkan tetapi **belum diterapkan**; akses INSERT langsung masih terbuka sampai migrasi disetujui dan dijalankan.
+- Akses INSERT publik legacy untuk `newsletter_subscribers` dan `whatsapp_leads` ditunda sambil memverifikasi pemanggil eksternal.
+- Pemanggilan langsung RPC checkout oleh customer masih dapat melewati limiter aplikasi; penanganannya terpisah. Akses dokumen yang benar-benar lead-gated ditunda ke 0055F.
+
+---
+
 # Distributor
 
 Public:

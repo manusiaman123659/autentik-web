@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { rfqSchema } from "@/lib/validations/rfqSchema";
 import { parseWhatsAppContacts, resolveWhatsAppContact } from "@/lib/communication";
 import { LimitedJsonBodyError, readJsonBodyWithLimit } from "@/lib/limited-json-body";
@@ -100,12 +101,13 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Insert RFQ with retry on unique_violation (rfq_code collision) ──
+    const adminSupabase = createAdminClient();
     let rfqCode: string | null = null;
     let lastErrorCode: string | null = null;
 
     for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
       const code = generateRfqCode();
-      const { error: insertError } = await supabase
+      const { error: insertError } = await adminSupabase
         .from("quotation_requests")
         .insert({
           rfq_code: code,
