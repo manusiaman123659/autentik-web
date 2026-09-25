@@ -4,6 +4,8 @@ import { randomUUID } from "crypto";
 import { createClient } from "@/utils/supabase/server";
 import { rfqSchema } from "@/lib/validations/rfqSchema";
 import { parseWhatsAppContacts, resolveWhatsAppContact } from "@/lib/communication";
+import { LimitedJsonBodyError, readJsonBodyWithLimit } from "@/lib/limited-json-body";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -12,6 +14,7 @@ const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 hari
 const RATE_LIMIT_WINDOW_MINUTES = 60;
 const RATE_LIMIT_MAX_SUBMISSIONS = 3;
 const MAX_CODE_ATTEMPTS = 10;
+const MAX_BODY_BYTES = 16 * 1024;
 
 function generateRfqCode(): string {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -21,7 +24,15 @@ function generateRfqCode(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Global circuit breaker per application instance, separate from the session RPC quota.
+    if (!checkRateLimit("rfq:global", 20, 10 * 60_000).allowed) {
+      return NextResponse.json(
+        { success: false, message: "Terlalu banyak permintaan. Silakan coba lagi beberapa saat." },
+        { status: 429, headers: { "Retry-After": "600" } },
+      );
+    }
+
+    const body = await readJsonBodyWithLimit(request, MAX_BODY_BYTES);
     const parsed = rfqSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -43,22 +54,33 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(cookieStore);
 
     // ── Rate limit check via RPC ──
-    const { data: allowed, error: rpcError } = await supabase.rpc(
-      "track_rfq_submission",
-      {
+    let tracking;
+    try {
+      tracking = await supabase.rpc("track_rfq_submission", {
         p_session_id: sessionId,
         p_window_minutes: RATE_LIMIT_WINDOW_MINUTES,
         p_max: RATE_LIMIT_MAX_SUBMISSIONS,
-      },
-    );
+      });
+    } catch {
+      console.error("[api/rfq] rfq.limiter_unavailable", { code: "request_failed" });
+      return NextResponse.json(
+        { success: false, message: "Layanan permintaan penawaran sementara tidak tersedia. Silakan coba lagi nanti." },
+        { status: 503 },
+      );
+    }
+    const { data: allowed, error: rpcError } = tracking;
 
     if (rpcError) {
       console.error("[api/rfq] rate_limit_failed", {
         code: /^[A-Z0-9]{5,8}$/.test(rpcError.code ?? "") ? rpcError.code : "unknown",
       });
+      return NextResponse.json(
+        { success: false, message: "Layanan permintaan penawaran sementara tidak tersedia. Silakan coba lagi nanti." },
+        { status: 503 },
+      );
     }
 
-    if (!rpcError && allowed === false) {
+    if (allowed === false) {
       return NextResponse.json(
         {
           success: false,
@@ -66,6 +88,14 @@ export async function POST(request: NextRequest) {
             "Batas pengiriman RFQ tercapai (maks 3 per jam). Silakan coba lagi nanti.",
         },
         { status: 429 },
+      );
+    }
+
+    if (allowed !== true) {
+      console.error("[api/rfq] rfq.limiter_unavailable", { code: "invalid_response" });
+      return NextResponse.json(
+        { success: false, message: "Layanan permintaan penawaran sementara tidak tersedia. Silakan coba lagi nanti." },
+        { status: 503 },
       );
     }
 
@@ -180,7 +210,13 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch {
+  } catch (error) {
+    if (error instanceof LimitedJsonBodyError) {
+      return NextResponse.json(
+        { success: false, message: error.reason === "too_large" ? "Permintaan terlalu besar." : "Format JSON tidak valid." },
+        { status: error.reason === "too_large" ? 413 : 400 },
+      );
+    }
     console.error("[api/rfq] rfq.unexpected_error", {
       category: "unexpected",
     });

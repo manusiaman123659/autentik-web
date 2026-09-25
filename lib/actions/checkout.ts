@@ -8,6 +8,7 @@ import { checkoutOrderSchema } from "@/lib/validations/storeSchema";
 import { createMidtransTransaction } from "@/lib/midtrans";
 import { logError } from "@/lib/logger";
 import { SHIPPING_UNAVAILABLE_MESSAGE } from "@/lib/shipping";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export interface CheckoutResult {
   success: boolean;
@@ -61,6 +62,19 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     };
   }
   const data = parsed.data;
+
+  if (data.items.length > 50) {
+    return {
+      success: false,
+      message: "Periksa kembali isian form.",
+      errors: { items: "Maksimal 50 item pesanan." },
+    };
+  }
+
+  // Authenticated per-user limit for order-creating attempts only; no page view or shipping quote counts.
+  if (!checkRateLimit(`checkout:create:${user.id}`, 10, 10 * 60_000).allowed) {
+    return { success: false, message: "Terlalu banyak permintaan. Silakan coba lagi beberapa saat." };
+  }
 
   const items = data.items.map((i) => ({
     product_id: i.productId,

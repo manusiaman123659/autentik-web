@@ -2,10 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { contactOrCustomSchema } from "@/lib/validations/contactSchema";
 import { createClient } from "@/utils/supabase/server";
+import { LimitedJsonBodyError, readJsonBodyWithLimit } from "@/lib/limited-json-body";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const MAX_BODY_BYTES = 16 * 1024;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Global circuit breaker per application instance, not per visitor/IP.
+    if (!checkRateLimit("contact:global", 30, 10 * 60_000).allowed) {
+      return NextResponse.json(
+        { success: false, message: "Terlalu banyak permintaan. Silakan coba lagi beberapa saat." },
+        { status: 429, headers: { "Retry-After": "600" } },
+      );
+    }
+
+    const body = await readJsonBodyWithLimit(request, MAX_BODY_BYTES);
     const parsed = contactOrCustomSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -41,7 +53,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      console.error("Contact API insert error:", error);
+      console.error("[api/contact] contact.insert_failed", {
+        code: /^[A-Z0-9]{5,8}$/.test(error.code ?? "") ? error.code : "unknown",
+      });
       return NextResponse.json(
         { success: false, message: "Terjadi kesalahan server" },
         { status: 500 }
@@ -60,7 +74,13 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Contact API error:", error);
+    if (error instanceof LimitedJsonBodyError) {
+      return NextResponse.json(
+        { success: false, message: error.reason === "too_large" ? "Permintaan terlalu besar." : "Format JSON tidak valid." },
+        { status: error.reason === "too_large" ? 413 : 400 },
+      );
+    }
+    console.error("[api/contact] contact.unexpected_error");
     return NextResponse.json(
       { success: false, message: "Terjadi kesalahan server" },
       { status: 500 }

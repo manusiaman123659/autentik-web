@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getAdminUser } from "@/lib/admin";
 import { recordAudit } from "@/lib/audit";
 import { docDownloadLeadSchema, type DocDownloadLeadFormData } from "@/lib/validations/rfqSchema";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { ActionResult } from "./products";
 
 export async function submitDocLeadAndGetUrl(
@@ -19,6 +20,27 @@ export async function submitDocLeadAndGetUrl(
       if (!errors[key]) errors[key] = issue.message;
     }
     return { success: false, message: "Periksa kembali isian form.", errors };
+  }
+
+  const maxLengths = {
+    fullName: 120,
+    workEmail: 254,
+    companyName: 160,
+    phoneNumber: 30,
+  } as const;
+  const lengthErrors: Record<string, string> = {};
+  for (const field of Object.keys(maxLengths) as Array<keyof typeof maxLengths>) {
+    if (parsed.data[field].length > maxLengths[field]) {
+      lengthErrors[field] = `Maksimal ${maxLengths[field]} karakter`;
+    }
+  }
+  if (Object.keys(lengthErrors).length > 0) {
+    return { success: false, message: "Periksa kembali isian form.", errors: lengthErrors };
+  }
+
+  // Global circuit breaker per application instance; Server Actions return ActionResult, not HTTP 429.
+  if (!checkRateLimit("document-lead:global", 20, 10 * 60_000).allowed) {
+    return { success: false, message: "Terlalu banyak permintaan. Silakan coba lagi beberapa saat." };
   }
 
   const cookieStore = await cookies();
