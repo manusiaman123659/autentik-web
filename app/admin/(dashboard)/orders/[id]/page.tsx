@@ -28,6 +28,11 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   if (!data) notFound();
   const { order, items } = data;
   const needsPaymentReconciliation = order.status === "cancelled" && order.payment_status === "paid";
+  const midtransIdentifierState = !order.midtrans_order_id
+    ? "missing"
+    : order.midtrans_order_id === order.order_code
+      ? "valid"
+      : "mismatch";
   const bankAccount = order.payment_method === "transfer"
     ? await getAdminBankAccount()
     : null;
@@ -97,6 +102,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           total={order.total}
           paidAt={order.paid_at ?? null}
           midtransRedirectUrl={order.midtrans_redirect_url ?? null}
+          midtransIdentifierState={midtransIdentifierState}
         />
       </div>
 

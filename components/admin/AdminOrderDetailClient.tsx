@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { Badge, Card, statusTone, formatRupiah } from "@/components/admin/ui";
 import ManualOrderRefundForm from "@/components/admin/ManualOrderRefundForm";
+import MidtransPaymentStatusCheck from "@/components/admin/MidtransPaymentStatusCheck";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/validations/storeSchema";
 import { createClient } from "@/utils/supabase/client";
 
@@ -19,6 +20,7 @@ interface Props {
   total: number;
   paidAt: string | null;
   midtransRedirectUrl: string | null;
+  midtransIdentifierState: "valid" | "missing" | "mismatch";
 }
 
 export default function AdminOrderDetailClient({
@@ -32,6 +34,7 @@ export default function AdminOrderDetailClient({
   total,
   paidAt,
   midtransRedirectUrl,
+  midtransIdentifierState,
 }: Props) {
   const router = useRouter();
   const [paymentStatus, setPaymentStatus] = useState(initialPaymentStatus);
@@ -124,6 +127,15 @@ export default function AdminOrderDetailClient({
               Lihat Halaman Pembayaran →
             </a>
           </div>
+        )}
+        {paymentMethod === "midtrans" && paymentStatus === "pending" && orderStatus === "pending" && (
+          midtransIdentifierState === "valid" ? (
+            <MidtransPaymentStatusCheck orderId={orderId} />
+          ) : midtransIdentifierState === "mismatch" ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs leading-relaxed text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+              Referensi transaksi Midtrans tidak cocok dengan kode pesanan. Status harus diperiksa secara manual.
+            </div>
+          ) : null
         )}
         {paymentStatus === "paid" && orderStatus === "cancelled" && (
           <ManualOrderRefundForm
