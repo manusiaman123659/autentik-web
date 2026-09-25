@@ -81,10 +81,13 @@ export default function RegisterForm() {
       if (signUpError) {
         if (signUpError.code === "user_already_exists") {
           setErrorMsg("Email sudah terdaftar. Silakan masuk.");
-        } else if (signUpError.message.includes("rate")) {
+        } else if (
+          signUpError.code === "over_email_send_rate_limit" ||
+          signUpError.code === "over_request_rate_limit"
+        ) {
           setErrorMsg("Terlalu banyak percobaan. Silakan coba lagi beberapa saat.");
         } else {
-          setErrorMsg(signUpError.message || "Gagal mendaftar. Silakan coba lagi.");
+          setErrorMsg("Gagal mendaftar. Silakan coba lagi.");
         }
         return;
       }

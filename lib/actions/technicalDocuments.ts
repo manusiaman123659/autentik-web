@@ -43,8 +43,10 @@ export async function submitDocLeadAndGetUrl(
   });
 
   if (leadError) {
-    console.error("[action] insert doc download lead", leadError);
-    return { success: false, message: "Gagal menyimpan data. " + leadError.message };
+    console.error("[action] document_lead.insert_failed", {
+      code: /^[A-Z0-9]{5,8}$/.test(leadError.code ?? "") ? leadError.code : "unknown",
+    });
+    return { success: false, message: "Gagal menyimpan data. Silakan coba lagi." };
   }
 
   return {

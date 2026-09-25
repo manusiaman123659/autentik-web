@@ -85,7 +85,10 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
   });
 
   if (error) {
-    logError("checkout.create_order", error, { userId: user.id });
+    logError("checkout.create_order", "Gagal membuat pesanan.", {
+      category: "rpc_error",
+      code: /^[A-Z0-9]{5,8}$/.test(error.code ?? "") ? error.code : "unknown",
+    });
     const errText = error.message || "";
     let customerMessage = "Pesanan belum dapat dibuat. Periksa kembali keranjang dan data pengiriman Anda.";
     if (errText.includes(SHIPPING_UNAVAILABLE_MESSAGE)) {
@@ -95,11 +98,14 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     } else if (
       errText.includes("Stok varian") ||
       errText.includes("Stok produk") ||
-      errText.includes("tidak mencukupi") ||
-      errText.includes("tidak dapat dibeli") ||
-      errText.includes("belum memiliki harga jual")
+      errText.includes('Stok "') ||
+      errText.includes("tidak mencukupi")
     ) {
-      customerMessage = errText;
+      customerMessage = "Stok produk tidak mencukupi. Silakan periksa kembali keranjang Anda.";
+    } else if (errText.includes("belum memiliki harga jual")) {
+      customerMessage = "Harga produk telah berubah. Silakan periksa kembali keranjang Anda.";
+    } else if (errText.includes("tidak dapat dibeli")) {
+      customerMessage = "Produk tidak tersedia untuk dibeli saat ini.";
     }
     return {
       success: false,

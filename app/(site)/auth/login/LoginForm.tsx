@@ -13,7 +13,7 @@ import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
 import { createClient } from "@/utils/supabase/client";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
-function translateAuthError(error: { code?: string; message?: string }): string {
+function translateAuthError(error: { code?: string }): string {
   if (error.code === "invalid_credentials")
     return "Email atau kata sandi salah.";
   if (error.code === "email_not_confirmed")
@@ -22,9 +22,7 @@ function translateAuthError(error: { code?: string; message?: string }): string 
     return "Email belum diverifikasi.";
   if (error.code === "over_email_send_rate_limit")
     return "Terlalu banyak percobaan. Silakan coba lagi beberapa saat.";
-  return error.message && error.message.length > 0
-    ? "Gagal masuk: " + error.message
-    : "Terjadi kesalahan. Silakan coba lagi.";
+  return "Gagal masuk. Silakan coba lagi.";
 }
 
 function translateOAuthError(errorCode: string | null): string | null {

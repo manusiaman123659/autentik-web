@@ -53,7 +53,9 @@ export async function POST(request: NextRequest) {
     );
 
     if (rpcError) {
-      console.error("track_rfq_submission RPC error:", rpcError);
+      console.error("[api/rfq] rate_limit_failed", {
+        code: /^[A-Z0-9]{5,8}$/.test(rpcError.code ?? "") ? rpcError.code : "unknown",
+      });
     }
 
     if (!rpcError && allowed === false) {
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     // ── Insert RFQ with retry on unique_violation (rfq_code collision) ──
     let rfqCode: string | null = null;
-    let lastError: string | null = null;
+    let lastErrorCode: string | null = null;
 
     for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
       const code = generateRfqCode();
@@ -100,26 +102,26 @@ export async function POST(request: NextRequest) {
         insertError.code === "23505" &&
         insertError.message?.includes("rfq_code")
       ) {
-        lastError = null;
+        lastErrorCode = null;
         continue;
       }
 
       // other error → stop immediately
-      lastError = insertError.message;
+      lastErrorCode = insertError.code;
       break;
     }
 
     if (!rfqCode) {
-      console.error(
-        "[api/rfq] insert failed:",
-        lastError ?? "unique collision after max attempts",
-      );
+      console.error("[api/rfq] rfq.insert_failed", {
+        code: lastErrorCode && /^[A-Z0-9]{5,8}$/.test(lastErrorCode)
+          ? lastErrorCode
+          : "unknown",
+        category: lastErrorCode ? "database_error" : "code_collision",
+      });
       return NextResponse.json(
         {
           success: false,
-          message: lastError
-            ? "Gagal mengirim permintaan penawaran. " + lastError
-            : "Gagal generate kode RFQ unik. Silakan coba lagi.",
+          message: "Gagal mengirim permintaan penawaran. Silakan coba lagi.",
         },
         { status: 500 },
       );
@@ -178,8 +180,10 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch (error) {
-    console.error("RFQ API error:", error);
+  } catch {
+    console.error("[api/rfq] rfq.unexpected_error", {
+      category: "unexpected",
+    });
     return NextResponse.json(
       { success: false, message: "Terjadi kesalahan server" },
       { status: 500 },
