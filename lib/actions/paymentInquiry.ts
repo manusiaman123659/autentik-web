@@ -3,7 +3,9 @@
 import { z } from "zod";
 import { getAdminUser } from "@/lib/admin";
 import { inquireMidtransPaymentStatus } from "@/lib/payments/midtransInquiry";
-import type { MidtransInquiryResult } from "@/lib/payments/types";
+import { reconcileMidtransPayment } from "@/lib/payments/midtransReconciliation";
+import type { MidtransInquiryResult, MidtransReconciliationResult } from "@/lib/payments/types";
+import { midtransReconciliationSchema } from "@/lib/validations/paymentReconciliationSchema";
 
 const orderIdSchema = z.string().uuid();
 
@@ -42,6 +44,51 @@ export async function checkMidtransPaymentStatus(
       success: false,
       category: "error",
       message: "Status pembayaran belum dapat diperiksa. Coba lagi nanti.",
+    };
+  }
+}
+
+export async function reconcileMidtransPaymentStatus(
+  input: unknown,
+): Promise<MidtransReconciliationResult> {
+  const admin = await getAdminUser();
+  if (!admin) {
+    return {
+      success: false,
+      category: "error",
+      message: "Anda tidak memiliki akses.",
+    };
+  }
+
+  const parsed = midtransReconciliationSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      category: "error",
+      message: "Data konfirmasi rekonsiliasi tidak valid. Periksa status pembayaran kembali.",
+    };
+  }
+
+  try {
+    return await reconcileMidtransPayment(
+      parsed.data.orderId,
+      parsed.data.expectedFingerprint,
+      admin.id,
+    );
+  } catch (error) {
+    console.error(JSON.stringify({
+      ts: new Date().toISOString(),
+      event: "midtrans.manual_reconciliation",
+      source: "admin",
+      actorId: admin.id,
+      orderId: parsed.data.orderId,
+      result: "unexpected_error",
+      errorType: error instanceof Error ? error.name : "UnknownError",
+    }));
+    return {
+      success: false,
+      category: "error",
+      message: "Status pesanan belum dapat disinkronkan. Coba lagi nanti.",
     };
   }
 }
