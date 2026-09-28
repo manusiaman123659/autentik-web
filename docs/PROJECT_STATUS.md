@@ -79,7 +79,8 @@ Gunakan communication resolver existing.
 ## Public form insert hardening (0055E2)
 
 - Contact, RFQ, dan lead dokumen memakai server-only service-role untuk INSERT. Migrasi `0056_restrict_public_form_inserts.sql` **sudah live**; direct INSERT anon/authenticated diblokir.
-- Akses INSERT publik legacy untuk `newsletter_subscribers` dan `whatsapp_leads` ditunda sambil memverifikasi pemanggil eksternal.
+- Akses INSERT publik legacy untuk `newsletter_subscribers` masih ditunda sambil memverifikasi pemanggil eksternal.
+- Tracking frontend `whatsapp_leads` tetap dormant. Migrasi `0058_restrict_whatsapp_leads_public_insert.sql` disiapkan (belum diterapkan) untuk mencabut direct INSERT publik; `/admin/lead` dipertahankan sebagai tampilan historis read-only staf. Keputusan berikutnya adalah menyambungkan tracking eksplisit atau mendeprekasi tabel dan halaman tersebut.
 - Pemanggilan langsung RPC checkout oleh customer masih dapat melewati limiter aplikasi; penanganannya terpisah.
 - 0055F dan migrasi `0057_private_technical_documents.sql` sudah live: dokumen ber-lead memakai bucket privat `technical-documents` dan signed URL 10 menit setelah lead dicatat; brosur dan dokumen bebas tetap publik di `media`.
 - 0055F1 selesai dan cleanup delete/replacement dokumen publik maupun privat sudah diverifikasi runtime.
