@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import {
   MapPin,
   Banknote,
@@ -11,6 +10,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import type { MikaJob } from "@/types/mika-career";
+import MikaCompanyLogo from "@/components/careers/MikaCompanyLogo";
 
 interface MikaJobCardProps {
   job: MikaJob;
@@ -74,22 +74,12 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
               border: "1px solid var(--border-subtle)",
             }}
           >
-            {job.company.logo ? (
-              <Image
-                src={job.company.logo}
-                alt={job.company.name}
-                width={48}
-                height={48}
-                className="w-full h-full object-contain p-1"
-              />
-            ) : (
-              <span
-                className="text-base font-bold uppercase"
-                style={{ color: "#0EA5A0" }}
-              >
-                {job.company.name.charAt(0)}
-              </span>
-            )}
+            <MikaCompanyLogo
+              logo={job.company.logo}
+              companyName={job.company.name}
+              size={48}
+              className="w-full h-full object-contain p-1"
+            />
           </div>
 
           {/* Company Name + Department + Job Tag */}

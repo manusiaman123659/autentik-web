@@ -7,7 +7,7 @@ import type {
   MikaJobQueryParams,
   MikaJobsResponse,
 } from "@/types/mika-career";
-import { getSafeExternalUrl, isNgrokHostname } from "@/lib/public-url";
+import { getSafeExternalUrl, isLocalHostname, isNgrokHostname } from "@/lib/public-url";
 
 export function getMikaApiBaseUrl(): string | null {
   const configured = process.env.MIKA_API_BASE_URL?.trim();
@@ -21,6 +21,132 @@ export function getMikaApiBaseUrl(): string | null {
 
   const path = parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/+$/, "");
   return `${parsed.origin}${path}`;
+}
+
+/**
+ * Extracts a safe HTTPS origin from a candidate base URL or the configured MIKA_API_BASE_URL.
+ */
+export function getSafeMikaOrigin(baseUrl?: string | null): string | null {
+  const candidate = (baseUrl !== undefined ? baseUrl : getMikaApiBaseUrl())?.trim();
+  if (!candidate) return null;
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== "https:") return null;
+    if (parsed.username || parsed.password) return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Normalizes an external MIKA Career company logo URL.
+ *
+ * Rules:
+ * - CASE A & B: Absolute HTTPS URL (Cloudinary, MIKA production/staging) -> preserved as-is.
+ * - CASE B: Relative Laravel public storage path (/storage/... or storage/...) -> resolved against MIKA origin.
+ * - CASE C, E, F: Localhost / 127.0.0.1 Laravel public storage path -> rewritten to MIKA HTTPS origin.
+ * - CASE D & I: null / undefined / empty / malformed -> null.
+ * - CASE E, G, H: Dangerous / non-HTTP(S) schemes (javascript:, data:, blob:, ftp:, file:) -> null.
+ * - CASE F: URLs with embedded credentials -> null.
+ * - CASE J: Arbitrary foreign localhost paths not in /storage/... -> null (not rewritten).
+ */
+export function normalizeMikaLogoUrl(
+  logo: string | null | undefined,
+  mikaApiBaseUrl?: string | null,
+): string | null {
+  if (!logo || typeof logo !== "string") return null;
+
+  const trimmed = logo.trim();
+  if (!trimmed) return null;
+
+  // Reject protocol-relative URLs
+  if (trimmed.startsWith("//")) return null;
+
+  // CASE B: Relative Laravel public storage path
+  if (trimmed.startsWith("/storage/") || trimmed.startsWith("storage/")) {
+    const normalizedPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+    const [pathname] = normalizedPath.split(/[?#]/);
+
+    if (!pathname.startsWith("/storage/") || pathname.length <= "/storage/".length) {
+      return null;
+    }
+
+    const origin = getSafeMikaOrigin(mikaApiBaseUrl);
+    if (!origin) return null;
+
+    try {
+      const resolved = new URL(normalizedPath, origin);
+      // Prevent directory traversal out of /storage/
+      if (!resolved.pathname.startsWith("/storage/")) return null;
+      return resolved.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  // Absolute URL handling
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+
+  // CASE F: Reject embedded credentials
+  if (parsed.username || parsed.password) return null;
+
+  // CASE E / G / H: Reject non-http(s) protocols
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+
+  // CASE C, E, F, J: Localhost / local IP handling
+  if (isLocalHostname(parsed.hostname)) {
+    // Only rewrite if it is a valid Laravel public storage path
+    if (parsed.pathname.startsWith("/storage/") && parsed.pathname.length > "/storage/".length) {
+      const origin = getSafeMikaOrigin(mikaApiBaseUrl);
+      if (!origin) return null;
+
+      try {
+        const rewritten = new URL(parsed.pathname + parsed.search + parsed.hash, origin);
+        if (!rewritten.pathname.startsWith("/storage/")) return null;
+        return rewritten.toString();
+      } catch {
+        return null;
+      }
+    }
+
+    // CASE J: Reject arbitrary foreign localhost paths
+    return null;
+  }
+
+  // CASE A & B: Absolute HTTPS external URL
+  if (parsed.protocol === "https:") {
+    return parsed.toString();
+  }
+
+  // Reject external insecure HTTP
+  return null;
+}
+
+export function normalizeMikaCompany(
+  company: MikaCompany,
+  baseUrl?: string | null,
+): MikaCompany {
+  return {
+    ...company,
+    logo: normalizeMikaLogoUrl(company.logo, baseUrl),
+  };
+}
+
+export function normalizeMikaJob(
+  job: MikaJob,
+  baseUrl?: string | null,
+): MikaJob {
+  return {
+    ...job,
+    company: normalizeMikaCompany(job.company, baseUrl),
+  };
 }
 
 function getMikaApiHeaders(baseUrl: string): HeadersInit {
@@ -186,9 +312,10 @@ export async function getMikaJobs(params: MikaJobQueryParams = {}): Promise<Mika
       const json = await response.json();
       if (Array.isArray(json?.data)) {
         const perPage = params.per_page ?? 10;
+        const normalizedJobs = json.data.map((job: MikaJob) => normalizeMikaJob(job, baseUrl));
         return {
           success: true,
-          data: json.data as MikaJob[],
+          data: normalizedJobs,
           meta: json.meta ?? {
             current_page: params.page ?? 1,
             per_page: perPage,
@@ -232,9 +359,17 @@ export async function getMikaJobDetail(id: number | string): Promise<MikaJobDeta
     if (response.ok) {
       const json = await response.json();
       if (json?.data) {
+        const rawDetail = json.data as MikaJobDetail;
+        const normalizedJob = normalizeMikaJob(rawDetail, baseUrl);
+        const rawRelated = Array.isArray(json.related_jobs)
+          ? json.related_jobs
+          : Array.isArray(rawDetail.related_jobs)
+            ? rawDetail.related_jobs
+            : undefined;
+
         return {
-          ...(json.data as MikaJobDetail),
-          related_jobs: Array.isArray(json.related_jobs) ? json.related_jobs : json.data.related_jobs,
+          ...normalizedJob,
+          related_jobs: rawRelated?.map((relJob: MikaJob) => normalizeMikaJob(relJob, baseUrl)),
         };
       }
     }
@@ -291,7 +426,10 @@ export async function getMikaCompanies(): Promise<MikaCompany[]> {
     });
     if (response.ok) {
       const json = await response.json();
-      if (Array.isArray(json?.data)) return getCompaniesFromJobs(json.data);
+      if (Array.isArray(json?.data)) {
+        const normalizedJobs = json.data.map((job: MikaJob) => normalizeMikaJob(job, baseUrl));
+        return getCompaniesFromJobs(normalizedJobs);
+      }
     }
   } catch {
     // Consumer derives options from the resolved fallback jobs.

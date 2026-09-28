@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import MikaCompanyLogo from "@/components/careers/MikaCompanyLogo";
 import {
   ArrowLeft,
   Briefcase,
@@ -241,19 +241,12 @@ export default async function JobDetailPage({ params }: Props) {
                         border: "1px solid var(--border-subtle)",
                       }}
                     >
-                      {mikaJob.company.logo ? (
-                        <Image
-                          src={mikaJob.company.logo}
-                          alt={mikaJob.company.name}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-contain p-1.5"
-                        />
-                      ) : (
-                        <span className="text-2xl font-bold" style={{ color: "#0EA5A0" }}>
-                          {mikaJob.company.name.charAt(0)}
-                        </span>
-                      )}
+                      <MikaCompanyLogo
+                        logo={mikaJob.company.logo}
+                        companyName={mikaJob.company.name}
+                        size={64}
+                        className="w-full h-full object-contain p-1.5"
+                      />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -641,19 +634,12 @@ export default async function JobDetailPage({ params }: Props) {
                         border: "1px solid var(--border-subtle)",
                       }}
                     >
-                      {mikaJob.company.logo ? (
-                        <Image
-                          src={mikaJob.company.logo}
-                          alt={mikaJob.company.name}
-                          width={48}
-                          height={48}
-                          className="w-full h-full object-contain p-1"
-                        />
-                      ) : (
-                        <span className="text-lg font-bold" style={{ color: "#0EA5A0" }}>
-                          {mikaJob.company.name.charAt(0)}
-                        </span>
-                      )}
+                      <MikaCompanyLogo
+                        logo={mikaJob.company.logo}
+                        companyName={mikaJob.company.name}
+                        size={48}
+                        className="w-full h-full object-contain p-1"
+                      />
                     </div>
                     <div className="min-w-0">
                       <h4 className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>

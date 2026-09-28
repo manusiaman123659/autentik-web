@@ -22,7 +22,7 @@ export function isNgrokHostname(hostname: string): boolean {
   );
 }
 
-function isLocalHostname(hostname: string): boolean {
+export function isLocalHostname(hostname: string): boolean {
   const normalized = hostname.toLowerCase();
   return (
     normalized === "localhost" ||
