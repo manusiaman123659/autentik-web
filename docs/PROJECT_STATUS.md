@@ -81,7 +81,15 @@ Gunakan communication resolver existing.
 - Contact, RFQ, dan lead dokumen memakai server-only service-role untuk INSERT. Migrasi `0056_restrict_public_form_inserts.sql` **sudah live**; direct INSERT anon/authenticated diblokir.
 - Akses INSERT publik legacy untuk `newsletter_subscribers` dan `whatsapp_leads` ditunda sambil memverifikasi pemanggil eksternal.
 - Pemanggilan langsung RPC checkout oleh customer masih dapat melewati limiter aplikasi; penanganannya terpisah.
-- 0055F disiapkan: dokumen ber-lead memakai bucket privat `technical-documents` dan signed URL 10 menit setelah lead dicatat. Migrasi `0057_private_technical_documents.sql` **belum diterapkan**; jangan aktifkan unggahan gated sebelum migrasi ditinjau/dijalankan. Brosur dan dokumen bebas tetap publik di `media`.
+- 0055F dan migrasi `0057_private_technical_documents.sql` sudah live: dokumen ber-lead memakai bucket privat `technical-documents` dan signed URL 10 menit setelah lead dicatat; brosur dan dokumen bebas tetap publik di `media`.
+- 0055F1 selesai dan cleanup delete/replacement dokumen publik maupun privat sudah diverifikasi runtime.
+
+## Production asset hosting (0055G)
+
+- Audit live memastikan aset publik AKA memakai host Supabase deployment melalui bucket `media`; tidak diperlukan cleanup data aset live.
+- Host `next/image` Supabase diturunkan dari `NEXT_PUBLIC_SUPABASE_URL` saat build dan dibatasi ke public `media`. Vercel Preview/Production wajib menerima `NEXT_PUBLIC_SUPABASE_URL` serta `NEXT_PUBLIC_SITE_URL` yang benar; perubahan host memerlukan deployment/build baru.
+- URL recruitment MIKA berbasis ngrok saat ini adalah konfigurasi development sementara yang disengaja. Sebelum production launch, deploy MIKA Careers ke HTTPS permanen, perbarui `site_settings.recruitment` dan `MIKA_API_BASE_URL`, lalu verifikasi navigasi/API Career.
+- Uji AKA di Vercel direncanakan sebelum pengujian Docker; integrasi Career dapat belum lengkap sampai hosting permanen MIKA tersedia.
 
 ---
 

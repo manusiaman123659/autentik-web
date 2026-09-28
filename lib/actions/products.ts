@@ -7,6 +7,7 @@ import { getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 import { productIdSchema, productSchema, type VariantRow } from "@/lib/validations/productSchema";
 import { recordAudit } from "@/lib/audit";
+import { resolveAkaProductMediaUrl } from "@/lib/supabase-public-media";
 
 export interface ActionResult {
   success: boolean;
@@ -36,34 +37,21 @@ function toErrors(error: ZodError): Record<string, string> {
   return out;
 }
 
-// Public URLs have the form
-// <SUPABASE_URL>/storage/v1/object/public/media/<path>.
-const STORAGE_PUBLIC_MARKER = "/storage/v1/object/public/media/";
-
 function stripQuery(url: string): string {
   return url.split(/[?#]/)[0];
-}
-
-function storagePathFromPublicUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const clean = stripQuery(url);
-  const idx = clean.indexOf(STORAGE_PUBLIC_MARKER);
-  if (idx === -1) return null;
-  const path = decodeURIComponent(clean.slice(idx + STORAGE_PUBLIC_MARKER.length));
-  // Only delete objects living under the paths this app manages.
-  if (!(path.startsWith("products/") || path.startsWith("brochures/") || path.startsWith("models/"))) return null;
-  return path || null;
 }
 
 async function removeStorageObjectIfAny(
   supabase: Awaited<ReturnType<typeof createClient>>,
   url: string | null | undefined,
-  context: string
+  context: string,
+  requiredPathPrefix?: string,
 ): Promise<void> {
-  const path = storagePathFromPublicUrl(url);
-  if (!path) return;
-  const { error } = await supabase.storage.from("media").remove([path]);
-  if (error) console.error(`[action] remove ${context}`, path, error);
+  const resolved = resolveAkaProductMediaUrl(url, process.env.NEXT_PUBLIC_SUPABASE_URL);
+  if (resolved.kind !== "managed"
+    || (requiredPathPrefix && !resolved.path.startsWith(requiredPathPrefix))) return;
+  const { error } = await supabase.storage.from("media").remove([resolved.path]);
+  if (error) console.error(`[action] remove ${context}`, { code: error.name });
 }
 
 const revalidateProductRoutes = () => {
@@ -302,10 +290,9 @@ export async function upsertProduct(
     for (const oldUrl of oldCalloutUrls) {
       if (!newCalloutUrls.has(oldUrl)) {
         // Only delete managed photo-hotspot files, never external URLs
-        const path = storagePathFromPublicUrl(oldUrl);
-        if (path && path.startsWith("products/photo-hotspots/")) {
-          await removeStorageObjectIfAny(supabase, oldUrl, "old callout image");
-        }
+        await removeStorageObjectIfAny(
+          supabase, oldUrl, "old callout image", "products/photo-hotspots/",
+        );
       }
     }
   } else if (photoHotspotsPayload && !isB2B) {
