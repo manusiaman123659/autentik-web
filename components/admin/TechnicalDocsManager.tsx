@@ -3,6 +3,7 @@
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { Loader2, Plus, Trash2, FileText, FileDown, Shield, HardDrive } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { removeStorageObjectAndVerify } from "@/lib/technical-document-media";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
 import {
   FILE_TYPES,
@@ -25,6 +26,7 @@ interface TechnicalDocsManagerProps {
   documents: TechDocItem[];
   onChange: Dispatch<SetStateAction<TechDocItem[]>>;
   onUploadingChange: (uploading: boolean) => void;
+  saving: boolean;
 }
 
 const FILE_ICONS: Record<string, typeof FileText> = {
@@ -40,9 +42,11 @@ export default function TechnicalDocsManager({
   documents,
   onChange,
   onUploadingChange,
+  saving,
 }: TechnicalDocsManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetRef = useRef<number | null>(null);
+  const pendingUploadsRef = useRef(new Map<string, { bucket: string; path: string }>());
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
@@ -57,8 +61,41 @@ export default function TechnicalDocsManager({
     onChange((prev) => prev.map((doc, i) => i === index ? { ...doc, [field]: value } : doc));
   }
 
-  function removeDocument(index: number) {
+  async function discardPendingUpload(doc: TechDocItem): Promise<boolean> {
+    const key = doc.fileUrl ?? doc.storagePath;
+    const pending = key ? pendingUploadsRef.current.get(key) : null;
+    if (!pending) return true;
+
+    setUploading(true);
+    onUploadingChange(true);
+    try {
+      if (!await removeStorageObjectAndVerify(createClient().storage.from(pending.bucket), pending.path)) {
+        setUploadError("Gagal membersihkan unggahan sementara. Dokumen belum diubah.");
+        return false;
+      }
+      pendingUploadsRef.current.delete(key!);
+      return true;
+    } catch {
+      setUploadError("Gagal membersihkan unggahan sementara. Dokumen belum diubah.");
+      return false;
+    } finally {
+      setUploading(false);
+      onUploadingChange(false);
+    }
+  }
+
+  async function removeDocument(index: number) {
+    if (!await discardPendingUpload(documents[index])) return;
+    setUploadError("");
     onChange((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function replaceDocument(index: number) {
+    if (!await discardPendingUpload(documents[index])) return;
+    setUploadError("");
+    onChange((prev) => prev.map((item, i) => i === index ? {
+      ...item, fileUrl: null, storagePath: null, fileSizeKb: null,
+    } : item));
   }
 
   function toggleLead(index: number, checked: boolean) {
@@ -108,6 +145,7 @@ export default function TechnicalDocsManager({
       const publicUrl = bucket === "media"
         ? supabase.storage.from("media").getPublicUrl(path).data.publicUrl
         : null;
+      pendingUploadsRef.current.set(publicUrl ?? path, { bucket, path });
       onChange((prev) => prev.map((doc, i) => i === index ? {
         ...doc,
         fileUrl: publicUrl,
@@ -124,7 +162,7 @@ export default function TechnicalDocsManager({
 
   return (
     <div className="space-y-4">
-      <fieldset disabled={uploading} className="space-y-4">
+      <fieldset disabled={uploading || saving} className="space-y-4">
       {documents.map((doc, index) => {
         const Icon = FILE_ICONS[doc.fileType] ?? FileText;
         return (
@@ -141,7 +179,7 @@ export default function TechnicalDocsManager({
               </div>
               <button
                 type="button"
-                onClick={() => removeDocument(index)}
+                onClick={() => void removeDocument(index)}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-red-500 hover:underline"
               >
                 <Trash2 size={13} />
@@ -201,11 +239,7 @@ export default function TechnicalDocsManager({
                     </a> : <span className="text-xs font-semibold text-[#0EA5A0]">File privat siap</span>}
                     <button
                       type="button"
-                      onClick={() => {
-                        onChange((prev) => prev.map((item, i) => i === index ? {
-                          ...item, fileUrl: null, storagePath: null, fileSizeKb: null,
-                        } : item));
-                      }}
+                      onClick={() => void replaceDocument(index)}
                       className="text-xs font-semibold text-red-500 hover:underline"
                     >
                       Ganti
