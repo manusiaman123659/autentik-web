@@ -3,6 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { getMidtransStatus } from "@/lib/midtrans";
+import { normalizeMoneyAmount } from "@/lib/payments/money";
 import type {
   MidtransInquiryDetails,
   MidtransInquiryResult,
@@ -63,22 +64,7 @@ type InquiryErrorCategory =
   | "network"
   | "unknown";
 
-export function normalizeMoneyAmount(value: unknown): string | null {
-  let normalized: string;
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) return null;
-    normalized = value.toFixed(2);
-  } else if (typeof value === "string") {
-    normalized = value.trim();
-  } else {
-    return null;
-  }
-
-  const match = normalized.match(/^(\d+)(?:\.(\d{1,2}))?$/);
-  if (!match) return null;
-  const fraction = (match[2] ?? "").padEnd(2, "0");
-  return `${BigInt(match[1])}.${fraction}`;
-}
+export { normalizeMoneyAmount } from "@/lib/payments/money";
 
 function getErrorStatus(error: unknown): number | null {
   if (typeof error !== "object" || error === null) return null;
