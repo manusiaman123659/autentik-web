@@ -15,6 +15,7 @@ import {
   Globe,
   CalendarDays,
   ChevronRight,
+  CloudOff,
 } from "lucide-react";
 import { getMikaJobDetail } from "@/lib/api/mika-career";
 import { getPublicCareerBySlug, getRecruitmentUrl } from "@/lib/public-data";
@@ -22,7 +23,6 @@ import AnimatedElement from "@/components/ui/ScrollAnimations";
 import MikaJobCard from "@/components/careers/MikaJobCard";
 import ShareJobButton from "@/components/careers/ShareJobButton";
 import JsonLd from "@/components/seo/JsonLd";
-import type { MikaJobDetail } from "@/types/mika-career";
 import { getSafeExternalUrl } from "@/lib/public-url";
 
 export const dynamic = "force-dynamic";
@@ -33,9 +33,10 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const mikaJob = await getMikaJobDetail(slug);
+  const mikaResult = await getMikaJobDetail(slug);
 
-  if (mikaJob) {
+  if (mikaResult.status === "found") {
+    const mikaJob = mikaResult.job;
     return {
       title: `${mikaJob.title} — Mika Career | ${mikaJob.company.name}`,
       description:
@@ -52,6 +53,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
+  if (mikaResult.status === "unavailable") {
+    return {
+      title: "Detail Karir | Mika Career",
+      description: "Informasi detail lowongan Mika Career sedang tidak dapat dimuat.",
+    };
+  }
+
   return {
     title: "Posisi Karir Tidak Ditemukan | Mika Career",
   };
@@ -59,15 +67,51 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function JobDetailPage({ params }: Props) {
   const { slug } = await params;
-  const recruitmentUrl = await getRecruitmentUrl();
+  const [mikaResult, recruitmentUrl] = await Promise.all([
+    getMikaJobDetail(slug),
+    getRecruitmentUrl(),
+  ]);
 
-  // 1. Coba ambil dari Mika Career API
-  const mikaJob: MikaJobDetail | null = await getMikaJobDetail(slug);
-
-  // 2. Jika tidak ditemukan, fallback ke legacy career data
-  if (!mikaJob) {
+  // Gunakan data legacy untuk slug lama atau saat layanan Mika sedang terganggu.
+  if (mikaResult.status !== "found") {
     const legacyJob = await getPublicCareerBySlug(slug);
-    if (!legacyJob) notFound();
+    if (!legacyJob && mikaResult.status === "not_found") notFound();
+
+    if (!legacyJob) {
+      return (
+        <section
+          className="min-h-[70vh] px-4 pb-20 pt-32 sm:px-6 lg:px-8"
+          style={{ backgroundColor: "var(--bg-primary)" }}
+        >
+          <div className="mx-auto max-w-2xl">
+            <div
+              className="rounded-2xl border p-8 text-center sm:p-10"
+              style={{
+                backgroundColor: "var(--bg-card)",
+                borderColor: "var(--border-subtle)",
+              }}
+            >
+              <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#0EA5A0]/10 text-[#0EA5A0]">
+                <CloudOff size={24} aria-hidden="true" />
+              </div>
+              <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+                Detail lowongan sementara tidak dapat dimuat
+              </h1>
+              <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                Layanan karir sedang mengalami gangguan. Silakan kembali ke daftar lowongan dan coba lagi beberapa saat lagi.
+              </p>
+              <Link
+                href="/careers"
+                className="mt-7 inline-flex items-center gap-2 rounded-xl bg-[#0EA5A0] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0c8e8a]"
+              >
+                <ArrowLeft size={16} />
+                Kembali ke Daftar Lowongan
+              </Link>
+            </div>
+          </div>
+        </section>
+      );
+    }
 
     // Render layout kompatibel untuk data legacy
     return (
@@ -142,6 +186,8 @@ export default async function JobDetailPage({ params }: Props) {
       </>
     );
   }
+
+  const mikaJob = mikaResult.job;
 
   // Mika Job JSON-LD Schema
   const jsonLdData = {

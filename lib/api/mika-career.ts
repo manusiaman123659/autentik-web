@@ -9,6 +9,20 @@ import type {
 } from "@/types/mika-career";
 import { getSafeExternalUrl, isLocalHostname, isNgrokHostname } from "@/lib/public-url";
 
+export const MIKA_JOB_DETAIL_TIMEOUT_MS = 8000;
+
+export type MikaJobDetailUnavailableReason =
+  | "configuration"
+  | "timeout"
+  | "network"
+  | "upstream"
+  | "invalid_response";
+
+export type MikaJobDetailResult =
+  | { status: "found"; job: MikaJobDetail }
+  | { status: "not_found" }
+  | { status: "unavailable"; reason: MikaJobDetailUnavailableReason };
+
 export function getMikaApiBaseUrl(): string | null {
   const configured = process.env.MIKA_API_BASE_URL?.trim();
   if (!configured) return null;
@@ -143,10 +157,90 @@ export function normalizeMikaJob(
   job: MikaJob,
   baseUrl?: string | null,
 ): MikaJob {
+  const education = job.education_requirements;
   return {
     ...job,
     company: normalizeMikaCompany(job.company, baseUrl),
+    education_requirements:
+      education == null || Array.isArray(education) ? undefined : education,
+    description: job.description ?? undefined,
+    responsibilities: job.responsibilities ?? undefined,
+    requirements: job.requirements ?? undefined,
+    benefits: job.benefits ?? undefined,
+    skills: job.skills ?? undefined,
+    created_at: job.created_at ?? undefined,
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isOptionalTextList(value: unknown): value is string | string[] | null | undefined {
+  return value === undefined || value === null || typeof value === "string" || isStringArray(value);
+}
+
+function isMikaJob(value: unknown): value is MikaJob {
+  if (!isRecord(value)) return false;
+
+  const salary = value.salary;
+  const deadlineInfo = value.deadline_info;
+  const company = value.company;
+  const department = value.department;
+  if (!isRecord(salary) || !isRecord(deadlineInfo) || !isRecord(company) || !isRecord(department)) {
+    return false;
+  }
+
+  const deadlineBadge = deadlineInfo.badge;
+  if (!isRecord(deadlineBadge)) return false;
+
+  const education = value.education_requirements;
+  if (
+    education !== undefined &&
+    education !== null &&
+    !(
+      (Array.isArray(education) && education.length === 0) ||
+      (isRecord(education) && isStringArray(education.degrees) && isStringArray(education.majors))
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    (typeof value.id === "number" || typeof value.id === "string") &&
+    typeof value.title === "string" &&
+    typeof value.employment_type === "string" &&
+    typeof value.location === "string" &&
+    typeof value.quota === "number" &&
+    typeof value.deadline === "string" &&
+    (salary.min === null || typeof salary.min === "number") &&
+    (salary.max === null || typeof salary.max === "number") &&
+    typeof salary.currency === "string" &&
+    typeof salary.formatted === "string" &&
+    typeof deadlineInfo.is_expired === "boolean" &&
+    typeof deadlineInfo.is_active === "boolean" &&
+    typeof deadlineInfo.days_remaining === "number" &&
+    typeof deadlineBadge.status === "string" &&
+    typeof deadlineBadge.label === "string" &&
+    typeof deadlineBadge.color === "string" &&
+    (typeof company.id === "number" || typeof company.id === "string") &&
+    typeof company.name === "string" &&
+    (company.logo === null || typeof company.logo === "string") &&
+    typeof company.city === "string" &&
+    (typeof department.id === "number" || typeof department.id === "string") &&
+    typeof department.name === "string" &&
+    (value.description === undefined || value.description === null || typeof value.description === "string") &&
+    isOptionalTextList(value.responsibilities) &&
+    isOptionalTextList(value.requirements) &&
+    isOptionalTextList(value.benefits) &&
+    (value.skills === undefined || value.skills === null || isStringArray(value.skills)) &&
+    (value.apply_url === undefined || value.apply_url === null || typeof value.apply_url === "string") &&
+    (value.created_at === undefined || value.created_at === null || typeof value.created_at === "string")
+  );
 }
 
 function getMikaApiHeaders(baseUrl: string): HeadersInit {
@@ -343,43 +437,63 @@ export async function getMikaJobs(params: MikaJobQueryParams = {}): Promise<Mika
   };
 }
 
-export async function getMikaJobDetail(id: number | string): Promise<MikaJobDetail | null> {
-  if (!/^\d+$/.test(String(id))) return null;
+export async function getMikaJobDetail(id: number | string): Promise<MikaJobDetailResult> {
+  if (!/^\d+$/.test(String(id))) return { status: "not_found" };
   const baseUrl = getMikaApiBaseUrl();
-  if (!baseUrl) return null;
+  if (!baseUrl) return { status: "unavailable", reason: "configuration" };
   const url = `${baseUrl}/jobs/${id}`;
 
   try {
     const response = await fetch(url, {
       method: "GET",
       headers: getMikaApiHeaders(baseUrl),
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(MIKA_JOB_DETAIL_TIMEOUT_MS),
       next: { revalidate: 60 },
     });
-    if (response.ok) {
-      const json = await response.json();
-      if (json?.data) {
-        const rawDetail = json.data as MikaJobDetail;
-        const normalizedJob = normalizeMikaJob(rawDetail, baseUrl);
-        const rawRelated = Array.isArray(json.related_jobs)
-          ? json.related_jobs
-          : Array.isArray(rawDetail.related_jobs)
-            ? rawDetail.related_jobs
-            : undefined;
 
-        return {
-          ...normalizedJob,
-          related_jobs: rawRelated?.map((relJob: MikaJob) => normalizeMikaJob(relJob, baseUrl)),
-        };
-      }
+    if (response.status === 404) return { status: "not_found" };
+    if (!response.ok) {
+      console.warn(`[Mika Career] Job detail upstream unavailable (id=${id}, status=${response.status})`);
+      return { status: "unavailable", reason: "upstream" };
     }
+
+    let json: unknown;
+    try {
+      json = await response.json();
+    } catch {
+      console.warn(`[Mika Career] Job detail response is not valid JSON (id=${id})`);
+      return { status: "unavailable", reason: "invalid_response" };
+    }
+
+    if (!isRecord(json) || !isMikaJob(json.data)) {
+      console.warn(`[Mika Career] Job detail payload is invalid (id=${id})`);
+      return { status: "unavailable", reason: "invalid_response" };
+    }
+
+    const rawDetail = json.data as MikaJobDetail;
+    const relatedCandidate: unknown = json.related_jobs ?? rawDetail.related_jobs;
+    if (
+      relatedCandidate !== undefined &&
+      (!Array.isArray(relatedCandidate) || !relatedCandidate.every(isMikaJob))
+    ) {
+      console.warn(`[Mika Career] Related job payload is invalid (id=${id})`);
+      return { status: "unavailable", reason: "invalid_response" };
+    }
+
+    const relatedJobs = relatedCandidate as MikaJob[] | undefined;
+    const normalizedJob = normalizeMikaJob(rawDetail, baseUrl);
+    return {
+      status: "found",
+      job: {
+        ...normalizedJob,
+        related_jobs: relatedJobs?.map((relatedJob) => normalizeMikaJob(relatedJob, baseUrl)),
+      },
+    };
   } catch (error) {
-    console.warn(
-      `[Mika Career] Job detail API failed (${url}):`,
-      error instanceof Error ? error.message : String(error),
-    );
+    const isTimeout = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    console.warn(`[Mika Career] Job detail request failed (id=${id}, reason=${isTimeout ? "timeout" : "network"})`);
+    return { status: "unavailable", reason: isTimeout ? "timeout" : "network" };
   }
-  return null;
 }
 
 export async function getMikaDepartments(): Promise<MikaDepartment[]> {
