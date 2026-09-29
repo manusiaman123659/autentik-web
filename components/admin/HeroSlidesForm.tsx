@@ -6,7 +6,11 @@ import { Loader2, Save, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { saveHeroSlides } from "@/lib/actions/settings";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
 import { useToast } from "@/components/admin/Toast";
-import type { HeroSlideInput } from "@/lib/validations/heroSchema";
+import {
+  HERO_MAIN_BRAND_IDS,
+  HERO_MAX_SLIDES,
+  type HeroSlideInput,
+} from "@/lib/validations/heroSchema";
 import type { ProductRow } from "@/lib/admin-data";
 
 function createEmpty(): HeroSlideInput {
@@ -25,6 +29,18 @@ export default function HeroSlidesForm({
   const [slides, setSlides] = useState<HeroSlideInput[]>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+
+  const productMap = new Map(products.map((product) => [product.id, product]));
+  const selectedBrandIds = new Set(
+    slides.flatMap((slide) => {
+      const brandId = productMap.get(slide.productId)?.brand_id;
+      return brandId ? [brandId] : [];
+    }),
+  );
+  const hasUnselectedBrand = HERO_MAIN_BRAND_IDS.some(
+    (brandId) => !selectedBrandIds.has(brandId),
+  );
+  const canAddSlide = slides.length < HERO_MAX_SLIDES && hasUnselectedBrand;
 
   const update = (index: number, productId: string) => {
     setSlides((prev) => prev.map((slide, i) => (i === index ? { productId } : slide)));
@@ -45,7 +61,7 @@ export default function HeroSlidesForm({
   };
 
   const add = () => {
-    if (slides.length >= 3) return;
+    if (!canAddSlide) return;
     setSlides((prev) => [...prev, createEmpty()]);
   };
 
@@ -68,7 +84,7 @@ export default function HeroSlidesForm({
       <div className="mb-5">
         <h2 className="text-base font-bold text-slate-900 dark:text-white">Hero Homepage</h2>
         <p className="text-xs text-slate-400">
-          Pilih dan urutkan maksimal 3 produk B2B aktif yang sudah dipublikasikan.
+          Pilih hingga 5 produk B2B aktif yang sudah dipublikasikan, maksimal 1 produk dari setiap brand utama.
         </p>
       </div>
 
@@ -81,8 +97,12 @@ export default function HeroSlidesForm({
       <div className="space-y-5">
         {slides.map((slide, i) => {
           const selectedProduct = products.find((p) => p.id === slide.productId);
-          const selectedElsewhere = new Set(
-            slides.filter((_, index) => index !== i).map((item) => item.productId),
+          const selectedBrandsElsewhere = new Set(
+            slides.flatMap((item, index) => {
+              if (index === i) return [];
+              const brandId = productMap.get(item.productId)?.brand_id;
+              return brandId ? [brandId] : [];
+            }),
           );
           return (
             <div
@@ -133,12 +153,19 @@ export default function HeroSlidesForm({
                   {slide.productId && !selectedProduct && (
                     <option value={slide.productId}>Produk tidak lagi tersedia</option>
                   )}
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id} disabled={selectedElsewhere.has(p.id)}>
-                      {p.brand} — {p.name}
-                      {selectedElsewhere.has(p.id) ? " (Sudah dipilih)" : ""}
-                    </option>
-                  ))}
+                  {products.map((p) => {
+                    const brandAlreadySelected = Boolean(
+                      p.id !== slide.productId
+                      && p.brand_id
+                      && selectedBrandsElsewhere.has(p.brand_id),
+                    );
+                    return (
+                      <option key={p.id} value={p.id} disabled={brandAlreadySelected}>
+                        {p.brand} — {p.name}
+                        {brandAlreadySelected ? " (Brand sudah dipilih)" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
                 {slide.productId && !selectedProduct && (
                   <p className="mt-1 text-xs text-red-500">
@@ -156,7 +183,7 @@ export default function HeroSlidesForm({
         <button
           type="button"
           onClick={add}
-          disabled={slides.length >= 3 || products.length === 0}
+          disabled={!canAddSlide}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
         >
           <Plus size={16} />

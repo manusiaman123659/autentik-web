@@ -10,7 +10,7 @@ import { teamMembers as staticTeamMembers } from "@/lib/data/team";
 import type { GroupCompany, Partner, TeamMember } from "@/types";
 import type { DistributionEntity, DistributionType } from "@/types";
 import { verifiedGroupDistribution } from "@/lib/data/distribution";
-import { heroSlidesReadSchema } from "@/lib/validations/heroSchema";
+import { HERO_MAIN_BRAND_IDS, heroSlidesReadSchema } from "@/lib/validations/heroSchema";
 import { logError } from "@/lib/logger";
 import type { ProductRow } from "@/lib/admin-data";
 import {
@@ -489,7 +489,7 @@ function safeBrandColor(value: string | null): string {
   return value && /^#[0-9a-f]{6}$/i.test(value) ? value : "#0EA5A0";
 }
 
-export async function getHeroSlides(): Promise<HeroSlideResolved[]> {
+export async function getHomepageFeaturedProducts(): Promise<ProductRow[]> {
   try {
     const supabase = await getSupabase();
     const { data, error } = await supabase
@@ -497,42 +497,50 @@ export async function getHeroSlides(): Promise<HeroSlideResolved[]> {
       .select("value")
       .eq("key", "home_hero")
       .maybeSingle();
-    if (error || !data) return COMPANY_HERO_FALLBACK;
+    if (error || !data) return [];
 
     const value = (data as { value: unknown }).value;
     const parsed = heroSlidesReadSchema.safeParse(value);
-    if (!parsed.success || parsed.data.slides.length === 0) return COMPANY_HERO_FALLBACK;
+    if (!parsed.success || parsed.data.slides.length === 0) return [];
 
     const productIds = [...new Set(parsed.data.slides.map((slide) => slide.productId))];
     const { data: products, error: productsError } = await supabase
-        .from("products")
-        .select("id, name, slug, brand, description, image_url, brand_color")
-        .in("id", productIds)
-        .eq("product_type", "b2b_system")
-        .eq("status", "published")
-        .eq("is_active", true)
-        .is("deleted_at", null);
-    if (productsError) return COMPANY_HERO_FALLBACK;
+      .from("products")
+      .select("*")
+      .in("id", productIds)
+      .eq("product_type", "b2b_system")
+      .eq("status", "published")
+      .eq("is_active", true)
+      .in("brand_id", HERO_MAIN_BRAND_IDS)
+      .is("deleted_at", null);
+    if (productsError) return [];
 
-    const productMap = new Map((products ?? []).map((product) => [product.id, product]));
-    const resolved = productIds.flatMap((productId): HeroSlideResolved[] => {
-      const product = productMap.get(productId);
-      if (!product) return [];
-      return [{
-        key: product.id,
-        badge: product.brand || "Produk Unggulan",
-        subtitle: product.description ?? "",
-        ctaLink: `/products/${product.slug}`,
-        ctaLabel: "Lihat Produk",
-        productImage: product.image_url,
-        productName: product.name,
-        accentColor: safeBrandColor(product.brand_color),
-        isCompanyFallback: false,
-      }];
+    const productMap = new Map((products ?? []).map((product) => [product.id, product as ProductRow]));
+    const selectedBrands = new Set<string>();
+    return parsed.data.slides.flatMap((slide): ProductRow[] => {
+      const product = productMap.get(slide.productId);
+      const brandId = product?.brand_id;
+      if (!product || !brandId || selectedBrands.has(brandId)) return [];
+      selectedBrands.add(brandId);
+      return [product];
     });
-    return resolved.length > 0 ? resolved : COMPANY_HERO_FALLBACK;
   } catch (err) {
-    logError("getHeroSlides", err);
-    return COMPANY_HERO_FALLBACK;
+    logError("getHomepageFeaturedProducts", err);
+    return [];
   }
+}
+
+export function resolveHeroSlides(products: ProductRow[]): HeroSlideResolved[] {
+  const resolved = products.map((product): HeroSlideResolved => ({
+    key: product.id,
+    badge: product.brand || "Produk Unggulan",
+    subtitle: product.description ?? "",
+    ctaLink: `/products/${product.slug}`,
+    ctaLabel: "Lihat Produk",
+    productImage: product.image_url ?? null,
+    productName: product.name,
+    accentColor: safeBrandColor(product.brand_color ?? null),
+    isCompanyFallback: false,
+  }));
+  return resolved.length > 0 ? resolved : COMPANY_HERO_FALLBACK;
 }

@@ -6,7 +6,7 @@ import type { ZodError } from "zod";
 import { getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 import { storeSettingsSchema } from "@/lib/validations/storeSchema";
-import { heroSlidesSchema } from "@/lib/validations/heroSchema";
+import { HERO_MAIN_BRAND_IDS, heroSlidesSchema } from "@/lib/validations/heroSchema";
 import { recordAudit } from "@/lib/audit";
 import type { ActionResult } from "./products";
 
@@ -111,7 +111,7 @@ export async function saveHeroSlides(input: unknown): Promise<ActionResult> {
   if (productIds.length > 0) {
     const { data: products, error: productsError } = await supabase
       .from("products")
-      .select("id")
+      .select("id, brand_id")
       .in("id", productIds)
       .eq("product_type", "b2b_system")
       .eq("is_active", true)
@@ -122,6 +122,33 @@ export async function saveHeroSlides(input: unknown): Promise<ActionResult> {
         success: false,
         message: "Satu atau lebih produk tidak tersedia untuk Hero Homepage.",
       };
+    }
+
+    const productMap = new Map(products.map((product) => [product.id, product]));
+    const allowedBrands = new Set<string>(HERO_MAIN_BRAND_IDS);
+    const selectedBrands = new Set<string>();
+    for (const [index, slide] of parsed.data.slides.entries()) {
+      const brandId = productMap.get(slide.productId)?.brand_id;
+      if (!brandId || !allowedBrands.has(brandId)) {
+        return {
+          success: false,
+          message: "Produk Hero hanya boleh berasal dari brand utama AKA.",
+          errors: {
+            [`slides.${index}.productId`]:
+              "Pilih produk dari TALPHA, AUTENTIK, CYLAB, ULLUN, atau EPAL.",
+          },
+        };
+      }
+      if (selectedBrands.has(brandId)) {
+        return {
+          success: false,
+          message: "Setiap brand utama hanya boleh memiliki satu produk Hero.",
+          errors: {
+            [`slides.${index}.productId`]: "Brand ini sudah dipilih pada slide lain.",
+          },
+        };
+      }
+      selectedBrands.add(brandId);
     }
   }
 

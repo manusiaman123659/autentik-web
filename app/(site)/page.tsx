@@ -10,13 +10,13 @@ import CtaBanner from "@/components/home/CtaBanner";
 import StoreTeaser from "@/components/home/StoreTeaser";
 import HomeCareers from "@/components/home/HomeCareers";
 import {
-  getHeroSlides,
+  getHomepageFeaturedProducts,
   getPublicCareerListings,
   listPublicDistributionEntities,
   getWhatsAppContact,
   listPublicBrands,
   listPublicProductsByType,
-  type ProductRow,
+  resolveHeroSlides,
   type PublicBrandItem,
 } from "@/lib/public-data";
 
@@ -45,27 +45,25 @@ function selectMainBrands(items: PublicBrandItem[]): PublicBrandItem[] {
   });
 }
 
-function selectFeaturedProducts(products: ProductRow[]): ProductRow[] {
-  return MAIN_BRANDS.flatMap(({ id }) => {
-    const product = products.find(
-      (candidate) => candidate.brand_id === id && candidate.is_active === true,
-    );
-    return product ? [product] : [];
-  });
-}
-
 export default async function HomePage() {
-  const [brandItems, careerListings, heroSlides, publicProducts, distributionEntities, distributorContact, salesContact] =
-    await Promise.all([
-      listPublicBrands(),
-      getPublicCareerListings({ page: 1, per_page: 3 }),
-      getHeroSlides(),
-      listPublicProductsByType(),
-      listPublicDistributionEntities(),
-      getWhatsAppContact("mika_distributor_inquiry"),
-      getWhatsAppContact("mika_product_sales"),
-    ]);
-  const featuredProducts = selectFeaturedProducts(publicProducts);
+  const [
+    brandItems,
+    careerListings,
+    featuredProducts,
+    publicProducts,
+    distributionEntities,
+    distributorContact,
+    salesContact,
+  ] = await Promise.all([
+    listPublicBrands(),
+    getPublicCareerListings({ page: 1, per_page: 3 }),
+    getHomepageFeaturedProducts(),
+    listPublicProductsByType(),
+    listPublicDistributionEntities(),
+    getWhatsAppContact("mika_distributor_inquiry"),
+    getWhatsAppContact("mika_product_sales"),
+  ]);
+  const heroSlides = resolveHeroSlides(featuredProducts);
   const products3d = publicProducts.filter((product) => product.model_3d_url?.trim());
   const hasGroupDistribution = distributionEntities.some(
     (entity) => entity.distributionType === "group_distribution",

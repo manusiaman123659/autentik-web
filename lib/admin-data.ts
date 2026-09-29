@@ -3,7 +3,11 @@ import { createClient } from "@/utils/supabase/server";
 import type { OrderStatus } from "@/lib/validations/storeSchema";
 import { ORDER_DEFAULT_PAGE_SIZE } from "@/lib/validations/storeSchema";
 import type { ComproSettings } from "@/lib/validations/comproSchema";
-import { heroSlidesReadSchema, type HeroSlideInput } from "@/lib/validations/heroSchema";
+import {
+  HERO_MAIN_BRAND_IDS,
+  heroSlidesReadSchema,
+  type HeroSlideInput,
+} from "@/lib/validations/heroSchema";
 import { getAdminUser } from "@/lib/admin";
 import { parseBankAccount, type BankAccount } from "@/lib/bank-account";
 
@@ -831,8 +835,10 @@ export async function listEligibleHeroProducts(): Promise<ProductRow[]> {
     .eq("product_type", "b2b_system")
     .eq("is_active", true)
     .eq("status", "published")
+    .in("brand_id", HERO_MAIN_BRAND_IDS)
     .is("deleted_at", null)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
   if (error) {
     console.error("[admin-data] eligible hero products", error);
     return [];

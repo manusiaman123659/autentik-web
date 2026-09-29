@@ -1,11 +1,14 @@
 import { z } from "zod";
 
+export const HERO_MAX_SLIDES = 5;
+export const HERO_MAIN_BRAND_IDS = ["talpha", "autentik", "cylab", "ullun", "epal"] as const;
+
 export const heroSlideSchema = z.object({
   productId: z.string().trim().min(1, "Produk wajib dipilih"),
 });
 
 export const heroSlidesReadSchema = z.object({
-  slides: z.array(heroSlideSchema).max(3, "Maksimal 3 slide"),
+  slides: z.array(heroSlideSchema).max(HERO_MAX_SLIDES, "Maksimal 5 slide"),
 });
 
 export const heroSlidesSchema = heroSlidesReadSchema.superRefine((value, ctx) => {
