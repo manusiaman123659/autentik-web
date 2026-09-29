@@ -205,6 +205,16 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
         items: activeItems.map((i) => ({ productId: i.id, quantity: i.quantity, variantId: i.variant_id ?? null })),
       });
 
+      if (!result.success && result.recoveryRequired && result.orderCode) {
+        if (isDirectMode) {
+          clearDirectBuyItem();
+        } else {
+          clearCart();
+        }
+        router.replace(`/store/orders/${result.orderCode}`);
+        return;
+      }
+
       if (!result.success || !result.orderCode) {
         setServerError(result.message || "Terjadi kesalahan. Silakan coba lagi.");
         return;

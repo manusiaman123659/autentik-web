@@ -1,5 +1,10 @@
 import midtransClient from "midtrans-client";
 import { getCanonicalOrigin } from "@/lib/auth-redirect";
+import {
+  getSafeMidtransRedirectUrl,
+  MidtransCreatePreflightError,
+  MidtransCreateResponseError,
+} from "@/lib/payments/midtransInitialization";
 
 const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
 const serverKey = (process.env.MIDTRANS_SERVER_KEY || "").trim();
@@ -45,12 +50,17 @@ export async function createMidtransTransaction(
   params: MidtransTransactionParams,
 ): Promise<MidtransTransactionResult> {
   if (!getMidtransConfigurationStatus().isComplete) {
-    throw new Error("Konfigurasi Midtrans belum lengkap di environment server.");
+    throw new MidtransCreatePreflightError("Konfigurasi Midtrans belum lengkap di environment server.");
   }
-  const finishUrl = new URL(
-    `/store/orders/${encodeURIComponent(params.orderCode)}`,
-    getCanonicalOrigin(),
-  );
+  let finishUrl: URL;
+  try {
+    finishUrl = new URL(
+      `/store/orders/${encodeURIComponent(params.orderCode)}`,
+      getCanonicalOrigin(),
+    );
+  } catch {
+    throw new MidtransCreatePreflightError("Origin callback pembayaran tidak valid.");
+  }
   finishUrl.searchParams.set("payment", "return");
 
   const parameter = {
@@ -69,8 +79,15 @@ export async function createMidtransTransaction(
   };
 
   const transaction = await snap.createTransaction(parameter);
+  const redirectUrl = getSafeMidtransRedirectUrl(
+    transaction.redirect_url,
+    isProduction,
+  );
+  if (!redirectUrl) {
+    throw new MidtransCreateResponseError("Midtrans tidak mengembalikan URL pembayaran yang valid.");
+  }
   return {
-    redirect_url: transaction.redirect_url,
+    redirect_url: redirectUrl,
   };
 }
 

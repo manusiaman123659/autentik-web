@@ -48,6 +48,7 @@ type DbOrder = {
   paid_at: string | null;
   midtrans_redirect_url: string | null;
   midtrans_order_id: string | null;
+  midtrans_init_state: string;
   created_at: string;
   order_items: DbOrderItem[];
 };
@@ -140,6 +141,10 @@ export default function OrderConfirmationClient({
   const needsPaymentFollowUp = isPaid && effectiveOrderStatus === "cancelled";
   const isCancelledFailed = isFailed && effectiveOrderStatus === "cancelled";
   const isVerifyingReturn = paymentReturn && isPending && !verificationTimedOut;
+  const paymentInitializationNeedsReview = paymentFlow === "midtrans"
+    && isPending
+    && !effectiveInvoiceUrl
+    && dbOrder.midtrans_init_state !== "idle";
 
   // Keep automatic verification bounded; browser reconnects are allowed only inside this window.
   useEffect(() => {
@@ -200,6 +205,7 @@ export default function OrderConfirmationClient({
         window.location.href = result.redirectUrl;
       } else {
         alert(result.message || "Gagal membuat invoice. Silakan coba lagi.");
+        if (result.recoveryRequired) router.refresh();
       }
     } catch (err) {
       console.error("[REGENERATE_INVOICE_CLIENT]", err);
@@ -659,7 +665,31 @@ export default function OrderConfirmationClient({
                   </>
                 )}
 
-                {effectiveInvoiceUrl ? (
+                {paymentInitializationNeedsReview ? (
+                  <div
+                    className="rounded-xl border p-4"
+                    style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Clock size={18} className="mt-0.5 shrink-0 text-amber-500" />
+                      <div>
+                        <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                          Pembayaran sedang diperiksa
+                        </h3>
+                        <p className="mt-1 text-xs" style={{ color: "var(--text-secondary)" }}>
+                          Pesanan sudah dibuat, tetapi pembayaran masih sedang diperiksa. Jangan membuat pesanan baru untuk item yang sama.
+                        </p>
+                        <Link
+                          href="/store/orders"
+                          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#0EA5A0] hover:underline"
+                        >
+                          Lihat Riwayat Pesanan
+                          <ChevronRight size={13} />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ) : effectiveInvoiceUrl ? (
                   <a
                     href={effectiveInvoiceUrl}
                     target="_blank"

@@ -6,6 +6,16 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { checkoutOrderSchema } from "@/lib/validations/storeSchema";
 import { createMidtransTransaction } from "@/lib/midtrans";
+import {
+  classifyMidtransCreateFailure,
+  getClaimId,
+  getRpcOutcome,
+  getSafeMidtransRedirectUrl,
+  parseWholeRupiahAmount,
+  type MidtransCompensationReason,
+  type MidtransInitializationState,
+  type MidtransUnknownReason,
+} from "@/lib/payments/midtransInitialization";
 import { logError } from "@/lib/logger";
 import { SHIPPING_UNAVAILABLE_MESSAGE } from "@/lib/shipping";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -22,6 +32,7 @@ export interface CheckoutResult {
   shippingZoneId?: string;
   shippingRateId?: string;
   total?: number;
+  recoveryRequired?: boolean;
 }
 
 function toErrors(error: ZodError): Record<string, string> {
@@ -40,6 +51,241 @@ function getErrorCategory(error: unknown): string {
     if (typeof code === "string" && code) return code;
   }
   return "unknown";
+}
+
+interface InitializableOrder {
+  id: string;
+  order_code: string;
+  total: unknown;
+  status: string;
+  payment_status: string;
+  payment_method: string | null;
+  customer_name: string;
+  customer_email: string | null;
+  customer_phone: string | null;
+  midtrans_order_id: string | null;
+  midtrans_redirect_url: string | null;
+  midtrans_init_state: MidtransInitializationState;
+}
+
+type PaymentInitializationResult =
+  | { outcome: "ready"; redirectUrl: string; amount: number }
+  | { outcome: "compensated"; message: string }
+  | { outcome: "review"; message: string };
+
+const RECOVERY_MESSAGE = "Pesanan sudah dibuat, tetapi pembayaran masih sedang diperiksa.";
+
+async function markInitializationUnknown(
+  orderCode: string,
+  userId: string,
+  claimId: string,
+  reason: MidtransUnknownReason,
+) {
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.rpc("mark_midtrans_initialization_unknown", {
+      p_order_code: orderCode,
+      p_user_id: userId,
+      p_claim_id: claimId,
+      p_reason: reason,
+    });
+    if (error) {
+      logError("checkout.midtrans_mark_unknown", "Gagal menandai inisialisasi untuk pemeriksaan.", {
+        orderCode,
+        category: getErrorCategory(error),
+      });
+    }
+  } catch (error) {
+    logError("checkout.midtrans_mark_unknown", "Gagal menandai inisialisasi untuk pemeriksaan.", {
+      orderCode,
+      category: getErrorCategory(error),
+    });
+  }
+}
+
+async function compensateInitialization(
+  orderCode: string,
+  userId: string,
+  claimId: string,
+  reason: MidtransCompensationReason,
+): Promise<boolean> {
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc("compensate_midtrans_initialization", {
+      p_order_code: orderCode,
+      p_user_id: userId,
+      p_claim_id: claimId,
+      p_reason: reason,
+    });
+    if (error) {
+      logError("checkout.midtrans_compensate", "Kompensasi inisialisasi pembayaran gagal.", {
+        orderCode,
+        category: getErrorCategory(error),
+      });
+      return false;
+    }
+    return ["released", "already_released"].includes(getRpcOutcome(data) ?? "");
+  } catch (error) {
+    logError("checkout.midtrans_compensate", "Kompensasi inisialisasi pembayaran gagal.", {
+      orderCode,
+      category: getErrorCategory(error),
+    });
+    return false;
+  }
+}
+
+async function readDurableMidtransReference(
+  orderCode: string,
+  userId: string,
+  expectedUrl?: string,
+): Promise<string | null> {
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("orders")
+      .select("midtrans_init_state, midtrans_order_id, midtrans_redirect_url, status, payment_status, deleted_at")
+      .eq("order_code", orderCode)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error || !data || data.deleted_at !== null) return null;
+
+    const redirectUrl = getSafeMidtransRedirectUrl(
+      data.midtrans_redirect_url,
+      process.env.MIDTRANS_IS_PRODUCTION === "true",
+    );
+    if (
+      data.midtrans_init_state !== "ready"
+      || data.midtrans_order_id !== orderCode
+      || !redirectUrl
+      || (expectedUrl !== undefined && redirectUrl !== expectedUrl)
+    ) {
+      return null;
+    }
+    return redirectUrl;
+  } catch {
+    return null;
+  }
+}
+
+async function initializeMidtransPayment(
+  order: InitializableOrder,
+  userId: string,
+  localPreflightValid = true,
+): Promise<PaymentInitializationResult> {
+  const admin = createAdminClient();
+  const amount = parseWholeRupiahAmount(order.total);
+  const { data: claimData, error: claimError } = await admin.rpc(
+    "claim_midtrans_initialization",
+    { p_order_code: order.order_code, p_user_id: userId },
+  );
+
+  if (claimError) {
+    logError("checkout.midtrans_claim", "Gagal memperoleh klaim inisialisasi pembayaran.", {
+      orderCode: order.order_code,
+      category: getErrorCategory(claimError),
+    });
+    return { outcome: "review", message: RECOVERY_MESSAGE };
+  }
+
+  const claimOutcome = getRpcOutcome(claimData);
+  if (claimOutcome === "ready") {
+    const redirectUrl = await readDurableMidtransReference(order.order_code, userId);
+    return redirectUrl && amount !== null
+      ? { outcome: "ready", redirectUrl, amount }
+      : { outcome: "review", message: RECOVERY_MESSAGE };
+  }
+  if (claimOutcome !== "claimed") {
+    return { outcome: "review", message: RECOVERY_MESSAGE };
+  }
+
+  const claimId = getClaimId(claimData);
+  if (!claimId) {
+    return { outcome: "review", message: RECOVERY_MESSAGE };
+  }
+
+  if (!localPreflightValid || amount === null) {
+    const reason: MidtransCompensationReason = amount === null
+      ? "amount_invalid"
+      : "local_preflight";
+    const compensated = await compensateInitialization(
+      order.order_code,
+      userId,
+      claimId,
+      reason,
+    );
+    return compensated
+      ? {
+          outcome: "compensated",
+          message: amount === null
+            ? "Total pembayaran tidak valid. Pesanan dibatalkan dan stok telah dikembalikan."
+            : "Pesanan belum dapat diproses. Stok telah dikembalikan.",
+        }
+      : { outcome: "review", message: RECOVERY_MESSAGE };
+  }
+
+  let redirectUrl: string;
+  try {
+    const transaction = await createMidtransTransaction({
+      orderCode: order.order_code,
+      amount,
+      customerEmail: (order.customer_email || "").trim() || `${order.order_code}@autentik.co`,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone ?? undefined,
+    });
+    redirectUrl = transaction.redirect_url;
+  } catch (error) {
+    const failure = classifyMidtransCreateFailure(error);
+    if (failure.outcome === "definitive") {
+      const compensated = await compensateInitialization(
+        order.order_code,
+        userId,
+        claimId,
+        failure.reason,
+      );
+      return compensated
+        ? { outcome: "compensated", message: "Pembayaran belum dapat dimulai. Stok telah dikembalikan." }
+        : { outcome: "review", message: RECOVERY_MESSAGE };
+    }
+
+    await markInitializationUnknown(
+      order.order_code,
+      userId,
+      claimId,
+      failure.reason,
+    );
+    return { outcome: "review", message: RECOVERY_MESSAGE };
+  }
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const { data, error } = await admin.rpc("finalize_midtrans_initialization", {
+        p_order_code: order.order_code,
+        p_user_id: userId,
+        p_claim_id: claimId,
+        p_redirect_url: redirectUrl,
+      });
+      const outcome = getRpcOutcome(data);
+      if (!error && ["finalized", "already_finalized"].includes(outcome ?? "")) {
+        const durableUrl = await readDurableMidtransReference(
+          order.order_code,
+          userId,
+          redirectUrl,
+        );
+        if (durableUrl) return { outcome: "ready", redirectUrl: durableUrl, amount };
+      }
+      if (!error && ["claim_mismatch", "ineligible"].includes(outcome ?? "")) break;
+    } catch {
+      // A bounded retry below handles transient database failures.
+    }
+  }
+
+  await markInitializationUnknown(
+    order.order_code,
+    userId,
+    claimId,
+    "provider_unpersisted",
+  );
+  return { outcome: "review", message: RECOVERY_MESSAGE };
 }
 
 export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
@@ -135,95 +381,70 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
   try {
     const { data: orderRow, error: orderError } = await supabase
       .from("orders")
-      .select("subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total")
+      .select("id, order_code, subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total, status, payment_status, payment_method, customer_name, customer_email, customer_phone, midtrans_order_id, midtrans_redirect_url, midtrans_init_state")
       .eq("order_code", orderCode)
       .eq("user_id", user.id)
       .single();
 
     if (orderError || !orderRow) {
-      throw orderError ?? new Error("Pesanan tidak dapat dibaca setelah checkout.");
+      logError("checkout.order_read", "Pesanan tidak dapat dibaca setelah checkout.", {
+        orderCode,
+        category: getErrorCategory(orderError),
+      });
+      return {
+        success: false,
+        message: RECOVERY_MESSAGE,
+        orderCode,
+        recoveryRequired: true,
+      };
     }
 
-    const totalAmount = Math.round(Number(orderRow?.total ?? 0));
     const shippingCost = Number(orderRow.shipping_cost ?? 0);
     const shippingTotalWeightG = Number(orderRow.shipping_total_weight_g ?? 0);
-
-    if (
+    const shippingIsValid = (
       shippingCost <= 0 ||
       shippingTotalWeightG <= 0 ||
       !orderRow.shipping_zone_id ||
       !orderRow.shipping_rate_id
-    ) {
-      return { success: false, message: SHIPPING_UNAVAILABLE_MESSAGE, orderCode };
-    }
+    ) === false;
+    const initialization = await initializeMidtransPayment(
+      orderRow as InitializableOrder,
+      user.id,
+      shippingIsValid,
+    );
 
-    if (totalAmount > 0) {
-      console.log("[CHECKOUT] Creating Midtrans transaction", { orderCode });
-
-      const transaction = await createMidtransTransaction({
-        orderCode,
-        amount: totalAmount,
-        customerEmail: data.customerEmail || `${orderCode}@autentik.co`,
-        customerName: data.customerName,
-        customerPhone: data.customerPhone,
-      });
-      if (!transaction.redirect_url) {
-        throw new Error("Midtrans tidak mengembalikan URL pembayaran.");
-      }
-
-      console.log("[CHECKOUT] Midtrans transaction created", { orderCode });
-
-      const supabaseAdmin = createAdminClient();
-      const { data: updatedOrder, error: updateErr } = await supabaseAdmin
-        .from("orders")
-        .update({
-          midtrans_order_id: orderCode,
-          midtrans_redirect_url: transaction.redirect_url,
-        })
-        .eq("order_code", orderCode)
-        .eq("user_id", user.id)
-        .eq("payment_method", "midtrans")
-        .eq("payment_status", "pending")
-        .is("deleted_at", null)
-        .select("id")
-        .maybeSingle();
-
-      if (updateErr || !updatedOrder) {
-        logError("checkout.midtrans_persist", "Gagal menyimpan referensi transaksi Midtrans.", {
-          orderCode,
-          category: getErrorCategory(updateErr),
-        });
-      } else {
-        console.log("[CHECKOUT] Midtrans reference saved", { orderCode });
-      }
-
+    if (initialization.outcome === "ready") {
       return {
         success: true,
         message: "Pesanan berhasil dibuat.",
         orderCode,
-        redirectUrl: transaction.redirect_url,
+        redirectUrl: initialization.redirectUrl,
         subtotal: Number(orderRow.subtotal),
         shippingCost,
         shippingTotalWeightG,
         shippingZoneId: orderRow.shipping_zone_id,
         shippingRateId: orderRow.shipping_rate_id,
-        total: totalAmount,
+        total: initialization.amount,
       };
     }
-    return {
+
+    const result: CheckoutResult = {
       success: false,
-      message: "Pesanan dibuat, tetapi total pembayaran tidak valid. Hubungi PPIC AKA.",
+      message: shippingIsValid ? initialization.message : SHIPPING_UNAVAILABLE_MESSAGE,
       orderCode,
+      recoveryRequired: initialization.outcome === "review",
     };
+    return result;
   } catch (err) {
-    logError("checkout.midtrans_transaction", "Pembuatan transaksi Midtrans gagal.", {
+    logError("checkout.midtrans_initialization", "Inisialisasi pembayaran memerlukan pemeriksaan.", {
       orderCode,
       category: getErrorCategory(err),
     });
     return {
       success: false,
-      message: "Pesanan dibuat, tetapi link pembayaran Midtrans gagal dibuat. Silakan buka riwayat pesanan untuk mencoba kembali.",
+      message: RECOVERY_MESSAGE,
       orderCode,
+      recoveryRequired: true,
     };
   }
 }
@@ -233,6 +454,7 @@ export interface RegenerateResult {
   success: boolean;
   message: string;
   redirectUrl?: string;
+  recoveryRequired?: boolean;
 }
 
 export async function regenerateMidtransPayment(orderCode: string): Promise<RegenerateResult> {
@@ -253,7 +475,7 @@ export async function regenerateMidtransPayment(orderCode: string): Promise<Rege
   try {
     const { data: order, error: fetchErr } = await supabase
       .from("orders")
-      .select("id, total, status, payment_status, payment_method, customer_name, customer_email, customer_phone, midtrans_redirect_url")
+      .select("id, order_code, total, status, payment_status, payment_method, customer_name, customer_email, customer_phone, midtrans_order_id, midtrans_redirect_url, midtrans_init_state")
       .eq("order_code", orderCode)
       .eq("user_id", user.id)
       .is("deleted_at", null)
@@ -267,70 +489,54 @@ export async function regenerateMidtransPayment(orderCode: string): Promise<Rege
       return { success: false, message: "Pesanan ini tidak menggunakan pembayaran Midtrans." };
     }
 
-    if (order.payment_status !== "pending") {
+    if (["paid", "refunded"].includes(order.payment_status)) {
       return { success: false, message: "Status pembayaran pesanan ini sudah tidak dapat diproses ulang." };
     }
 
-    if (order.status === "cancelled" || order.status === "completed" || order.status === "shipped") {
+    if (
+      order.payment_status !== "pending"
+      || ["cancelled", "completed", "shipped"].includes(order.status)
+      || order.midtrans_init_state === "compensated"
+    ) {
       return { success: false, message: "Pesanan ini sudah tidak dapat dibayar." };
     }
 
-    if (order.midtrans_redirect_url) {
-      return { success: true, message: "Link pembayaran sudah ada.", redirectUrl: order.midtrans_redirect_url };
+    if (order.midtrans_init_state === "ready") {
+      const redirectUrl = await readDurableMidtransReference(orderCode, user.id);
+      return redirectUrl
+        ? { success: true, message: "Link pembayaran sudah ada.", redirectUrl }
+        : { success: false, message: RECOVERY_MESSAGE, recoveryRequired: true };
     }
 
-    const totalAmount = Math.round(Number(order.total ?? 0));
-    if (totalAmount <= 0) {
-      return { success: false, message: "Total pesanan tidak valid." };
+    if (["initializing", "unknown"].includes(order.midtrans_init_state)) {
+      return { success: false, message: RECOVERY_MESSAGE, recoveryRequired: true };
     }
 
-    const customerEmail = (order.customer_email || "").trim() || `order_${orderCode}@autentik.co`;
-
-    console.log("[REGENERATE] Creating Midtrans transaction", { orderCode });
-
-    const transaction = await createMidtransTransaction({
-      orderCode,
-      amount: totalAmount,
-      customerEmail,
-      customerName: order.customer_name,
-      customerPhone: order.customer_phone,
-    });
-
-    console.log("[REGENERATE] Midtrans transaction created", { orderCode });
-
-    const supabaseAdmin = createAdminClient();
-    const { data: updatedOrder, error: updateErr } = await supabaseAdmin
-      .from("orders")
-      .update({
-        midtrans_order_id: orderCode,
-        midtrans_redirect_url: transaction.redirect_url,
-      })
-      .eq("id", order.id)
-      .eq("user_id", user.id)
-      .eq("payment_method", "midtrans")
-      .eq("payment_status", "pending")
-      .is("deleted_at", null)
-      .select("id")
-      .maybeSingle();
-
-    if (updateErr || !updatedOrder) {
-      logError("checkout.regenerate_midtrans_persist", "Gagal menyimpan referensi transaksi Midtrans.", {
-        orderCode,
-        category: getErrorCategory(updateErr),
-      });
-      return { success: false, message: "Gagal menyimpan data pembayaran. Silakan coba lagi." };
+    if (order.midtrans_init_state !== "idle") {
+      return { success: false, message: RECOVERY_MESSAGE, recoveryRequired: true };
     }
 
+    const initialization = await initializeMidtransPayment(
+      order as InitializableOrder,
+      user.id,
+    );
+    if (initialization.outcome === "ready") {
+      return {
+        success: true,
+        message: "Link pembayaran berhasil dibuat.",
+        redirectUrl: initialization.redirectUrl,
+      };
+    }
     return {
-      success: true,
-      message: "Link pembayaran berhasil dibuat.",
-      redirectUrl: transaction.redirect_url,
+      success: false,
+      message: initialization.message,
+      recoveryRequired: initialization.outcome === "review",
     };
   } catch (err) {
-    logError("checkout.regenerate_midtrans", "Regenerasi transaksi Midtrans gagal.", {
+    logError("checkout.regenerate_midtrans", "Pemulihan pembayaran Midtrans gagal.", {
       orderCode,
       category: getErrorCategory(err),
     });
-    return { success: false, message: "Gagal membuat link pembayaran. Silakan coba lagi." };
+    return { success: false, message: RECOVERY_MESSAGE, recoveryRequired: true };
   }
 }

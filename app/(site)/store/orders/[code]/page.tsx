@@ -6,6 +6,7 @@ import OrderConfirmationClient from "@/components/orders/OrderConfirmationClient
 import { getWhatsAppContact, getOwnedLegacyTransferBankAccount } from "@/lib/public-data";
 import { createClient } from "@/utils/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getSafeMidtransRedirectUrl } from "@/lib/payments/midtransInitialization";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     paid_at: string | null;
     midtrans_redirect_url: string | null;
     midtrans_order_id: string | null;
+    midtrans_init_state: string;
     created_at: string;
     order_items: {
       product_name: string;
@@ -88,7 +90,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
 
   const { data, error: orderError } = await supabase
     .from("orders")
-    .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total, paid_at, midtrans_redirect_url, midtrans_order_id, created_at, order_items(product_name, sku, unit_price, quantity, product_id, variant_label)")
+    .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total, paid_at, midtrans_redirect_url, midtrans_order_id, midtrans_init_state, created_at, order_items(product_name, sku, unit_price, quantity, product_id, variant_label)")
     .eq("order_code", code)
     .eq("user_id", user.id)
     .is("deleted_at", null)
@@ -106,6 +108,13 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   const bankAccount = paymentFlow === "manual_transfer"
     ? await getOwnedLegacyTransferBankAccount(code)
     : null;
+  const safeMidtransRedirectUrl = rawOrder.midtrans_init_state === "ready"
+    && rawOrder.midtrans_order_id === rawOrder.order_code
+    ? getSafeMidtransRedirectUrl(
+        rawOrder.midtrans_redirect_url,
+        process.env.MIDTRANS_IS_PRODUCTION === "true",
+      )
+    : null;
   const dbOrderSafe = {
     order_code: rawOrder.order_code,
     customer_name: rawOrder.customer_name,
@@ -119,8 +128,9 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     shipping_rate_id: rawOrder.shipping_rate_id,
     total: rawOrder.total,
     paid_at: rawOrder.paid_at,
-    midtrans_redirect_url: rawOrder.midtrans_redirect_url,
+    midtrans_redirect_url: safeMidtransRedirectUrl,
     midtrans_order_id: rawOrder.midtrans_order_id,
+    midtrans_init_state: rawOrder.midtrans_init_state,
     created_at: rawOrder.created_at,
     order_items: rawOrder.order_items,
   };
