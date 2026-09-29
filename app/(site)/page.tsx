@@ -16,6 +16,7 @@ import {
   getWhatsAppContact,
   listPublicBrands,
   listPublicProductsByType,
+  type ProductRow,
   type PublicBrandItem,
 } from "@/lib/public-data";
 
@@ -27,14 +28,29 @@ export const metadata: Metadata = {
     "PT Autentik Karya Analitika mengembangkan produk dan sistem teknologi untuk kebutuhan industri, laboratorium, pemantauan lingkungan, dan integrasi IoT.",
 };
 
-const MAIN_BRANDS = ["Talpha", "Autentik", "Cylab", "Ullun", "Epal"] as const;
+const MAIN_BRANDS = [
+  { id: "talpha", name: "Talpha" },
+  { id: "autentik", name: "Autentik" },
+  { id: "cylab", name: "Cylab" },
+  { id: "ullun", name: "Ullun" },
+  { id: "epal", name: "Epal" },
+] as const;
 
 function selectMainBrands(items: PublicBrandItem[]): PublicBrandItem[] {
-  return MAIN_BRANDS.map((name) => {
+  return MAIN_BRANDS.map(({ name }) => {
     const item = items.find((candidate) => candidate.name.toLowerCase() === name.toLowerCase());
     return item
       ? { ...item, name: name.toUpperCase() }
       : { name: name.toUpperCase(), brandFilter: name, logoSrc: "" };
+  });
+}
+
+function selectFeaturedProducts(products: ProductRow[]): ProductRow[] {
+  return MAIN_BRANDS.flatMap(({ id }) => {
+    const product = products.find(
+      (candidate) => candidate.brand_id === id && candidate.is_active === true,
+    );
+    return product ? [product] : [];
   });
 }
 
@@ -49,7 +65,7 @@ export default async function HomePage() {
       getWhatsAppContact("mika_distributor_inquiry"),
       getWhatsAppContact("mika_product_sales"),
     ]);
-  const featuredProducts = publicProducts.slice(0, 4);
+  const featuredProducts = selectFeaturedProducts(publicProducts);
   const products3d = publicProducts.filter((product) => product.model_3d_url?.trim());
   const hasGroupDistribution = distributionEntities.some(
     (entity) => entity.distributionType === "group_distribution",

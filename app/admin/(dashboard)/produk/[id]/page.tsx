@@ -7,6 +7,7 @@ import type { HotspotItem, PhotoHotspotItem } from "@/components/admin/ProductFo
 
 interface Props {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ created?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -15,8 +16,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `${product?.name ?? "Produk"} | Autentik CMS` };
 }
 
-export default async function AdminProdukEditPage({ params }: Props) {
+export default async function AdminProdukEditPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const created = (await searchParams).created === "1";
   const [product, brands, techDocs, hotspots, photoHotspots] = await Promise.all([
     getProduct(id),
     listBrands(),
@@ -50,6 +52,14 @@ export default async function AdminProdukEditPage({ params }: Props) {
   return (
     <div>
       <PageHeader title="Edit Produk B2B" description={product.name} backHref="/admin/produk" />
+      {created && (
+        <div
+          role="status"
+          className="mb-6 rounded-xl border border-[#0EA5A0]/30 bg-[#0EA5A0]/10 px-4 py-3 text-sm font-semibold text-[#0B7F7A]"
+        >
+          Produk berhasil dibuat. Lengkapi hotspot dan dokumen teknis di bawah.
+        </div>
+      )}
       <ProductForm
         productType="b2b_system"
         initial={product}

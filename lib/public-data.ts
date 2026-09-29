@@ -95,7 +95,8 @@ export async function listPublicProductsByType(): Promise<ProductRow[]> {
     .eq("product_type", "b2b_system")
     .eq("status", "published")
     .is("deleted_at", null)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
   if (error) {
     logError("listPublicProductsByType", error);
     return [];

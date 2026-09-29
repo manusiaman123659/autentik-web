@@ -12,6 +12,7 @@ import { resolveAkaProductMediaUrl } from "@/lib/supabase-public-media";
 export interface ActionResult {
   success: boolean;
   message: string;
+  productId?: string;
   errors?: Record<string, string>;
   variantWarning?: string;
   hotspotWarning?: string;
@@ -218,6 +219,7 @@ export async function upsertProduct(
       return {
         success: true,
         message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+        productId: id,
         variantWarning: "Gagal menyimpan varian: " + variantError.message,
       };
     }
@@ -242,6 +244,7 @@ export async function upsertProduct(
       return {
         success: true,
         message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+        productId: id,
         hotspotWarning: "Gagal menyimpan hotspot: " + hotspotError.message,
       };
     }
@@ -280,6 +283,7 @@ export async function upsertProduct(
       return {
         success: true,
         message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+        productId: id,
         photoHotspotWarning: "Gagal menyimpan photo hotspot: " + photoHotspotError.message,
       };
     }
@@ -304,7 +308,11 @@ export async function upsertProduct(
   revalidatePath("/products");
   revalidatePath(`/products/${p.slug}`);
 
-  return { success: true, message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan." };
+  return {
+    success: true,
+    message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+    productId: id,
+  };
 }
 
 export async function deleteProduct(id: string): Promise<ActionResult> {

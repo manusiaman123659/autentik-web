@@ -30,7 +30,7 @@ export default function FeaturedProducts({ products }: { products: ProductRow[] 
           </div>
         </AnimatedElement>
 
-        <AnimatedElement type="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <AnimatedElement type="stagger" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
           {products.map((product) => (
             <div
               key={product.id}
@@ -48,7 +48,7 @@ export default function FeaturedProducts({ products }: { products: ProductRow[] 
                     alt={product.name}
                     fill
                     className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 20vw"
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-[#0EA5A0]/30">

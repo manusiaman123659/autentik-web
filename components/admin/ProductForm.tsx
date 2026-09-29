@@ -698,7 +698,17 @@ export default function ProductForm({
       toast("error", result.photoHotspotWarning);
     }
 
-    const productId = form.id || (result as { productId?: string }).productId;
+    const productId = result.productId ?? form.id;
+    if (!initial && !isSparepart) {
+      setSaving(false);
+      if (!productId) {
+        toast("error", "Produk tersimpan, tetapi ID produk tidak tersedia. Muat ulang daftar produk sebelum melanjutkan.");
+        return;
+      }
+      router.push(`/admin/produk/${encodeURIComponent(productId)}?created=1`);
+      return;
+    }
+
     if (productId && !isSparepart) {
       try {
         const existingIds = initialDocuments.map((d) => d.id).filter(Boolean);
