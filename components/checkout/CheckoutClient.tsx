@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -14,6 +14,13 @@ import { formatRupiah } from "@/lib/format";
 import { orderSnapshotKey, type OrderSnapshot } from "@/lib/order-snapshot";
 import { getDirectBuyItem, clearDirectBuyItem, type DirectBuyItem } from "@/lib/direct-buy";
 import { createClient as createSupabaseClient } from "@/utils/supabase/client";
+import {
+  associateCheckoutIntentOrder,
+  CheckoutIntentStorageError,
+  getOrCreateCheckoutIntent,
+  resetCheckoutIntent,
+  type CheckoutIntentScope,
+} from "@/lib/checkout-intent";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import {
   parseShippingQuote,
@@ -68,7 +75,16 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
   }, [isDirectMode, directItem, cartTotalItems]);
 
   const [submitting, setSubmitting] = useState(false);
+  const submissionGuard = useRef(false);
+  const authGeneration = useRef(0);
   const [serverError, setServerError] = useState("");
+  const [intentContext, setIntentContext] = useState<{
+    userId: string;
+    key: string;
+    scope: CheckoutIntentScope;
+  } | null>(null);
+  const [existingIntentOrderCode, setExistingIntentOrderCode] = useState<string | null>(null);
+  const [canStartNewIntent, setCanStartNewIntent] = useState(false);
   const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
   const [quotedRequestKey, setQuotedRequestKey] = useState("");
   const [estimating, setEstimating] = useState(false);
@@ -140,9 +156,21 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
   // Auto-fill dari profil user yang sudah login
   useEffect(() => {
     let active = true;
-    const loadProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!active || !user) return;
+    let currentUserId: string | null = null;
+    const applyUser = (user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"]) => {
+      if (!active) return;
+      const nextUserId = user?.id ?? null;
+      if (currentUserId === nextUserId) return;
+      const accountChanged = currentUserId !== null;
+      currentUserId = nextUserId;
+      if (accountChanged) {
+        authGeneration.current += 1;
+        setIntentContext(null);
+        setExistingIntentOrderCode(null);
+        setCanStartNewIntent(false);
+        setServerError("");
+      }
+      if (!user) return;
       const meta = user.user_metadata ?? {};
       reset({
         customerName: meta.full_name ?? "",
@@ -150,8 +178,18 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
         customerPhone: meta.phone ?? "",
       }, { keepDefaultValues: false });
     };
-    loadProfile();
-    return () => { active = false; };
+    const loadProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      applyUser(user);
+    };
+    void loadProfile();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      applyUser(session?.user ?? null);
+    });
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [reset]);
 
   if (!hydrated) {
@@ -191,27 +229,84 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
   }
 
   const onSubmit = async (data: CheckoutFormData) => {
+    if (submissionGuard.current) return;
     const quoteIsCurrent = quotedRequestKey === quoteRequestKey;
     if (!quoteIsCurrent || shippingQuote?.status !== "QUOTED" || !shippingQuote.cost || shippingQuote.cost <= 0) {
       setServerError(SHIPPING_UNAVAILABLE_MESSAGE);
       return;
     }
 
+    submissionGuard.current = true;
     setSubmitting(true);
     setServerError("");
+    setExistingIntentOrderCode(null);
+    setCanStartNewIntent(false);
     try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData.user) {
+        setServerError("Sesi Anda telah berakhir. Silakan masuk kembali sebelum checkout.");
+        return;
+      }
+
+      const intentScope: CheckoutIntentScope = isDirectMode ? "direct" : "cart";
+      const requestIdentity = JSON.stringify({
+        version: 1,
+        items: activeItems
+          .map((item) => ({
+            productId: item.id,
+            variantId: item.variant_id ?? null,
+            quantity: item.quantity,
+          }))
+          .sort((a, b) => `${a.productId}:${a.variantId ?? ""}`.localeCompare(`${b.productId}:${b.variantId ?? ""}`)),
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        customerPhone: data.customerPhone,
+        address: data.address,
+        city: data.city,
+        province: data.province,
+        postalCode: data.postalCode,
+        notes: data.notes,
+      });
+      const intent = getOrCreateCheckoutIntent(authData.user.id, intentScope, requestIdentity);
+      setIntentContext({ userId: authData.user.id, key: intent.key, scope: intentScope });
+      const requestAuthGeneration = authGeneration.current;
+
       const result = await submitCheckout({
         ...data,
+        idempotencyKey: intent.key,
         items: activeItems.map((i) => ({ productId: i.id, quantity: i.quantity, variantId: i.variant_id ?? null })),
       });
+      if (authGeneration.current !== requestAuthGeneration) return;
+
+      if (result.idempotencyConflict) {
+        if (result.orderCode) {
+          associateCheckoutIntentOrder(authData.user.id, intentScope, intent.key, result.orderCode, false);
+          setExistingIntentOrderCode(result.orderCode);
+        }
+        setCanStartNewIntent(result.canStartNewIntent === true);
+        setServerError(result.message);
+        return;
+      }
 
       if (!result.success && result.recoveryRequired && result.orderCode) {
-        if (isDirectMode) {
-          clearDirectBuyItem();
-        } else {
-          clearCart();
+        associateCheckoutIntentOrder(authData.user.id, intentScope, intent.key, result.orderCode, false);
+        const cleared = isDirectMode ? clearDirectBuyItem() : clearCart();
+        if (!cleared) {
+          setExistingIntentOrderCode(result.orderCode);
+          setServerError("Pesanan sedang diproses, tetapi data keranjang lokal belum dapat dibersihkan. Buka pesanan terkait untuk melanjutkan dengan aman.");
+          return;
         }
         router.replace(`/store/orders/${result.orderCode}`);
+        return;
+      }
+
+      if (!result.success && result.intentTerminal) {
+        if (result.orderCode) {
+          associateCheckoutIntentOrder(authData.user.id, intentScope, intent.key, result.orderCode, false);
+          setExistingIntentOrderCode(result.orderCode);
+        }
+        setCanStartNewIntent(result.canStartNewIntent === true);
+        setServerError(result.message);
         return;
       }
 
@@ -231,11 +326,13 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
         return;
       }
 
+      associateCheckoutIntentOrder(authData.user.id, intentScope, intent.key, result.orderCode, false);
+
       const snapshot: OrderSnapshot = {
         code: result.orderCode,
         createdAt: new Date().toISOString(),
-        status: "pending",
-        paymentStatus: "pending",
+        status: result.orderStatus ?? "pending",
+        paymentStatus: result.paymentStatus ?? "pending",
         items: activeItems.map((i) => ({
           id: i.id,
           slug: i.slug,
@@ -260,11 +357,14 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
         // Abaikan jika sessionStorage penuh/blokir; halaman konfirmasi tetap tampil via URL.
       }
 
-      if (isDirectMode) {
-        clearDirectBuyItem();
-      } else {
-        clearCart();
+      const cleared = isDirectMode ? clearDirectBuyItem() : clearCart();
+      if (!cleared) {
+        setExistingIntentOrderCode(result.orderCode);
+        setServerError("Pesanan berhasil dibuat, tetapi data keranjang lokal belum dapat dibersihkan. Buka pesanan terkait untuk melanjutkan pembayaran dengan aman.");
+        return;
       }
+      associateCheckoutIntentOrder(authData.user.id, intentScope, intent.key, result.orderCode, true);
+      if (isDirectMode) setDirectItem(null);
 
       // If Midtrans returned a redirect URL, redirect to payment page
       if (result.redirectUrl) {
@@ -273,11 +373,29 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
       }
 
       router.replace(`/store/orders/${result.orderCode}`);
-    } catch {
-      setServerError("Terjadi kesalahan saat memproses pesanan. Silakan coba lagi.");
+    } catch (error) {
+      setServerError(
+        error instanceof CheckoutIntentStorageError
+          ? "Penyimpanan sesi checkout tidak tersedia. Aktifkan sessionStorage sebelum mencoba kembali."
+          : "Terjadi kesalahan saat memproses pesanan. Silakan coba lagi.",
+      );
     } finally {
+      submissionGuard.current = false;
       setSubmitting(false);
     }
+  };
+
+  const handleStartNewIntent = () => {
+    if (!intentContext) return;
+    resetCheckoutIntent(intentContext.userId, intentContext.scope);
+    setIntentContext(null);
+    setExistingIntentOrderCode(null);
+    setCanStartNewIntent(false);
+    setServerError("Intent checkout baru siap. Periksa kembali data lalu tekan Bayar Sekarang.");
+  };
+
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    void handleSubmit(onSubmit)(event);
   };
 
   const quoteIsCurrent = quotedRequestKey === quoteRequestKey;
@@ -319,11 +437,30 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
                 Kembali ke {isDirectMode ? "Produk" : "Keranjang"} untuk menyesuaikan
                 <ChevronRight size={12} />
               </Link>
+              {existingIntentOrderCode && (
+                <Link
+                  href={`/store/orders/${encodeURIComponent(existingIntentOrderCode)}`}
+                  className="ml-3 inline-flex items-center gap-1 mt-2 text-xs font-bold text-[#0EA5A0] hover:underline"
+                >
+                  Lihat pesanan terkait
+                  <ChevronRight size={12} />
+                </Link>
+              )}
+              {canStartNewIntent && intentContext && (
+                <button
+                  type="button"
+                  onClick={handleStartNewIntent}
+                  className="mt-3 block text-xs font-semibold underline underline-offset-2"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Mulai checkout baru dengan kunci baru
+                </button>
+              )}
             </div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleFormSubmit}>
           <div className="grid lg:grid-cols-3 gap-8 items-start">
             {/* Form data pembeli */}
             <div className="lg:col-span-2 space-y-6">

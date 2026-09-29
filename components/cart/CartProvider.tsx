@@ -48,7 +48,7 @@ interface CartContextValue {
   addItem: (product: CartItemInput, quantity?: number) => void;
   removeItem: (keyOrId: string, variantId?: string | null) => void;
   updateQty: (keyOrId: string, quantity: number, variantId?: string | null) => void;
-  clearCart: () => void;
+  clearCart: () => boolean;
 }
 
 const STORAGE_KEY = "autentik-cart:v1";
@@ -202,7 +202,15 @@ export default function CartProvider({
     );
   }, []);
 
-  const clearCart = useCallback(() => setItems([]), []);
+  const clearCart = useCallback(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, "[]");
+      setItems([]);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   const totalItems = useMemo(
     () => items.reduce((sum, i) => sum + i.quantity, 0),

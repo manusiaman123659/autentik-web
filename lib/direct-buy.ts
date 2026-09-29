@@ -44,11 +44,13 @@ export function getDirectBuyItem(): DirectBuyItem | null {
   return null;
 }
 
-export function clearDirectBuyItem(): void {
-  if (typeof window === "undefined") return;
+export function clearDirectBuyItem(): boolean {
+  if (typeof window === "undefined") return false;
   try {
     window.sessionStorage.removeItem(DIRECT_BUY_STORAGE_KEY);
+    return true;
   } catch (err) {
     console.error("[DirectBuy] Failed to clear direct buy item:", err);
+    return false;
   }
 }

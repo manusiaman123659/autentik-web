@@ -18,7 +18,6 @@ import {
 } from "@/lib/payments/midtransInitialization";
 import { logError } from "@/lib/logger";
 import { SHIPPING_UNAVAILABLE_MESSAGE } from "@/lib/shipping";
-import { checkRateLimit } from "@/lib/rate-limit";
 
 export interface CheckoutResult {
   success: boolean;
@@ -33,6 +32,11 @@ export interface CheckoutResult {
   shippingRateId?: string;
   total?: number;
   recoveryRequired?: boolean;
+  idempotencyConflict?: boolean;
+  canStartNewIntent?: boolean;
+  intentTerminal?: boolean;
+  orderStatus?: string;
+  paymentStatus?: string;
 }
 
 function toErrors(error: ZodError): Record<string, string> {
@@ -317,11 +321,6 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     };
   }
 
-  // Authenticated per-user limit for order-creating attempts only; no page view or shipping quote counts.
-  if (!checkRateLimit(`checkout:create:${user.id}`, 10, 10 * 60_000).allowed) {
-    return { success: false, message: "Terlalu banyak permintaan. Silakan coba lagi beberapa saat." };
-  }
-
   const items = data.items.map((i) => ({
     product_id: i.productId,
     quantity: i.quantity,
@@ -335,9 +334,10 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     postal_code: data.postalCode,
   };
 
-  const { data: orderCode, error } = await supabase.rpc("create_checkout_order", {
+  const { data: orderCode, error } = await supabase.rpc("create_checkout_order_v2", {
     p_items: items,
     p_customer_name: data.customerName,
+    p_idempotency_key: data.idempotencyKey,
     p_customer_email: data.customerEmail || null,
     p_customer_phone: data.customerPhone || null,
     p_shipping_address: shippingAddress,
@@ -350,6 +350,43 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       code: /^[A-Z0-9]{5,8}$/.test(error.code ?? "") ? error.code : "unknown",
     });
     const errText = error.message || "";
+    if (error.code === "P0023" || errText.includes("idempotency_conflict")) {
+      const { data: existingOrder } = await supabase
+        .from("orders")
+        .select("order_code,status,payment_status,midtrans_init_state")
+        .eq("user_id", user.id)
+        .eq("checkout_idempotency_key", data.idempotencyKey)
+        .maybeSingle();
+      const canStartNewIntent = existingOrder != null && (
+        existingOrder.status === "cancelled"
+        || ["paid", "failed", "refunded"].includes(existingOrder.payment_status)
+        || existingOrder.midtrans_init_state === "compensated"
+      );
+      return {
+        success: false,
+        message: canStartNewIntent
+          ? "Data checkout berubah setelah proses sebelumnya selesai. Periksa pesanan terkait atau mulai checkout baru."
+          : "Data checkout berubah saat pesanan sebelumnya masih aktif. Periksa pesanan terkait sebelum melanjutkan.",
+        orderCode: existingOrder?.order_code,
+        idempotencyConflict: true,
+        canStartNewIntent,
+      };
+    }
+    if (error.code === "P0025" || errText.includes("idempotency_order_archived")) {
+      return {
+        success: false,
+        message: "Pesanan dari intent ini telah diarsipkan. Mulai checkout baru jika Anda memang ingin membuat pesanan lain.",
+        orderCode: /^ORD-[A-Z0-9-]+$/.test(error.details ?? "") ? error.details : undefined,
+        intentTerminal: true,
+        canStartNewIntent: true,
+      };
+    }
+    if (error.code === "P0026" || errText.includes("checkout_rate_limit_exceeded")) {
+      return {
+        success: false,
+        message: "Terlalu banyak percobaan checkout. Tunggu 10 menit sebelum mencoba lagi.",
+      };
+    }
     let customerMessage = "Pesanan belum dapat dibuat. Periksa kembali keranjang dan data pengiriman Anda.";
     if (errText.includes(SHIPPING_UNAVAILABLE_MESSAGE)) {
       customerMessage = SHIPPING_UNAVAILABLE_MESSAGE;
@@ -401,6 +438,83 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
 
     const shippingCost = Number(orderRow.shipping_cost ?? 0);
     const shippingTotalWeightG = Number(orderRow.shipping_total_weight_g ?? 0);
+    const orderDetails = {
+      orderCode,
+      subtotal: Number(orderRow.subtotal),
+      shippingCost,
+      shippingTotalWeightG,
+      shippingZoneId: orderRow.shipping_zone_id,
+      shippingRateId: orderRow.shipping_rate_id,
+      total: Number(orderRow.total),
+      orderStatus: orderRow.status,
+      paymentStatus: orderRow.payment_status,
+    };
+
+    if (orderRow.payment_status === "paid") {
+      return {
+        success: true,
+        message: "Pesanan ini sudah dibayar.",
+        ...orderDetails,
+      };
+    }
+
+    if (
+      orderRow.midtrans_init_state === "compensated"
+      || orderRow.status === "cancelled"
+      || ["failed", "refunded"].includes(orderRow.payment_status)
+    ) {
+      return {
+        success: false,
+        message: "Checkout ini sudah berakhir. Periksa detail pesanan sebelum memulai checkout baru.",
+        ...orderDetails,
+        intentTerminal: true,
+        canStartNewIntent: true,
+      };
+    }
+
+    if (
+      orderRow.midtrans_init_state === "ready"
+      && orderRow.payment_status === "pending"
+      && orderRow.status === "pending"
+    ) {
+      const redirectUrl = await readDurableMidtransReference(orderCode, user.id);
+      return redirectUrl
+        ? {
+            success: true,
+            message: "Link pembayaran sudah tersedia.",
+            ...orderDetails,
+            redirectUrl,
+          }
+        : {
+            success: false,
+            message: RECOVERY_MESSAGE,
+            ...orderDetails,
+            recoveryRequired: true,
+          };
+    }
+
+    if (["initializing", "unknown"].includes(orderRow.midtrans_init_state)) {
+      return {
+        success: false,
+        message: RECOVERY_MESSAGE,
+        ...orderDetails,
+        recoveryRequired: true,
+      };
+    }
+
+    if (
+      orderRow.midtrans_init_state !== "idle"
+      || orderRow.payment_status !== "pending"
+      || orderRow.status !== "pending"
+    ) {
+      return {
+        success: false,
+        message: RECOVERY_MESSAGE,
+        ...orderDetails,
+        recoveryRequired: true,
+      };
+    }
+
     const shippingIsValid = (
       shippingCost <= 0 ||
       shippingTotalWeightG <= 0 ||
@@ -417,13 +531,8 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       return {
         success: true,
         message: "Pesanan berhasil dibuat.",
-        orderCode,
+        ...orderDetails,
         redirectUrl: initialization.redirectUrl,
-        subtotal: Number(orderRow.subtotal),
-        shippingCost,
-        shippingTotalWeightG,
-        shippingZoneId: orderRow.shipping_zone_id,
-        shippingRateId: orderRow.shipping_rate_id,
         total: initialization.amount,
       };
     }
@@ -431,8 +540,10 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
     const result: CheckoutResult = {
       success: false,
       message: shippingIsValid ? initialization.message : SHIPPING_UNAVAILABLE_MESSAGE,
-      orderCode,
+      ...orderDetails,
       recoveryRequired: initialization.outcome === "review",
+      intentTerminal: initialization.outcome === "compensated",
+      canStartNewIntent: initialization.outcome === "compensated",
     };
     return result;
   } catch (err) {

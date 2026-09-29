@@ -55,6 +55,7 @@ export const manualOrderRefundSchema = z
 export type ManualOrderRefundFormData = z.input<typeof manualOrderRefundSchema>;
 
 export const checkoutOrderSchema = z.object({
+  idempotencyKey: z.string().uuid("Kunci checkout tidak valid"),
   customerName: z.string().min(2, "Nama pembeli minimal 2 karakter"),
   customerEmail: z.string().email("Format email tidak valid").or(z.literal("")).default(""),
   customerPhone: z.string().default(""),
@@ -82,7 +83,7 @@ export type CheckoutOrderFormData = z.input<typeof checkoutOrderSchema>;
 // tidak pernah ada di form values (root cause: klik "Buat Pesanan" tidak
 // melakukan apa pun tanpa pesan error). Server tetap memakai
 // `checkoutOrderSchema` (ketat) lewat submitCheckout yang selalu menerima items.
-export const checkoutFormSchema = checkoutOrderSchema.omit({ items: true });
+export const checkoutFormSchema = checkoutOrderSchema.omit({ idempotencyKey: true, items: true });
 export type CheckoutFormData = z.input<typeof checkoutFormSchema>;
 
 export const storeSettingsSchema = z.object({
