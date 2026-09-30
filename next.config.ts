@@ -7,7 +7,7 @@ const supabaseMediaPattern = createSupabasePublicMediaPattern(
 );
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: process.env.VERCEL ? undefined : "standalone",
   allowedDevOrigins: ["*.ngrok-free.dev", "*.ngrok-free.app"],
   images: {
     formats: ["image/avif", "image/webp"],
