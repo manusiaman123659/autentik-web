@@ -77,22 +77,6 @@ export default function StoreFilterSidebar({
         )}
       </div>
 
-      {/* Search */}
-      <div>
-        <label className="block text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
-          Cari
-        </label>
-        <input
-          type="text"
-          value={filters.query}
-          onChange={(e) => onFilterChange({ query: e.target.value })}
-          placeholder="Nama, SKU, merek..."
-          aria-label="Cari produk"
-          className="w-full rounded-sm border px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
-          style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}
-        />
-      </div>
-
       {/* Category */}
       <div>
         <label className="block text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "var(--text-muted)" }}>
