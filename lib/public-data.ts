@@ -5,7 +5,6 @@ import { parseBankAccount, type BankAccount } from "@/lib/bank-account";
 import type { CareerPosition } from "@/lib/data/careers";
 import { groups as staticGroups } from "@/lib/data/groups";
 import { partners as staticPartners } from "@/lib/data/partners";
-import { brands as staticBrands } from "@/lib/data/brands";
 import { teamMembers as staticTeamMembers } from "@/lib/data/team";
 import type { GroupCompany, Partner, TeamMember } from "@/types";
 import type { DistributionEntity, DistributionType } from "@/types";
@@ -32,20 +31,13 @@ import { getSafeExternalUrl } from "@/lib/public-url";
 export type { ProductRow };
 
 export interface PublicBrandItem {
+  id: string;
   name: string;
   logoSrc: string;
   logoSrcDark?: string;
   /** Value used for ?brand= query param on /products */
   brandFilter: string;
 }
-
-export const staticBrandItems: PublicBrandItem[] = staticBrands
-  .map((b) => ({
-    name: b.name,
-    logoSrc: b.logoLight ?? b.logoDark ?? "",
-    logoSrcDark: b.logoDark ?? b.logoLight ?? "",
-    brandFilter: b.name,
-  }));
 
 interface CareerRow {
   slug: string;
@@ -342,31 +334,37 @@ export async function listPublicTeamMembers(): Promise<TeamMember[]> {
 }
 
 interface BrandRow {
+  id: string;
   name: string;
   logo_light: string | null;
   logo_dark: string | null;
 }
 
 export async function listPublicBrands(): Promise<PublicBrandItem[]> {
-  const supabase = await getSupabase();
-  const { data, error } = await supabase
-    .from("brands")
-    .select("id, name, logo_light, logo_dark")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
-  if (error) {
-    console.error("[public-data] brands", error);
-    return staticBrandItems;
-  }
-  if (!data || data.length === 0) return staticBrandItems;
-  const items = (data as unknown as BrandRow[])
-    .map((r) => ({
+  try {
+    const supabase = await getSupabase();
+    const { data, error } = await supabase
+      .from("brands")
+      .select("id, name, logo_light, logo_dark")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(5);
+    if (error) {
+      logError("listPublicBrands", error);
+      return [];
+    }
+    return ((data ?? []) as BrandRow[]).map((r) => ({
+      id: r.id,
       name: r.name,
-      logoSrc: r.logo_light ?? r.logo_dark ?? "",
-      logoSrcDark: r.logo_dark ?? r.logo_light ?? "",
+      logoSrc: r.logo_light || r.logo_dark || "",
+      logoSrcDark: r.logo_dark || r.logo_light || "",
       brandFilter: r.name,
     }));
-  return items.length > 0 ? items : staticBrandItems;
+  } catch (error) {
+    logError("listPublicBrands", error);
+    return [];
+  }
 }
 
 export async function getRecruitmentUrl(): Promise<string | null> {

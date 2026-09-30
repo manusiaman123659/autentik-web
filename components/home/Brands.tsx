@@ -4,16 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "@/components/ThemeProvider";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
+import type { PublicBrandItem } from "@/lib/public-data";
 
-interface BrandItem {
-  name: string;
-  logoSrc?: string;
-  logoSrcDark?: string;
-  /** Value used for ?brand= query param on /products */
-  brandFilter: string;
-}
+const brandGridColumns: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-2 sm:grid-cols-3",
+  4: "grid-cols-2 lg:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
+};
 
-export default function Brands({ items }: { items: BrandItem[] }) {
+export default function Brands({ items }: { items: PublicBrandItem[] }) {
   const { theme } = useTheme();
 
   if (items.length === 0) return null;
@@ -42,7 +43,7 @@ export default function Brands({ items }: { items: BrandItem[] }) {
               className="text-sm leading-relaxed mt-4 max-w-lg"
               style={{ color: "var(--text-secondary)" }}
             >
-              Lima brand utama dalam portofolio produk yang dikembangkan untuk kebutuhan
+              Brand utama dalam portofolio produk yang dikembangkan untuk kebutuhan
               industri, laboratorium, dan lingkungan.
             </p>
           </div>
@@ -52,15 +53,15 @@ export default function Brands({ items }: { items: BrandItem[] }) {
       <div className="max-w-7xl mx-auto px-8 lg:px-16">
         <AnimatedElement
           type="stagger"
-          className="grid grid-cols-2 border-l border-t sm:grid-cols-3 lg:grid-cols-5"
+          className={`grid border-l border-t ${brandGridColumns[items.length] ?? brandGridColumns[5]}`}
           style={{ borderColor: "var(--border-subtle)" }}
         >
           {items.map((brand) => (
             <Link
-              key={brand.name}
-              href={`/products?brand=${brand.brandFilter}`}
+              key={brand.id}
+              href={`/products?brand=${encodeURIComponent(brand.brandFilter)}`}
               aria-label={`Lihat produk ${brand.name}`}
-              className="flex h-28 items-center justify-center border-b border-r px-5 opacity-75 transition-all duration-300 hover:bg-[#0EA5A0]/5 hover:opacity-100 md:h-32"
+              className="flex min-w-0 h-28 items-center justify-center border-b border-r px-5 opacity-75 transition-all duration-300 hover:bg-[#0EA5A0]/5 hover:opacity-100 md:h-32"
               style={{ borderColor: "var(--border-subtle)" }}
             >
               {brand.logoSrc ? (
@@ -69,10 +70,10 @@ export default function Brands({ items }: { items: BrandItem[] }) {
                   alt={brand.name}
                   width={160}
                   height={80}
-                  className="h-10 md:h-12 w-auto max-w-[180px] object-contain"
+                  className="h-10 md:h-12 w-auto max-w-full object-contain"
                 />
               ) : (
-                <span className="text-xl font-black tracking-[0.14em]" style={{ color: "var(--text-primary)" }}>
+                <span className="min-w-0 text-center text-base sm:text-xl font-black tracking-[0.14em] [overflow-wrap:anywhere]" style={{ color: "var(--text-primary)" }}>
                   {brand.name.toUpperCase()}
                 </span>
               )}

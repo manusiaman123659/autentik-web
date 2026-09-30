@@ -17,7 +17,6 @@ import {
   listPublicBrands,
   listPublicProductsByType,
   resolveHeroSlides,
-  type PublicBrandItem,
 } from "@/lib/public-data";
 
 export const dynamic = "force-dynamic";
@@ -27,23 +26,6 @@ export const metadata: Metadata = {
   description:
     "PT Autentik Karya Analitika mengembangkan produk dan sistem teknologi untuk kebutuhan industri, laboratorium, pemantauan lingkungan, dan integrasi IoT.",
 };
-
-const MAIN_BRANDS = [
-  { id: "talpha", name: "Talpha" },
-  { id: "autentik", name: "Autentik" },
-  { id: "cylab", name: "Cylab" },
-  { id: "ullun", name: "Ullun" },
-  { id: "epal", name: "Epal" },
-] as const;
-
-function selectMainBrands(items: PublicBrandItem[]): PublicBrandItem[] {
-  return MAIN_BRANDS.map(({ name }) => {
-    const item = items.find((candidate) => candidate.name.toLowerCase() === name.toLowerCase());
-    return item
-      ? { ...item, name: name.toUpperCase() }
-      : { name: name.toUpperCase(), brandFilter: name, logoSrc: "" };
-  });
-}
 
 export default async function HomePage() {
   const [
@@ -73,7 +55,7 @@ export default async function HomePage() {
     <main className="flex-grow">
       <Hero slides={heroSlides} />
       <AboutUs />
-      <Brands items={selectMainBrands(brandItems)} />
+      <Brands items={brandItems} />
       <FeaturedProducts products={featuredProducts} />
       <CoreSolutions />
       {products3d.length > 0 && <Product3DTeaser products={products3d} />}
