@@ -7,6 +7,7 @@ const supabaseMediaPattern = createSupabasePublicMediaPattern(
 );
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   allowedDevOrigins: ["*.ngrok-free.dev", "*.ngrok-free.app"],
   images: {
     formats: ["image/avif", "image/webp"],
