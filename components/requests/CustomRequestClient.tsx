@@ -66,8 +66,7 @@ export default function CustomRequestClient({
     <>
       {/* Header */}
       <section
-        className="py-20 relative overflow-hidden text-white"
-        style={{ background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)" }}
+        className="py-20 relative overflow-hidden text-heading public-page-hero"
       >
         <div
           className="absolute inset-0 opacity-5 pointer-events-none"
@@ -80,9 +79,9 @@ export default function CustomRequestClient({
               Pesanan Kustom
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold mb-5">
-              Ajukan Kebutuhan <span className="text-[#14B8A6]">Custom</span>
+              Ajukan Kebutuhan <span className="text-teal-700 dark:text-teal-300">Custom</span>
             </h1>
-            <p className="text-slate-300 text-lg leading-relaxed max-w-2xl mx-auto">
+            <p className="text-body dark:text-slate-300 text-lg leading-relaxed max-w-2xl mx-auto">
               Beri tahu kami spesifikasi yang Anda butuhkan — tim engineer akan membahas
               kelayakan teknis, estimasi biaya, dan waktu pengerjaan.
             </p>
@@ -103,7 +102,7 @@ export default function CustomRequestClient({
               Kembali
             </Link>
 
-            <div className="rounded-2xl border shadow-sm p-8" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
+            <div className="rounded-2xl border shadow-sm p-5 sm:p-8" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}>
               <h2 className="text-xl font-bold mb-6" style={{ color: "var(--text-primary)" }}>
                 Formulir Permintaan Custom
               </h2>

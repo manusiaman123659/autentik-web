@@ -11,11 +11,7 @@ export default function TermsOfServicePage() {
     <>
       {/* Hero Section */}
       <section
-        className="pt-36 pb-20 relative overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
+        className="pt-36 pb-20 relative overflow-hidden public-page-hero"
       >
         <div
           className="absolute inset-0 opacity-5 pointer-events-none"
@@ -47,13 +43,7 @@ export default function TermsOfServicePage() {
       >
         <div className="max-w-4xl mx-auto px-6 lg:px-16">
           <div
-            className="prose prose-slate max-w-none dark:prose-invert
-              prose-headings:font-bold prose-headings:tracking-tight
-              prose-h2:text-xl prose-h2:mt-12 prose-h2:mb-4
-              prose-h3:text-lg prose-h3:mt-8 prose-h3:mb-3
-              prose-p:leading-relaxed prose-p:mb-4
-              prose-ul:mb-4 prose-li:mb-2
-              prose-a:text-[#14B8A6] prose-a:no-underline hover:prose-a:underline"
+            className="public-rich-text"
             style={{
               color: "var(--text-primary)",
             }}

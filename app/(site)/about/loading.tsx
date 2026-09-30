@@ -3,10 +3,7 @@ export default function Loading() {
     <>
       {/* Hero skeleton */}
       <section
-        className="pt-36 pb-24"
-        style={{
-          background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
+        className="pt-36 pb-24 public-page-hero"
       >
         <div className="max-w-4xl mx-auto px-6 lg:px-16 text-center space-y-6">
           <div className="w-20 h-20 mx-auto rounded-2xl animate-pulse bg-white/10" />
@@ -44,7 +41,7 @@ export default function Loading() {
 
       {/* Company Profile Viewer skeleton */}
       <section className="py-24 px-6 lg:px-16" style={{ backgroundColor: "var(--bg-primary)" }}>
-        <div className="max-w-5xl mx-auto text-center space-y-6">
+        <div className="max-w-5xl mx-auto text-center space-y-6 [&>div]:max-w-full">
           <div className="h-6 w-40 mx-auto rounded-full animate-pulse bg-slate-200 dark:bg-slate-800" />
           <div className="h-8 w-72 mx-auto rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
           <div className="h-4 w-96 mx-auto rounded animate-pulse bg-slate-200 dark:bg-slate-800" />

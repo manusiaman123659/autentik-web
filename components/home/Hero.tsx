@@ -22,7 +22,7 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
   if (slides.length === 0) return null;
 
   return (
-    <section className="relative overflow-hidden bg-black text-white min-h-[680px] lg:min-h-[820px] flex items-center pt-24 pb-16">
+    <section className="relative overflow-hidden bg-page-alt text-heading dark:bg-black min-h-[680px] lg:min-h-[820px] flex items-center pt-24 pb-16">
       {/* Background Slides with smooth fade */}
       {slides.map((slide, index) => (
         <div
@@ -37,7 +37,7 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
           <div
             className="w-full h-full"
             style={{
-              background: `linear-gradient(135deg, ${slide.accentColor}22, #0a1628)`,
+              background: `linear-gradient(135deg, ${slide.accentColor}22, var(--public-hero-end))`,
             }}
           />
           {/* Radial Light Glow */}
@@ -69,27 +69,27 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
               {/* Left Column: Text Content */}
               <div className="lg:col-span-7">
                 {/* Badge */}
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase bg-white/10 text-white border border-white/20 backdrop-blur-md mb-6 shadow-sm">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide uppercase bg-white/70 dark:bg-white/10 text-heading border border-base dark:border-white/20 backdrop-blur-md mb-6 shadow-sm">
                   <Sparkles size={14} style={{ color: slide.accentColor }} />
                   <span>{slide.badge}</span>
                 </div>
 
                 {/* Title */}
-                <h1 className="text-4xl sm:text-6xl lg:text-[76px] font-extrabold tracking-tight leading-[1.05] mb-6">
+                <h1 className="text-4xl sm:text-6xl lg:text-[76px] font-extrabold tracking-tight leading-[1.05] mb-6 [overflow-wrap:anywhere]">
                   {slide.productName}
                 </h1>
 
                 {/* Subtitle */}
-                <p className="text-base sm:text-lg text-slate-300 mb-10 leading-relaxed font-light max-w-xl">
+                <p className="text-base sm:text-lg text-body dark:text-slate-300 mb-10 leading-relaxed font-light max-w-xl">
                   {slide.subtitle}
                 </p>
 
                 {/* CTA Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">
                   {slide.ctaLink && (
                     <Link
                       href={slide.ctaLink}
-                      className="inline-flex items-center justify-center bg-white text-[#0B1F3A] hover:bg-slate-100 h-13 px-8 text-base rounded-full font-bold shadow-xl transition-all transform hover:-translate-y-0.5"
+                      className="inline-flex items-center justify-center bg-navy-900 text-white hover:bg-navy-800 dark:bg-white dark:text-navy-900 dark:hover:bg-slate-100 min-h-13 py-3 px-8 text-base rounded-full font-bold shadow-xl transition-all transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
                     >
                       {slide.ctaLabel}
                       <ArrowRight className="w-5 h-5 ml-2" />
@@ -98,7 +98,7 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
                   <button
                     type="button"
                     onClick={() => setRfqOpen(true)}
-                    className="inline-flex h-13 items-center justify-center gap-2 rounded-full border border-white/40 px-8 text-base font-bold text-white transition-all hover:bg-white/10"
+                    className="inline-flex min-h-13 py-3 items-center justify-center gap-2 rounded-full border border-base dark:border-white/40 px-8 text-base font-bold text-heading transition-all hover:bg-white/50 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
                   >
                     <ClipboardList size={18} />
                     Request Quotation
@@ -108,16 +108,16 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
 
               {/* Right Column: Product Image Showcase */}
               <div className="lg:col-span-5 flex justify-center">
-                <div className="relative w-full max-w-md bg-white/5 border border-white/15 rounded-3xl p-6 backdrop-blur-xl shadow-2xl group hover:border-white/30 transition-all duration-300">
+                <div className="relative w-full max-w-md bg-white/70 dark:bg-white/5 border border-base dark:border-white/15 rounded-3xl p-6 backdrop-blur-xl shadow-2xl group dark:hover:border-white/30 transition-all duration-300">
                   <div className="relative w-full h-[320px] sm:h-[360px] rounded-2xl overflow-hidden bg-white/90 flex items-center justify-center p-4">
                     {slide.productImage ? (
                       <Image
                         src={slide.productImage}
                         alt={slide.productName}
                         fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
+                         sizes="(max-width: 480px) calc(100vw - 96px), 400px"
                         className="object-contain p-4 group-hover:scale-105 transition-transform duration-500"
-                        priority
+                        loading="eager"
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-[#0EA5A0]">
@@ -126,16 +126,16 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
                     )}
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold uppercase tracking-wider text-body">
                         {slide.isCompanyFallback ? "Profil Perusahaan" : "Portofolio Produk AKA"}
                       </span>
-                      <h4 className="text-lg font-bold text-white leading-tight">
+                      <h4 className="text-lg font-bold text-heading leading-tight break-words">
                         {slide.productName}
                       </h4>
                     </div>
-                    <div className="w-9 h-9 rounded-full bg-[#0EA5A0]/20 border border-[#0EA5A0]/40 flex items-center justify-center text-[#14B8A6]">
+                    <div className="w-9 h-9 shrink-0 rounded-full bg-[#0EA5A0]/20 border border-[#0EA5A0]/40 flex items-center justify-center text-teal-600 dark:text-teal-300">
                       <Factory size={20} />
                     </div>
                   </div>
@@ -153,12 +153,13 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
             <button
               key={slide.key}
               onClick={() => setCurrentSlide(index)}
-              className={`transition-all duration-300 rounded-full cursor-pointer focus:outline-none ${
+              className={`transition-all duration-300 rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500 ${
                 index === currentSlide
-                  ? "w-8 h-2 bg-white"
-                  : "w-2.5 h-2.5 bg-white/40 hover:bg-white/70"
+                  ? "w-8 h-2 bg-navy-900 dark:bg-white"
+                  : "w-2.5 h-2.5 bg-slate-400 hover:bg-slate-600 dark:bg-white/40 dark:hover:bg-white/70"
               }`}
-              aria-label={`Go to slide ${index + 1}`}
+              aria-label={`Tampilkan slide ${index + 1}`}
+              aria-current={index === currentSlide ? "true" : undefined}
             />
           ))}
         </div>

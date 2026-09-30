@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, ShoppingBag, ChevronRight, Loader2, ArrowLeft, Package } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { formatRupiah } from "@/lib/format";
+import EmptyState from "@/components/ui/EmptyState";
 import {
   ORDER_STATUS_LABELS,
   type OrderStatus,
@@ -96,7 +97,7 @@ export default function OrderHistoryList() {
               <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
                 Riwayat Pesanan
               </h1>
-              <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+               <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
                 {orders.length > 0
                   ? `${orders.length} pesanan ditemukan`
                   : "Daftar pesanan yang telah Anda buat"}
@@ -108,22 +109,20 @@ export default function OrderHistoryList() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         {orders.length === 0 ? (
-          <div className="text-center py-20 rounded-sm border" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-            <Package size={36} className="mx-auto mb-3 opacity-30" />
-            <h3 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-              Belum ada pesanan
-            </h3>
-            <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
-              Mulai berbelanja komponen original bergaransi resmi untuk unit Anda.
-            </p>
+          <EmptyState
+            icon={Package}
+            title="Belum ada pesanan"
+            description="Mulai berbelanja komponen original bergaransi resmi untuk unit Anda."
+            action={
             <Link
               href="/store"
-              className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-sm text-xs font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-sm text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
             >
               Jelajahi Marketplace Komponen
               <ChevronRight size={14} />
             </Link>
-          </div>
+            }
+          />
         ) : (
           <div className="space-y-2">
             {orders.map((order) => {
@@ -140,13 +139,13 @@ export default function OrderHistoryList() {
                   className="block rounded-sm border p-3 transition-colors hover:opacity-80"
                   style={{
                     backgroundColor: "var(--bg-card)",
-                    borderColor: "var(--border-subtle)",
+                    borderColor: "var(--border-color)",
                   }}
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold tabular-nums" style={{ color: "var(--text-primary)" }}>
+                        <span className="text-sm font-bold tabular-nums break-all" style={{ color: "var(--text-primary)" }}>
                           {order.order_code}
                         </span>
                         <span className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold ${statusBadge(order.status)}`}>
@@ -156,16 +155,16 @@ export default function OrderHistoryList() {
                           {paymentLabel}
                         </span>
                       </div>
-                      <p className="text-[11px] mt-1 truncate" style={{ color: "var(--text-secondary)" }}>
+                      <p className="text-sm mt-2 break-words" style={{ color: "var(--text-secondary)" }}>
                         {firstItem}{itemCount > 1 ? ` +${itemCount - 1} lainnya` : ""}
                       </p>
                       {needsPaymentFollowUp && (
-                        <p className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                        <p className="mt-1 flex items-center gap-1 text-sm font-semibold text-amber-700 dark:text-amber-400">
                           <AlertTriangle size={11} />
                           Perlu tindak lanjut pembayaran
                         </p>
                       )}
-                      <p className="text-[10px] mt-0.5" style={{ color: "var(--text-muted, var(--text-secondary))" }}>
+                      <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
                         {new Date(order.created_at).toLocaleDateString("id-ID", {
                           day: "2-digit",
                           month: "short",
@@ -174,7 +173,7 @@ export default function OrderHistoryList() {
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-bold text-red-600 dark:text-red-400 tabular-nums">
+                      <p className="text-sm font-bold text-red-600 dark:text-red-400 tabular-nums">
                         {formatRupiah(order.total)}
                       </p>
                       <ChevronRight size={14} className="ml-auto mt-1 opacity-30" style={{ color: "var(--text-secondary)" }} />

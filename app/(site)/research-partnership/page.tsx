@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 export default function ResearchPartnershipPage() {
   return (
     <main className="flex-grow">
-      <section className="relative overflow-hidden bg-[#0B1F3A] px-6 pb-24 pt-36 text-white lg:px-16">
+      <section className="relative overflow-hidden public-page-hero px-6 pb-24 pt-36 text-heading lg:px-16">
         <div
           className="absolute inset-0 opacity-5"
           style={{
@@ -46,7 +46,7 @@ export default function ResearchPartnershipPage() {
             <h1 className="max-w-4xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
               Pengembangan produk melalui engineering dan kolaborasi
             </h1>
-            <p className="mt-6 max-w-3xl text-base font-light leading-relaxed text-slate-300 sm:text-lg">
+            <p className="mt-6 max-w-3xl text-base leading-relaxed text-body dark:text-slate-300 sm:text-lg">
               AKA mengembangkan produk sebagai manufacturer dengan dukungan fungsi engineering
               internal dan kolaborasi yang terdokumentasi bersama institusi terkait.
             </p>

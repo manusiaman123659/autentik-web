@@ -3,10 +3,7 @@ export default function Loading() {
     <>
       {/* Hero skeleton */}
       <section
-        className="pt-36 pb-20"
-        style={{
-          background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
+        className="pt-36 pb-20 public-page-hero [&_.animate-pulse]:max-w-full [&_.animate-pulse]:bg-slate-200 dark:[&_.animate-pulse]:bg-white/10"
       >
         <div className="max-w-4xl mx-auto px-6 lg:px-16 text-center space-y-6">
           <div className="h-6 w-48 mx-auto rounded-full animate-pulse bg-white/10" />

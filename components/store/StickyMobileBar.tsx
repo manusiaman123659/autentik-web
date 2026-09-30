@@ -73,22 +73,22 @@ export default function StickyMobileBar({
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t"
+      className="fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t pb-[env(safe-area-inset-bottom)]"
       style={{
         backgroundColor: "var(--bg-card)",
-        borderColor: "var(--border-subtle)",
+        borderColor: "var(--border-color)",
         boxShadow: "0 -2px 8px rgba(0,0,0,0.08)",
       }}
     >
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap">
         {/* Price */}
-        <div className="flex-shrink-0 min-w-0">
+        <div className="w-full sm:w-auto flex-shrink-0 min-w-0">
           {effectivePrice != null ? (
             <span className="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
               {formatRupiah(effectivePrice)}
             </span>
           ) : (
-            <span className="text-[10px] font-medium text-slate-400 whitespace-nowrap">Harga: hubungi</span>
+            <span className="text-sm font-medium text-body">Harga: hubungi</span>
           )}
         </div>
 
@@ -97,7 +97,7 @@ export default function StickyMobileBar({
           type="button"
           onClick={isReady ? handleCart : onBuyNow}
           disabled={!isReady && !waHref}
-          className="flex-1 h-10 rounded-sm font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 min-w-0 h-11 rounded-sm font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
           style={{
             backgroundColor: isReady ? "#0EA5A0" : "#25D366",
             color: "#fff",
@@ -120,6 +120,7 @@ export default function StickyMobileBar({
             href={waHref}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Hubungi melalui WhatsApp"
             className="flex-shrink-0 w-10 h-10 rounded-sm flex items-center justify-center transition-colors"
             style={{
               border: "1px solid #25D36640",

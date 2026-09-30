@@ -141,7 +141,7 @@ export default async function ProductDetailPage({ params }: Props) {
       {/* Breadcrumb */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <nav className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-secondary)" }}>
+          <nav aria-label="Jejak navigasi" className="flex flex-wrap items-center gap-1.5 text-sm [&_svg]:shrink-0" style={{ color: "var(--text-secondary)" }}>
             <Link href="/" className="hover:text-[#0EA5A0] transition-colors">
               Home
             </Link>
@@ -160,7 +160,7 @@ export default async function ProductDetailPage({ params }: Props) {
               {product.brand}
             </Link>
             <ChevronRight size={12} style={{ color: "var(--text-muted)" }} />
-            <span className="font-medium truncate max-w-[200px]" style={{ color: "var(--text-primary)" }}>
+            <span className="min-w-0 font-medium [overflow-wrap:anywhere]" style={{ color: "var(--text-primary)" }}>
               {product.name}
             </span>
           </nav>
@@ -295,8 +295,8 @@ export default async function ProductDetailPage({ params }: Props) {
               <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--text-primary)" }}>
                 Spesifikasi Teknis
               </h2>
-              <div className="rounded-xl border shadow-sm overflow-hidden max-w-2xl" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-                <table className="w-full text-sm">
+              <div className="rounded-xl border shadow-sm overflow-hidden max-w-4xl" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}>
+                <table className="w-full table-fixed text-sm [&_td]:align-top [&_td]:[overflow-wrap:anywhere]">
                   <tbody>
                     {product.specs.map((spec) => (
                       <tr

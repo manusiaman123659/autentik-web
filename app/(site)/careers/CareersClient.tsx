@@ -14,6 +14,7 @@ import AnimatedElement from "@/components/ui/ScrollAnimations";
 import MikaJobCard from "@/components/careers/MikaJobCard";
 import MikaJobFilter from "@/components/careers/MikaJobFilter";
 import MikaPagination from "@/components/careers/MikaPagination";
+import EmptyState from "@/components/ui/EmptyState";
 import type { MikaJob, MikaCompany, MikaDepartment, MikaPaginationMeta } from "@/types/mika-career";
 
 interface CareersClientProps {
@@ -112,10 +113,7 @@ export default function CareersClient({
     <>
       {/* ─── Hero Section ────────────────────────────────────────────────────────── */}
       <section
-        className="pt-32 pb-20 relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
+        className="pt-32 pb-20 relative overflow-hidden public-page-hero"
       >
         <div
           className="absolute inset-0 opacity-5 pointer-events-none"
@@ -138,33 +136,33 @@ export default function CareersClient({
               Mika Career - Portal Rekrutmen & Karir
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-6 leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-heading mb-6 leading-tight">
               Wujudkan Potensi Terbaik Anda Bersama Kami
             </h1>
 
-            <p className="text-lg sm:text-xl text-slate-300 leading-relaxed font-light mb-8">
+            <p className="text-lg sm:text-xl text-body dark:text-slate-300 leading-relaxed mb-8">
               Jelajahi berbagai peluang karir menarik di bidang teknologi instrumentasi, IoT, software engineering, dan technical sales. Kami mengundang talenta berdedikasi untuk bertumbuh bersama.
             </p>
 
             {/* Quick Stats Strip */}
-            <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-slate-700/60">
+            <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-base">
               <div>
-                <span className="block text-2xl font-bold text-white">
+                <span className="block text-2xl font-bold text-heading">
                   {meta.total_items}
                 </span>
-                <span className="text-xs text-slate-400">Posisi Lowongan Aktif</span>
+                <span className="text-sm text-body">Posisi Lowongan Aktif</span>
               </div>
               <div className="w-px h-8 bg-slate-700" />
               <div>
                 <span className="block text-2xl font-bold text-teal-400">
                   {departments.length}
                 </span>
-                <span className="text-xs text-slate-400">Departemen Kerja</span>
+                <span className="text-sm text-body">Departemen Kerja</span>
               </div>
               <div className="w-px h-8 bg-slate-700" />
               <div>
-                <span className="block text-2xl font-bold text-white">100%</span>
-                <span className="text-xs text-slate-400">Peluang Pertumbuhan Karir</span>
+                <span className="block text-2xl font-bold text-heading">100%</span>
+                <span className="text-sm text-body">Peluang Pertumbuhan Karir</span>
               </div>
             </div>
           </AnimatedElement>
@@ -364,33 +362,20 @@ export default function CareersClient({
               ))}
             </div>
           ) : (
-            <div
-              className="text-center py-16 px-6 rounded-2xl border"
-              style={{
-                backgroundColor: "var(--bg-card)",
-                borderColor: "var(--border-subtle)",
-              }}
-            >
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                <Search size={28} />
-              </div>
-              <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-                Tidak ada lowongan yang sesuai
-              </h3>
-              <p
-                className="text-sm max-w-md mx-auto mb-6"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Kami tidak menemukan lowongan dengan kriteria filter yang Anda pilih. Coba sesuaikan kata kunci atau reset filter pencarian.
-              </p>
+            <EmptyState
+              icon={Search}
+              title="Tidak ada lowongan yang sesuai"
+              description="Kami tidak menemukan lowongan dengan kriteria filter yang Anda pilih. Coba sesuaikan kata kunci atau reset filter pencarian."
+              action={
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0EA5A0] text-white text-xs font-semibold hover:bg-[#0c8e8a] transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0c8e8a] transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
               >
                 Reset Semua Filter
               </button>
-            </div>
+              }
+            />
           )}
 
           {/* Pagination */}

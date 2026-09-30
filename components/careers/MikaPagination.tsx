@@ -15,12 +15,12 @@ export default function MikaPagination({ meta, onPageChange }: MikaPaginationPro
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-10 pt-6 border-t" style={{ borderColor: "var(--border-subtle)" }}>
-      <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
+      <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
         Menampilkan halaman <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{meta.current_page}</span> dari{" "}
         <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{meta.total_pages}</span> (Total {meta.total_items} posisi)
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap justify-center items-center gap-2">
         {/* Prev Button */}
         <button
           type="button"
@@ -38,13 +38,14 @@ export default function MikaPagination({ meta, onPageChange }: MikaPaginationPro
         </button>
 
         {/* Page Numbers */}
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap justify-center items-center gap-1">
           {pages.map((p) => {
             const isActive = p === meta.current_page;
             return (
               <button
                 key={p}
                 type="button"
+                aria-current={isActive ? "page" : undefined}
                 onClick={() => onPageChange(p)}
                 className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${
                   isActive

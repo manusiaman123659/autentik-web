@@ -562,11 +562,11 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
             </div>
 
             {/* Ringkasan */}
-            <div className="lg:sticky lg:top-20 rounded-2xl border shadow-sm p-6" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
+            <div className="lg:sticky lg:top-20 rounded-2xl border shadow-sm p-6" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}>
               <h2 className="text-base font-bold mb-5" style={{ color: "var(--text-primary)" }}>Ringkasan Pesanan</h2>
               <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1">
                 {activeItems.map((item) => (
-                  <div key={item.key ?? `${item.id}::${item.variant_id ?? "default"}`} className="flex gap-3">
+                  <div key={item.key ?? `${item.id}::${item.variant_id ?? "default"}`} className="flex flex-wrap gap-3">
                     <div className="w-14 h-14 rounded-lg flex items-center justify-center overflow-hidden border flex-shrink-0" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
                       {item.image_url ? (
                         <Image src={item.image_url} alt={item.name} width={56} height={56} className="object-contain w-full h-full p-1" />
@@ -575,17 +575,17 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold leading-snug line-clamp-2" style={{ color: "var(--text-primary)" }}>{item.name}</p>
+                      <p className="text-sm font-bold leading-relaxed break-words" style={{ color: "var(--text-primary)" }}>{item.name}</p>
                       {item.variant_label && (
-                        <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[#0EA5A0]/10 text-[#0EA5A0]">
+                        <span className="inline-block mt-0.5 px-1.5 py-0.5 text-sm font-semibold rounded bg-[#0EA5A0]/10 text-teal-700 dark:text-teal-300 break-words">
                           Varian: {item.variant_label}
                         </span>
                       )}
-                      <p className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
+                      <p className="text-sm mt-0.5" style={{ color: "var(--text-secondary)" }}>
                         {item.quantity} × {formatRupiah(item.price)}
                       </p>
                     </div>
-                    <p className="text-xs font-semibold flex-shrink-0 tabular-nums" style={{ color: "var(--text-primary)" }}>
+                    <p className="text-sm font-semibold flex-shrink-0 tabular-nums" style={{ color: "var(--text-primary)" }}>
                       {formatRupiah(item.price * item.quantity)}
                     </p>
                   </div>

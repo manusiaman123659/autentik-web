@@ -34,7 +34,7 @@ function DistributionCard({
   return (
     <article
       className="grid gap-5 rounded-2xl border p-5 sm:grid-cols-[112px_1fr] sm:p-6"
-      style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
+      style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}
     >
       <div className="flex h-24 items-center justify-center rounded-xl border bg-white p-3" style={{ borderColor: "var(--border-subtle)" }}>
         {entity.logoUrl ? (
@@ -103,12 +103,12 @@ export default async function DistributorsPage() {
 
   return (
     <main className="flex-grow">
-      <section className="relative overflow-hidden bg-[#0B1F3A] px-4 py-20 text-white sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden public-page-hero px-4 py-20 text-heading sm:px-6 lg:px-8">
         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "40px 40px" }} />
         <div className="relative mx-auto max-w-7xl">
           <div className="mb-5 flex items-center gap-3 text-[#14B8A6]"><Network size={22} /><span className="text-xs font-bold uppercase tracking-[0.22em]">Jaringan Distribusi</span></div>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">Akses informasi jaringan distribusi produk AKA</h1>
-          <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">AKA berperan sebagai manufacturer. Informasi kebutuhan pembelian dan penentuan distributor atau sub-distributor yang sesuai dikoordinasikan melalui MIKA.</p>
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-body dark:text-slate-300 sm:text-lg">AKA berperan sebagai manufacturer. Informasi kebutuhan pembelian dan penentuan distributor atau sub-distributor yang sesuai dikoordinasikan melalui MIKA.</p>
         </div>
       </section>
 

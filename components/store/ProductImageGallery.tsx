@@ -39,8 +39,8 @@ export default function ProductImageGallery({
             alt={`${name} - gambar ${activeIdx + 1}`}
             fill
             className="object-contain p-3"
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            priority
+            sizes="(max-width: 1023px) calc(100vw - 32px), (max-width: 1280px) 65vw, 920px"
+            loading="eager"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">

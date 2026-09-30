@@ -59,12 +59,12 @@ export default function StoreFilterSidebar({
   }
 
   const sidebarContent = (
-    <div className="space-y-4">
+    <div className="space-y-5 [&_label]:text-sm [&_label]:text-body [&_label]:leading-relaxed [&_label]:py-1 [&_input]:min-w-0 [&_input[type=checkbox]]:size-4 [&_input[type=radio]]:size-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <SlidersHorizontal size={14} className="text-[#0EA5A0]" />
-          <h3 className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>Filter Produk</h3>
+          <h3 className="text-base font-bold" style={{ color: "var(--text-primary)" }}>Filter Produk</h3>
         </div>
         {activeCount > 0 && (
           <button
@@ -87,8 +87,9 @@ export default function StoreFilterSidebar({
           value={filters.query}
           onChange={(e) => onFilterChange({ query: e.target.value })}
           placeholder="Nama, SKU, merek..."
-          className="w-full rounded-sm border px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
-          style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
+          aria-label="Cari produk"
+          className="w-full rounded-sm border px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
+          style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}
         />
       </div>
 
@@ -106,7 +107,7 @@ export default function StoreFilterSidebar({
                 onChange={() => toggleArrayFilter("categories", name)}
                 className="rounded-sm border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]/30 w-3 h-3"
               />
-              <span className="text-[11px] flex-1 truncate group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
+              <span className="text-sm flex-1 min-w-0 break-words group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
                 {name}
               </span>
               <span className="text-[10px] tabular-nums text-slate-400">{count}</span>
@@ -129,7 +130,7 @@ export default function StoreFilterSidebar({
                 onChange={() => toggleArrayFilter("brands", name)}
                 className="rounded-sm border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]/30 w-3 h-3"
               />
-              <span className="text-[11px] flex-1 truncate group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
+              <span className="text-sm flex-1 min-w-0 break-words group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
                 {name}
               </span>
               <span className="text-[10px] tabular-nums text-slate-400">{count}</span>
@@ -150,8 +151,9 @@ export default function StoreFilterSidebar({
             value={filters.priceMin}
             onChange={(e) => onFilterChange({ priceMin: e.target.value })}
             placeholder="Min"
-            className="w-full rounded-sm border px-2 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
-            style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
+            aria-label="Harga minimum"
+            className="w-full rounded-sm border px-2 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
+            style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}
           />
           <span className="text-[10px] font-bold text-slate-400">–</span>
           <input
@@ -160,8 +162,9 @@ export default function StoreFilterSidebar({
             value={filters.priceMax}
             onChange={(e) => onFilterChange({ priceMax: e.target.value })}
             placeholder="Max"
-            className="w-full rounded-sm border px-2 py-1.5 text-[11px] focus:outline-none focus:ring-1 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
-            style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
+            aria-label="Harga maksimum"
+            className="w-full rounded-sm border px-2 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
+            style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-color)", color: "var(--text-primary)" }}
           />
         </div>
       </div>
@@ -186,7 +189,7 @@ export default function StoreFilterSidebar({
                 onChange={() => onFilterChange({ stockStatus: opt.value })}
                 className="border-slate-300 dark:border-slate-600 text-[#0EA5A0] focus:ring-[#0EA5A0]/30 w-3 h-3"
               />
-              <span className="text-[11px] group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
+              <span className="text-sm group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
                 {opt.label}
               </span>
             </label>
@@ -199,10 +202,10 @@ export default function StoreFilterSidebar({
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block w-[220px] shrink-0">
+      <aside className="hidden lg:block w-64 shrink-0">
         <div
           className="sticky top-24 rounded-sm border p-4"
-          style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
+          style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}
         >
           {sidebarContent}
         </div>
@@ -213,7 +216,7 @@ export default function StoreFilterSidebar({
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={onMobileClose} />
           <div
-            className="absolute left-0 top-0 bottom-0 w-[280px] overflow-y-auto p-4"
+            className="absolute left-0 top-0 bottom-0 w-80 max-w-[calc(100vw-32px)] overflow-y-auto p-5"
             style={{ backgroundColor: "var(--bg-card)" }}
           >
             <div className="flex items-center justify-between mb-3">
@@ -221,7 +224,8 @@ export default function StoreFilterSidebar({
               <button
                 type="button"
                 onClick={onMobileClose}
-                className="p-1 rounded-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Tutup filter"
+                className="p-3 rounded-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-2 focus-visible:outline-teal-500"
                 style={{ color: "var(--text-secondary)" }}
               >
                 <X size={16} />

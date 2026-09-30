@@ -248,9 +248,9 @@ function LoadingOverlay() {
   const { active, progress } = useProgress();
   if (!active) return null;
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0a1628]/90">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-50/95 dark:bg-[#0a1628]/90">
       <Loader2 size={26} className="animate-spin text-[#0EA5A0]" />
-      <p className="text-xs text-white/60">
+      <p className="text-sm text-body">
         Memuat model 3D... {Math.round(progress)}%
       </p>
     </div>
@@ -268,9 +268,9 @@ class ViewerErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-[#0a1628] p-6 text-center">
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-page-alt p-6 text-center">
           <AlertTriangle size={26} className="text-amber-400" />
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-body">
             Model 3D gagal dimuat. File mungkin rusak atau format tidak
             didukung.
           </p>
@@ -311,7 +311,7 @@ export default function Product3DViewer({
           dpr={[1, 2]}
           camera={{ fov: 45, near: 0.1, far: 1000 }}
           gl={{ antialias: true, powerPreference: "high-performance" }}
-          style={{ background: "#0a1628" }}
+          style={{ background: "var(--public-hero-end)" }}
         >
           <Suspense fallback={null}>
             <ambientLight intensity={0.7} />
@@ -345,13 +345,13 @@ export default function Product3DViewer({
               </button>
             </div>
             {displayedHotspot.description && (
-              <p className="text-xs mt-1 leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="text-sm mt-1 leading-relaxed text-slate-600 dark:text-slate-300 break-words">
                 {displayedHotspot.description}
               </p>
             )}
           </div>
         ) : (
-          <p className="text-xs text-center text-slate-400 dark:text-slate-500">
+          <p className="text-sm text-center text-slate-600 dark:text-slate-300">
             {hotspots.length > 0
               ? "Klik titik merah pada model untuk melihat detail bagian"
               : ""}

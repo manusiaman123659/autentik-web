@@ -26,16 +26,16 @@ export default function Product3DTeaser({ products }: { products: ProductRow[] }
       <AnimatedElement type="fade-up" className="mx-auto max-w-7xl">
         <div
           className="relative grid overflow-hidden rounded-3xl border lg:grid-cols-[1.1fr_0.9fr]"
-          style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-card)" }}
+          style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-card)" }}
         >
-          <div className="relative min-h-72 bg-[#07182e] lg:min-h-[420px]">
+          <div className="relative min-h-72 bg-page-alt dark:bg-[#07182e] lg:min-h-[420px]">
             {product.image_url ? (
               <Image
                 key={product.id}
                 src={product.image_url}
                 alt={product.name}
                 fill
-                sizes="(max-width: 1024px) 100vw, 55vw"
+                sizes="(max-width: 1023px) calc(100vw - 48px), (max-width: 1280px) 55vw, 700px"
                 className="object-contain p-8 sm:p-12"
               />
             ) : (
@@ -77,7 +77,7 @@ export default function Product3DTeaser({ products }: { products: ProductRow[] }
             <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
               {product.brand}
             </p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: "var(--text-primary)" }}>
+            <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl break-words" style={{ color: "var(--text-primary)" }}>
               Jelajahi {product.name} dalam 3D
             </h2>
             <p className="mt-5 line-clamp-3 max-w-lg leading-relaxed" style={{ color: "var(--text-secondary)" }}>
@@ -92,7 +92,7 @@ export default function Product3DTeaser({ products }: { products: ProductRow[] }
             </Link>
 
             {hasMultipleProducts && (
-              <div className="mt-8 flex items-center gap-2" aria-label="Pilihan produk 3D">
+              <div className="mt-8 flex flex-wrap items-center gap-2" aria-label="Pilihan produk 3D">
                 {products.map((item, index) => (
                   <button
                     key={item.id}

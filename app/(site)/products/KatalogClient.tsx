@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { Product } from "@/types";
 import RfqModal from "@/components/product/RfqModal";
+import EmptyState from "@/components/ui/EmptyState";
 
 // Company Profile Official Categories
 const COMPANY_CATEGORIES = [
@@ -102,7 +103,7 @@ function ProductCard({
       className="rounded-[22px] border shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:border-[#0EA5A0]/40"
       style={{
         backgroundColor: "var(--bg-card)",
-        borderColor: "var(--border-subtle)",
+        borderColor: "var(--border-color)",
       }}
     >
       <div>
@@ -120,7 +121,7 @@ function ProductCard({
               alt={product.name}
               fill
               className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) 50vw, (max-width: 1279px) 35vw, (max-width: 1536px) 25vw, 380px"
             />
           ) : (
             <div className="text-6xl opacity-20 select-none">🔬</div>
@@ -153,7 +154,7 @@ function ProductCard({
           </Link>
 
           <p
-            className="text-xs leading-relaxed line-clamp-2 font-light"
+            className="text-sm leading-relaxed line-clamp-2"
             style={{ color: "var(--text-secondary)" }}
           >
             {product.description}
@@ -166,10 +167,10 @@ function ProductCard({
               style={{ borderColor: "var(--border-subtle)" }}
             >
               {displaySpecs.map((spec, idx) => (
-                <div key={idx} className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400 font-medium">{spec.label.replace(/:\s*$/, "")}:</span>
+                <div key={idx} className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start gap-x-3 gap-y-1 text-sm leading-relaxed">
+                  <span className="min-w-0 text-body font-medium [overflow-wrap:anywhere]">{spec.label.replace(/:\s*$/, "")}:</span>
                   <span
-                    className="font-semibold truncate max-w-[170px]"
+                    className="min-w-0 font-semibold [overflow-wrap:anywhere]"
                     style={{ color: "var(--text-primary)" }}
                   >
                     {spec.value}
@@ -185,7 +186,7 @@ function ProductCard({
       <div className="px-6 pb-6 pt-4 mt-auto grid grid-cols-2 gap-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
         <Link
           href={`/products/${product.slug}`}
-          className="inline-flex items-center justify-center h-9 px-3 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors gap-1"
+          className="inline-flex items-center justify-center min-h-11 px-3 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors gap-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
         >
           <span>Detail</span>
           <ChevronRight size={13} />
@@ -196,7 +197,7 @@ function ProductCard({
             e.stopPropagation();
             onRfqClick(product);
           }}
-          className="inline-flex items-center justify-center gap-1.5 h-9 px-2 rounded-lg text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all shadow-sm shadow-emerald-500/10"
+          className="inline-flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-sm font-medium text-white bg-teal-600 hover:bg-teal-500 active:scale-95 transition-all shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
           title="Minta Penawaran Resmi"
         >
           <FileText size={13} className="shrink-0" />
@@ -298,11 +299,7 @@ function KatalogContent({ products }: { products: Product[] }) {
     <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
       {/* Dark Navy Hero Section */}
       <section
-        className="pt-32 pb-20 relative overflow-hidden text-white"
-        style={{
-          background:
-            "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
+        className="pt-32 pb-20 relative overflow-hidden public-page-hero text-heading"
       >
         {/* Subtle grid/dot pattern background */}
         <div
@@ -321,7 +318,7 @@ function KatalogContent({ products }: { products: Product[] }) {
 
         <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10 text-center">
           {/* Eyebrow Label */}
-          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 mb-5 backdrop-blur-md">
+          <div className="inline-flex items-center gap-2 bg-white/70 dark:bg-white/10 border border-base dark:border-white/20 rounded-full px-4 py-1.5 mb-5 backdrop-blur-md">
             <Package size={14} className="text-[#0EA5A0]" />
             <span className="text-xs font-semibold uppercase tracking-widest text-[#0EA5A0]">
               PT AUTENTIK KARYA ANALITIKA PRODUCTS
@@ -329,12 +326,12 @@ function KatalogContent({ products }: { products: Product[] }) {
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-heading mb-4 leading-tight">
             Katalog Peralatan & Teknologi Laboratorium
           </h1>
 
           {/* Description */}
-          <p className="text-slate-200 text-base sm:text-lg max-w-2xl mx-auto font-light leading-relaxed mb-8">
+          <p className="text-body dark:text-slate-200 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
             Instrumen presisi tinggi, pemurnian air, dry cabinet, dan sistem pemantauan berbasis IoT berstandar internasional.
           </p>
 
@@ -363,7 +360,7 @@ function KatalogContent({ products }: { products: Product[] }) {
 
           {/* Brand Chips */}
           <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-300 mr-2">
+            <span className="text-sm font-bold uppercase tracking-wider text-body mr-2">
               Brand:
             </span>
             {BRAND_CHIPS.map((chip) => {
@@ -372,10 +369,10 @@ function KatalogContent({ products }: { products: Product[] }) {
                 <button
                   key={chip}
                   onClick={() => handleBrandChipClick(chip)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500 ${
                     isActive
                       ? "bg-[#0EA5A0] text-white shadow-md"
-                      : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                      : "bg-white/70 hover:bg-white text-heading border border-base dark:bg-white/10 dark:hover:bg-white/20 dark:border-white/20"
                   }`}
                 >
                   {chip}
@@ -387,7 +384,7 @@ function KatalogContent({ products }: { products: Product[] }) {
       </section>
 
       {/* Main Catalog Container */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-12 py-24">
+      <div className="max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         
         {/* FEATURED SOLUTIONS SECTION (3 Premium Cards) */}
         <section className="mb-16">
@@ -422,14 +419,14 @@ function KatalogContent({ products }: { products: Product[] }) {
                     <h3 className="text-xl font-bold mb-3 group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
                       {item.title}
                     </h3>
-                    <p className="text-xs leading-relaxed font-light mb-6" style={{ color: "var(--text-secondary)" }}>
+                    <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--text-secondary)" }}>
                       {item.description}
                     </p>
                   </div>
 
                   <Link
                     href={item.link}
-                    className="inline-flex items-center gap-2 text-xs font-bold text-[#0EA5A0] hover:text-[#0D9E98] transition-colors group/link mt-auto"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-teal-600 dark:text-teal-300 hover:text-[#0D9E98] transition-colors group/link mt-auto"
                   >
                     <span>Jelajahi Produk</span>
                     <ArrowRight size={14} className="group-hover/link:translate-x-1 transition-transform" />
@@ -441,14 +438,14 @@ function KatalogContent({ products }: { products: Product[] }) {
         </section>
 
         {/* CATALOG CONTENT GRID WITH LEFT SIDEBAR */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start pt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[19rem_minmax(0,1fr)] gap-6 xl:gap-8 items-start pt-6">
           
           {/* LEFT SIDEBAR: Minimal Category Navigation */}
           <aside
-            className="lg:col-span-4 space-y-6 p-6 rounded-[22px] border shadow-sm"
+            className="min-w-0 space-y-6 p-5 rounded-[22px] border shadow-sm"
             style={{
               backgroundColor: "var(--bg-card)",
-              borderColor: "var(--border-subtle)",
+              borderColor: "var(--border-color)",
             }}
           >
             {/* Sidebar Header & Reset */}
@@ -459,7 +456,7 @@ function KatalogContent({ products }: { products: Product[] }) {
               </div>
               <button
                 onClick={handleResetFilters}
-                className="text-xs font-semibold text-slate-400 hover:text-[#0EA5A0] flex items-center gap-1 transition-colors"
+                className="text-sm font-semibold text-body hover:text-[#0EA5A0] flex items-center gap-1 transition-colors"
               >
                 <RefreshCw size={12} />
                 Reset Filter
@@ -496,8 +493,8 @@ function KatalogContent({ products }: { products: Product[] }) {
                       />
                     </div>
                     <p
-                      className={`text-xs mt-1 font-light leading-snug ${
-                        isActive ? "text-slate-100" : "text-slate-500"
+                      className={`text-sm mt-1 leading-relaxed ${
+                        isActive ? "text-slate-100" : "text-body"
                       }`}
                     >
                       {cat.subtitle}
@@ -509,7 +506,7 @@ function KatalogContent({ products }: { products: Product[] }) {
 
             {/* Procurement Contact Box */}
             <div
-              className="p-5 rounded-xl border text-xs space-y-2"
+              className="p-5 rounded-xl border text-sm space-y-2"
               style={{
                 backgroundColor: "var(--bg-secondary)",
                 borderColor: "var(--border-subtle)",
@@ -530,7 +527,7 @@ function KatalogContent({ products }: { products: Product[] }) {
           </aside>
 
           {/* RIGHT PRODUCT GRID AREA (3-Column Desktop Grid) */}
-          <main className="lg:col-span-8 space-y-6">
+          <main className="min-w-0 space-y-6">
             {/* Top Sort & Summary Bar */}
             <div
               className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border shadow-sm"
@@ -549,15 +546,16 @@ function KatalogContent({ products }: { products: Product[] }) {
               </div>
 
               {/* Sort Dropdown */}
-              <div className="flex items-center gap-2 self-end sm:self-auto">
-                <span className="text-xs font-semibold text-slate-400 whitespace-nowrap">Urutkan:</span>
+              <div className="flex min-w-0 max-w-full items-center gap-2 self-end sm:self-auto">
+                <span className="text-sm font-semibold text-body whitespace-nowrap">Urutkan:</span>
                 <select
+                  aria-label="Urutkan produk"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as "relevance" | "name-asc" | "brand-asc")}
-                  className="px-3.5 py-2 rounded-xl border text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
+                  className="min-w-0 max-w-full px-3.5 py-2 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
                   style={{
                     backgroundColor: "var(--bg-primary)",
-                    borderColor: "var(--border-subtle)",
+                     borderColor: "var(--border-color)",
                     color: "var(--text-primary)",
                   }}
                 >
@@ -570,7 +568,7 @@ function KatalogContent({ products }: { products: Product[] }) {
 
             {/* 3-Column Desktop Responsive Product Grid */}
             {paginatedProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {paginatedProducts.map((product) => (
                   <ProductCard
                     key={product.id}
@@ -580,32 +578,27 @@ function KatalogContent({ products }: { products: Product[] }) {
                 ))}
               </div>
             ) : (
-              <div
-                className="text-center py-24 rounded-2xl border shadow-sm"
-                style={{
-                  backgroundColor: "var(--bg-card)",
-                  borderColor: "var(--border-subtle)",
-                }}
-              >
-                <div className="text-5xl mb-4 opacity-30">🔬</div>
-                <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Tidak ada produk yang cocok</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto font-light">
-                  Coba ubah kata kunci pencarian, pilih brand lain, atau reset filter Anda.
-                </p>
+              <EmptyState
+                icon={Package}
+                title="Tidak ada produk yang cocok"
+                description="Coba ubah kata kunci pencarian, pilih brand lain, atau reset filter Anda."
+                action={
                 <button
                   onClick={handleResetFilters}
-                  className="mt-5 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
+                   className="px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
                 >
                   Reset Filter
                 </button>
-              </div>
+                }
+              />
             )}
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-8">
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-8">
                 <button
                   disabled={currentPage === 1}
+                  aria-label="Halaman sebelumnya"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   className="p-2.5 rounded-xl border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   style={{
@@ -619,6 +612,7 @@ function KatalogContent({ products }: { products: Product[] }) {
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <button
                     key={page}
+                    aria-current={currentPage === page ? "page" : undefined}
                     onClick={() => setCurrentPage(page)}
                     className={`w-10 h-10 rounded-xl text-xs font-bold transition-all ${
                       currentPage === page
@@ -637,6 +631,7 @@ function KatalogContent({ products }: { products: Product[] }) {
 
                 <button
                   disabled={currentPage === totalPages}
+                  aria-label="Halaman berikutnya"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   className="p-2.5 rounded-xl border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   style={{

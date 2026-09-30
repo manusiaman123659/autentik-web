@@ -227,11 +227,7 @@ export default function ServicesClient({
     <>
       {/* Hero Section */}
       <section
-        className="py-24 relative overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
+        className="py-24 relative overflow-hidden public-page-hero"
       >
         <div
           className="absolute inset-0 opacity-5 pointer-events-none"
@@ -254,11 +250,11 @@ export default function ServicesClient({
                 <Sparkles size={14} />
                 Layanan & Rekayasa Terintegrasi
               </div>
-              <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
+              <h1 className="text-4xl sm:text-5xl font-bold text-heading mb-6 leading-tight">
                 Solusi Layanan Teknis{" "}
-                <span className="text-[#14B8A6]">Laboratorium & Industri</span>
+                <span className="text-teal-700 dark:text-teal-300">Laboratorium & Industri</span>
               </h1>
-              <p className="text-slate-300 text-lg leading-relaxed mb-10 max-w-2xl">
+              <p className="text-body dark:text-slate-300 text-lg leading-relaxed mb-10 max-w-2xl">
                 PT Autentik Karya Analitika menghadirkan ekosistem layanan lengkap mulai dari integrasi telemetri IoT, rekayasa tata ruang lab, pemurnian air industri, hingga kalibrasi instrumen berstandar tinggi.
               </p>
               <div className="flex flex-wrap gap-4">
@@ -274,7 +270,7 @@ export default function ServicesClient({
                 <Link
                   href="#services-list"
                   id="services-[#services-list]-btn"
-                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-white border border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/40 transition-all"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-heading border border-base dark:border-white/20 bg-white/70 dark:bg-white/5 hover:bg-white/90 dark:hover:bg-white/10 transition-all"
                 >
                   Lihat Katalog Layanan
                 </Link>
@@ -282,26 +278,26 @@ export default function ServicesClient({
             </div>
 
             {/* Right Badge Grid */}
-            <div className="lg:col-span-5 grid grid-cols-2 gap-4">
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+            <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-6 rounded-2xl bg-white/70 dark:bg-white/5 border border-base dark:border-white/10 backdrop-blur-md">
                 <ShieldCheck size={32} className="text-[#14B8A6] mb-3" />
-                <h4 className="text-white font-bold text-base mb-1">Standar ISO 17025</h4>
-                <p className="text-xs text-slate-400">Jaminan kepatuhan akurasi & regulasi pengujian.</p>
+                <h4 className="text-heading font-bold text-base mb-1">Standar ISO 17025</h4>
+                <p className="text-sm text-body">Jaminan kepatuhan akurasi & regulasi pengujian.</p>
               </div>
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <div className="p-6 rounded-2xl bg-white/70 dark:bg-white/5 border border-base dark:border-white/10 backdrop-blur-md">
                 <Cpu size={32} className="text-[#14B8A6] mb-3" />
-                <h4 className="text-white font-bold text-base mb-1">IoT Smart System</h4>
-                <p className="text-xs text-slate-400">Telemetri sensor realtime 24/7 di cloud.</p>
+                <h4 className="text-heading font-bold text-base mb-1">IoT Smart System</h4>
+                <p className="text-sm text-body">Telemetri sensor realtime 24/7 di cloud.</p>
               </div>
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <div className="p-6 rounded-2xl bg-white/70 dark:bg-white/5 border border-base dark:border-white/10 backdrop-blur-md">
                 <Wrench size={32} className="text-[#14B8A6] mb-3" />
-                <h4 className="text-white font-bold text-base mb-1">Teknisi Berpengalaman</h4>
-                <p className="text-xs text-slate-400">Dukungan ahli tersertifikasi untuk instalasi presisi.</p>
+                <h4 className="text-heading font-bold text-base mb-1">Teknisi Berpengalaman</h4>
+                <p className="text-sm text-body">Dukungan ahli tersertifikasi untuk instalasi presisi.</p>
               </div>
-              <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
+              <div className="p-6 rounded-2xl bg-white/70 dark:bg-white/5 border border-base dark:border-white/10 backdrop-blur-md">
                 <Clock size={32} className="text-[#14B8A6] mb-3" />
-                <h4 className="text-white font-bold text-base mb-1">Dukungan Purna Jual</h4>
-                <p className="text-xs text-slate-400">Respon cepat & pemeliharaan berkesinambungan.</p>
+                <h4 className="text-heading font-bold text-base mb-1">Dukungan Purna Jual</h4>
+                <p className="text-sm text-body">Respon cepat & pemeliharaan berkesinambungan.</p>
               </div>
             </div>
           </AnimatedElement>
@@ -384,7 +380,7 @@ export default function ServicesClient({
                         Fitur Utama & Keunggulan:
                       </p>
                       {service.highlights.map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-2.5 text-xs">
+                        <div key={idx} className="flex items-start gap-2.5 text-sm leading-relaxed">
                           <CheckCircle2 size={16} className="text-[#0EA5A0] flex-shrink-0 mt-0.5" />
                           <span style={{ color: "var(--text-primary)" }}>{item}</span>
                         </div>
@@ -447,7 +443,7 @@ export default function ServicesClient({
                     </p>
                     <ul className="space-y-2.5 mb-6">
                       {path.points.map((point) => (
-                        <li key={point} className="flex items-start gap-2.5 text-xs">
+                        <li key={point} className="flex items-start gap-2.5 text-sm leading-relaxed">
                           <CheckCircle2 size={15} className="flex-shrink-0 mt-0.5" style={{ color: path.tone }} />
                           <span style={{ color: "var(--text-primary)" }}>{point}</span>
                         </li>
@@ -503,7 +499,7 @@ export default function ServicesClient({
                   <h4 className="text-base font-bold mb-2" style={{ color: "var(--text-primary)" }}>
                     {step.title}
                   </h4>
-                  <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                  <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                     {step.desc}
                   </p>
                 </div>

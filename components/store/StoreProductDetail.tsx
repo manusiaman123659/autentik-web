@@ -126,11 +126,11 @@ export default function StoreProductDetail({
   }
 
   return (
-    <div className="min-h-screen pb-20 lg:pb-0" style={{ backgroundColor: "var(--bg-primary)" }}>
+    <div className="min-h-screen pb-[calc(120px+env(safe-area-inset-bottom))] lg:pb-0" style={{ backgroundColor: "var(--bg-primary)" }}>
       {/* Breadcrumb */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2">
-          <nav className="flex items-center gap-1 text-[11px]" style={{ color: "var(--text-muted)" }}>
+          <nav aria-label="Jejak navigasi" className="flex flex-wrap items-center gap-1.5 text-sm [&_svg]:shrink-0" style={{ color: "var(--text-secondary)" }}>
             <Link href="/" className="hover:text-[#0EA5A0] transition-colors">Home</Link>
             <ChevronRight size={10} />
             <Link href="/store" className="hover:text-[#0EA5A0] transition-colors">Marketplace Komponen</Link>
@@ -260,7 +260,7 @@ export default function StoreProductDetail({
               <div className="py-3">
                 {activeTab === "description" ? (
                   <div className="space-y-3">
-                    <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                    <p className="text-sm leading-relaxed break-words" style={{ color: "var(--text-secondary)" }}>
                       {product.description}
                     </p>
 
@@ -274,7 +274,7 @@ export default function StoreProductDetail({
                           {features.map((f) => (
                             <li key={f} className="flex items-start gap-1.5">
                               <CheckCircle2 size={12} className="flex-shrink-0 mt-0.5 text-[#0EA5A0]" />
-                              <span className="text-[11px]" style={{ color: "var(--text-secondary)" }}>{f}</span>
+                              <span className="text-sm break-words" style={{ color: "var(--text-secondary)" }}>{f}</span>
                             </li>
                           ))}
                         </ul>
@@ -282,8 +282,8 @@ export default function StoreProductDetail({
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-sm border overflow-hidden" style={{ borderColor: "var(--border-subtle)" }}>
-                    <table className="w-full text-xs">
+                  <div className="rounded-sm border overflow-hidden" style={{ borderColor: "var(--border-color)" }}>
+                    <table className="w-full table-fixed text-sm [&_td]:align-top [&_td]:[overflow-wrap:anywhere]">
                       <tbody>
                         {specs.map((s, i) => (
                           <tr key={s.label} className={i % 2 === 0 ? "bg-slate-50 dark:bg-slate-900" : ""}>
@@ -351,10 +351,10 @@ export default function StoreProductDetail({
             {/* Purchase box */}
             <div
               className="rounded-sm border p-4 space-y-3"
-              style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
+              style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}
             >
               {/* Mini info */}
-              <div className="space-y-1.5 text-[11px]">
+              <div className="space-y-2 text-sm [&>div]:gap-3 [&>div>span]:min-w-0 [&>div>span]:[overflow-wrap:anywhere] [&>div>span:last-child]:text-right">
                 <div className="flex justify-between">
                   <span style={{ color: "var(--text-muted)" }}>Merek</span>
                   <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{product.brand}</span>

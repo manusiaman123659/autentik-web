@@ -5,10 +5,7 @@ export default function AuthLayout({
 }) {
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 py-12"
-      style={{
-        background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-      }}
+      className="min-h-screen flex items-center justify-center px-4 py-12 public-page-hero"
     >
       <div className="w-full max-w-md">{children}</div>
     </div>

@@ -19,6 +19,7 @@ import CategoryToolbar from "@/components/store/CategoryToolbar";
 import StoreTrustStrip from "@/components/store/StoreTrustStrip";
 import StorePromoBanner from "@/components/store/StorePromoBanner";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
+import EmptyState from "@/components/ui/EmptyState";
 
 const ITEMS_PER_PAGE = 9;
 
@@ -259,19 +260,19 @@ export default function StoreClient({
             )}
 
             {filtered.length === 0 ? (
-              <div className="text-center py-20 rounded-2xl border shadow-sm" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-                <Package size={40} className="mx-auto mb-4 opacity-30" />
-                <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Tidak ada produk ditemukan</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto font-light">
-                  Coba ubah filter pencarian atau reset filter Anda.
-                </p>
+              <EmptyState
+                icon={Package}
+                title="Tidak ada produk ditemukan"
+                description="Coba ubah filter pencarian atau reset filter Anda."
+                action={
                 <button
                   onClick={resetFilters}
-                  className="mt-5 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
+                  className="px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
                 >
                   Reset Filter
                 </button>
-              </div>
+                }
+              />
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -287,7 +288,7 @@ export default function StoreClient({
                       Halaman <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{safePage}</span> dari{" "}
                       <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{totalPages}</span>
                     </p>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         type="button"
                         disabled={safePage === 1}
@@ -303,6 +304,7 @@ export default function StoreClient({
                           key={n}
                           type="button"
                           onClick={() => setPage(n)}
+                          aria-current={n === safePage ? "page" : undefined}
                           className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
                             n === safePage
                               ? "bg-[#0EA5A0] text-white"

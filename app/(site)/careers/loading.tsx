@@ -3,10 +3,7 @@ export default function Loading() {
     <>
       {/* Hero skeleton */}
       <section
-        className="pt-36 pb-20"
-        style={{
-          background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
+        className="pt-36 pb-20 public-page-hero [&_.animate-pulse]:max-w-full"
       >
         <div className="max-w-4xl mx-auto px-6 lg:px-16 text-center space-y-6">
           <div className="h-6 w-48 mx-auto rounded-full animate-pulse bg-white/10" />
@@ -19,7 +16,7 @@ export default function Loading() {
       {/* Mengapa Autentik skeleton */}
       <section className="py-24 px-6 lg:px-16" style={{ backgroundColor: "var(--bg-secondary)" }}>
         <div className="max-w-6xl mx-auto space-y-10">
-          <div className="text-center space-y-3">
+          <div className="text-center space-y-3 [&>div]:max-w-full">
             <div className="h-8 w-64 mx-auto rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
             <div className="h-4 w-96 mx-auto rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
           </div>
@@ -39,11 +36,11 @@ export default function Loading() {
       {/* Posisi Terbuka skeleton */}
       <section className="py-24 px-6 lg:px-16" style={{ backgroundColor: "var(--bg-primary)" }}>
         <div className="max-w-4xl mx-auto space-y-8">
-          <div className="text-center space-y-3">
+          <div className="text-center space-y-3 [&>div]:max-w-full">
             <div className="h-8 w-56 mx-auto rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
             <div className="h-4 w-80 mx-auto rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
           </div>
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-wrap gap-3 justify-center">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-9 w-24 rounded-full animate-pulse bg-slate-200 dark:bg-slate-800" />
             ))}

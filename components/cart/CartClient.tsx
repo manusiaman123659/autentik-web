@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/components/cart/CartProvider";
 import { formatRupiah } from "@/lib/format";
+import EmptyState from "@/components/ui/EmptyState";
 
 function QtyStepper({
   itemKey,
@@ -81,7 +82,7 @@ export default function CartClient() {
               <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
                 Keranjang Belanja
               </h1>
-              <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+              <p className="text-sm mt-0.5" style={{ color: "var(--text-secondary)" }}>
                 {totalItems > 0
                   ? `${totalItems} item dalam keranjang Anda`
                   : "Belanja komponen original untuk unit Anda"}
@@ -93,22 +94,20 @@ export default function CartClient() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {items.length === 0 ? (
-          <div className="text-center py-24 rounded-2xl border shadow-sm" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-            <ShoppingCart size={44} className="mx-auto mb-4 opacity-30" />
-            <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
-              Keranjang Anda kosong
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto font-light">
-              Temukan komponen original bergaransi resmi untuk unit Talpha, Cylab, Ullun, dan Epal.
-            </p>
+          <EmptyState
+            icon={ShoppingCart}
+            title="Keranjang Anda kosong"
+            description="Temukan komponen original bergaransi resmi untuk unit Talpha, Cylab, Ullun, dan Epal."
+            action={
             <Link
               href="/store"
-              className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
             >
               Jelajahi Marketplace Komponen
               <ChevronRight size={16} />
             </Link>
-          </div>
+            }
+          />
         ) : (
           <div className="grid lg:grid-cols-3 gap-8 items-start">
             {/* Daftar item */}

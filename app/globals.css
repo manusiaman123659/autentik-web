@@ -31,6 +31,8 @@
   --shadow-card-hover: 0 10px 25px rgba(0,0,0,0.12);
   --navbar-bg:       #ffffff;
   --navbar-shadow:   0 1px 3px rgba(0,0,0,0.08);
+  --public-hero-end: #edf4f8;
+  --public-hero-gradient: linear-gradient(135deg, #f8fafc 0%, #edf4f8 50%, #e5f3f1 100%);
 }
 
 /* ─── Dark Mode Tokens ──────────────────────────────────────────────────────── */
@@ -48,6 +50,8 @@
   --shadow-card-hover: 0 10px 25px rgba(0,0,0,0.5);
   --navbar-bg:       #0f172a;
   --navbar-shadow:   0 1px 3px rgba(0,0,0,0.3);
+  --public-hero-end: #0a1628;
+  --public-hero-gradient: linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%);
 }
 
 @layer base {
@@ -105,6 +109,20 @@
   .container-custom {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
+
+  .public-page-hero { background: var(--public-hero-gradient); }
+  .public-rich-text {
+    @apply text-base leading-relaxed;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+  }
+  .public-rich-text h2 { @apply mt-12 mb-4 text-xl font-bold tracking-tight; color: var(--text-primary); }
+  .public-rich-text h3 { @apply mt-8 mb-3 text-lg font-bold; color: var(--text-primary); }
+  .public-rich-text p { @apply mb-4; }
+  .public-rich-text ul { @apply mb-4 list-disc pl-6; }
+  .public-rich-text ol { @apply mb-4 list-decimal pl-6; }
+  .public-rich-text li { @apply mb-2; }
+  .public-rich-text a { @apply text-teal-600 underline underline-offset-4 dark:text-teal-300; }
 
   /* ── Thin, reusable scrollbar (Firefox + Chromium) ── */
   .scrollbar-thin {

@@ -117,16 +117,13 @@ export default async function JobDetailPage({ params }: Props) {
     return (
       <>
         <section
-          className="pt-32 pb-20 relative overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-          }}
+          className="pt-32 pb-20 relative overflow-hidden public-page-hero"
         >
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <AnimatedElement type="fade-up">
               <Link
                 href="/careers"
-                className="inline-flex items-center gap-2 text-slate-300 hover:text-white text-sm mb-8 transition-colors"
+                className="inline-flex items-center gap-2 text-body hover:text-teal-600 text-sm mb-8 transition-colors"
               >
                 <ArrowLeft size={16} />
                 Kembali ke Mika Career
@@ -135,19 +132,19 @@ export default async function JobDetailPage({ params }: Props) {
                 <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full bg-teal-500/20 text-[#14B8A6] border border-teal-500/30">
                   {legacyJob.type}
                 </span>
-                <span className="text-slate-300 text-xs font-medium flex items-center gap-1.5">
+                <span className="text-body text-sm font-medium flex items-center gap-1.5">
                   <Briefcase size={14} className="text-[#14B8A6]" />
                   {legacyJob.department}
                 </span>
-                <span className="text-slate-300 text-xs font-medium flex items-center gap-1.5">
+                <span className="text-body text-sm font-medium flex items-center gap-1.5">
                   <MapPin size={14} className="text-[#14B8A6]" />
                   {legacyJob.location}
                 </span>
               </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mb-4">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-heading leading-tight mb-4 break-words">
                 {legacyJob.title}
               </h1>
-              <p className="text-slate-300 text-lg leading-relaxed">{legacyJob.summary}</p>
+              <p className="text-body text-lg leading-relaxed">{legacyJob.summary}</p>
             </AnimatedElement>
           </div>
         </section>
@@ -239,13 +236,10 @@ export default async function JobDetailPage({ params }: Props) {
 
       {/* ─── Breadcrumb ─────────────────────────────────────────────────────── */}
       <section
-        className="pt-28 pb-0"
-        style={{
-          background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
+        className="pt-28 pb-0 public-page-hero"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+          <nav aria-label="Jejak navigasi" className="flex flex-wrap items-center gap-1.5 text-sm [&_svg]:shrink-0 [&_span]:[overflow-wrap:anywhere]" style={{ color: "var(--text-secondary)" }}>
             <Link href="/" className="hover:text-[#0EA5A0] transition-colors">Beranda</Link>
             <ChevronRight size={12} />
             <Link href="/careers" className="hover:text-[#0EA5A0] transition-colors">Lowongan</Link>
@@ -259,7 +253,7 @@ export default async function JobDetailPage({ params }: Props) {
       <section
         className="pb-16 pt-6 px-4 sm:px-6 lg:px-8"
         style={{
-          background: "linear-gradient(180deg, #0B1F3A 0%, var(--bg-primary) 300px)",
+          background: "linear-gradient(180deg, var(--public-hero-end) 0%, var(--bg-primary) 300px)",
         }}
       >
         <div className="max-w-7xl mx-auto">
@@ -355,7 +349,7 @@ export default async function JobDetailPage({ params }: Props) {
 
                   {/* Info Grid: 4 columns */}
                   <div
-                    className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+                    className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 [&>div]:min-w-0 [&_p]:[overflow-wrap:anywhere]"
                   >
                     {/* Lokasi */}
                     <div

@@ -51,7 +51,7 @@ export default function MikaJobFilter({
       className="rounded-2xl border p-5 sm:p-6 mb-8 shadow-sm transition-all"
       style={{
         backgroundColor: "var(--bg-card)",
-        borderColor: "var(--border-subtle)",
+        borderColor: "var(--border-color)",
       }}
     >
       {/* Search Input Bar */}
@@ -63,6 +63,7 @@ export default function MikaJobFilter({
         />
         <input
           type="text"
+          aria-label="Cari lowongan pekerjaan"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Cari posisi pekerjaan, skill (Next.js, IoT, Sales), atau kata kunci..."
@@ -91,13 +92,14 @@ export default function MikaJobFilter({
         {/* Company Filter (1st) */}
         <div>
           <label
-            className="block text-xs font-semibold mb-1.5 uppercase tracking-wider"
-            style={{ color: "var(--text-muted)" }}
+            className="block text-sm font-semibold mb-1.5 uppercase tracking-wider"
+            style={{ color: "var(--text-secondary)" }}
           >
             Perusahaan
           </label>
           <div className="relative">
             <select
+              aria-label="Filter perusahaan"
               value={selectedCompany}
               onChange={(e) => onCompanyChange(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-lg border text-sm font-medium transition-all focus:outline-none focus:border-[#0EA5A0] appearance-none"
@@ -126,13 +128,14 @@ export default function MikaJobFilter({
         {/* Department Filter (2nd) */}
         <div>
           <label
-            className="block text-xs font-semibold mb-1.5 uppercase tracking-wider"
-            style={{ color: "var(--text-muted)" }}
+            className="block text-sm font-semibold mb-1.5 uppercase tracking-wider"
+            style={{ color: "var(--text-secondary)" }}
           >
             Departemen
           </label>
           <div className="relative">
             <select
+              aria-label="Filter departemen"
               value={selectedDepartment}
               onChange={(e) => onDepartmentChange(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-lg border text-sm font-medium transition-all focus:outline-none focus:border-[#0EA5A0] appearance-none"
@@ -161,13 +164,14 @@ export default function MikaJobFilter({
         {/* Employment Type Filter (3rd) */}
         <div>
           <label
-            className="block text-xs font-semibold mb-1.5 uppercase tracking-wider"
-            style={{ color: "var(--text-muted)" }}
+            className="block text-sm font-semibold mb-1.5 uppercase tracking-wider"
+            style={{ color: "var(--text-secondary)" }}
           >
             Tipe Pekerjaan
           </label>
           <div className="relative">
             <select
+              aria-label="Filter tipe pekerjaan"
               value={selectedEmploymentType}
               onChange={(e) => onEmploymentTypeChange(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-lg border text-sm font-medium transition-all focus:outline-none focus:border-[#0EA5A0] appearance-none"

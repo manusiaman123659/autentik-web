@@ -121,11 +121,7 @@ export default async function AboutPage() {
     <>
       {/* ─── Section 1: Hero & Sekilas Perusahaan ─── */}
       <section
-        className="pt-36 pb-24 relative overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)",
-        }}
+        className="pt-36 pb-24 relative overflow-hidden public-page-hero"
       >
         <div
           className="absolute inset-0 opacity-5 pointer-events-none"
@@ -153,12 +149,12 @@ export default async function AboutPage() {
                 className="w-24 h-24 object-contain transition-transform duration-500"
               />
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white mb-4 leading-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-heading mb-4 leading-tight">
               Membangun Solusi Cerdas
               <br />
               <span className="text-[#0EA5A0]">&amp; Otomasi Berkelanjutan</span>
             </h1>
-            <p className="text-lg md:text-xl text-slate-300 leading-relaxed font-light max-w-3xl mx-auto mb-4">
+            <p className="text-lg md:text-xl text-body dark:text-slate-300 leading-relaxed max-w-3xl mx-auto mb-4">
               PT Autentik Karya Analitika adalah perusahaan teknologi pintar yang berkomitmen memberikan solusi otomasi dan IoT industri terintegrasi untuk laboratorium, manufaktur, dan lingkungan kerja di seluruh Indonesia.
             </p>
             <p className="text-sm text-slate-400 font-light">
@@ -170,13 +166,13 @@ export default async function AboutPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
             {/* VISI */}
             <AnimatedElement type="fade-up">
-              <div className="p-8 md:p-10 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 h-full flex flex-col justify-between">
+              <div className="p-8 md:p-10 rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-sm border border-base dark:border-white/10 dark:hover:bg-white/10 transition-all duration-300 h-full flex flex-col justify-between">
                 <div>
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
                     <span className="text-[#0EA5A0] font-black italic text-3xl">I.</span>
-                    <span className="text-white">Visi</span>
+                    <span className="text-heading">Visi</span>
                   </h2>
-                  <p className="text-lg md:text-xl leading-relaxed font-medium text-white mb-4">
+                  <p className="text-lg md:text-xl leading-relaxed font-medium text-heading mb-4">
                     Menjadi perusahaan yang unggul di bidang penerapan teknologi pintar untuk akses kehidupan yang lebih baik.
                   </p>
                 </div>
@@ -188,18 +184,18 @@ export default async function AboutPage() {
 
             {/* MISI */}
             <AnimatedElement type="fade-up">
-              <div className="p-8 md:p-10 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 h-full flex flex-col justify-between">
+              <div className="p-8 md:p-10 rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-sm border border-base dark:border-white/10 dark:hover:bg-white/10 transition-all duration-300 h-full flex flex-col justify-between">
                 <div>
                   <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
                     <span className="text-[#0EA5A0] font-black italic text-3xl">II.</span>
-                    <span className="text-white">Misi</span>
+                    <span className="text-heading">Misi</span>
                   </h2>
                   <ul className="space-y-4 font-medium list-none">
                     {missionPoints.map((point) => (
                       <li key={point.number} className="relative pl-5">
                         <span className="absolute left-0 top-2 w-2 h-2 rounded-full bg-[#0EA5A0]" />
-                        <span className="text-white">{point.text}</span>
-                        <span className="text-xs italic mt-1 block font-light text-slate-400">
+                        <span className="text-heading">{point.text}</span>
+                        <span className="text-sm italic mt-1 block text-body">
                           ({point.english})
                         </span>
                       </li>
@@ -412,7 +408,7 @@ export default async function AboutPage() {
       )}
 
       {/* Combined GRUP KAMI & PARTNER KAMI Section */}
-      <section className="py-24 px-6 lg:px-16 text-white" style={{ backgroundColor: "#0B1F3A" }}>
+      <section className="py-24 px-6 lg:px-16 text-heading bg-page-alt dark:bg-navy-900">
         <div className="max-w-7xl mx-auto">
           <AnimatedElement type="fade-up">
             <div className="flex flex-col xl:flex-row gap-16 xl:gap-12 justify-between">
@@ -420,10 +416,10 @@ export default async function AboutPage() {
               {/* LEFT HALF: GRUP KAMI */}
               <div className="w-full xl:w-1/2">
                 <div className="text-center xl:text-left mb-10">
-                  <h2 className="text-3xl font-bold tracking-tight text-white mb-3">
+                  <h2 className="text-3xl font-bold tracking-tight text-heading mb-3">
                     Grup Kami
                   </h2>
-                  <p className="text-slate-300 text-sm font-light max-w-lg mx-auto xl:mx-0">
+                  <p className="text-body dark:text-slate-300 text-sm max-w-lg mx-auto xl:mx-0">
                     Perusahaan afiliasi yang menjadi bagian integral dari ekosistem Autentik.
                   </p>
                 </div>
@@ -460,15 +456,15 @@ export default async function AboutPage() {
               </div>
 
               {/* VERTICAL DIVIDER LINE */}
-              <div className="hidden xl:block w-px bg-white/15 self-stretch" />
+              <div className="hidden xl:block w-px bg-slate-300 dark:bg-white/15 self-stretch" />
 
               {/* RIGHT HALF: PARTNER KAMI */}
               <div className="w-full xl:w-1/2">
                 <div className="text-center xl:text-left mb-10">
-                  <h2 className="text-3xl font-bold tracking-tight text-white mb-3">
+                  <h2 className="text-3xl font-bold tracking-tight text-heading mb-3">
                     Partner Kami
                   </h2>
-                  <p className="text-slate-300 text-sm font-light max-w-lg mx-auto xl:mx-0">
+                  <p className="text-body dark:text-slate-300 text-sm max-w-lg mx-auto xl:mx-0">
                     Kolaborasi strategis dengan berbagai pimpinan teknologi & institusi pendidikan.
                   </p>
                 </div>

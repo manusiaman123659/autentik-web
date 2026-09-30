@@ -122,7 +122,7 @@ export default function FaqWidget() {
       {/* Panel */}
       {open && (
         <div
-          className="fixed z-40 bottom-[130px] md:bottom-24 right-3 left-3 sm:left-auto sm:right-5 w-auto sm:w-96 max-h-[70vh] md:max-h-[550px] flex flex-col rounded-lg border shadow-2xl overflow-hidden transition-all duration-200"
+          className="fixed z-40 bottom-[calc(184px+env(safe-area-inset-bottom))] lg:bottom-24 right-3 left-3 sm:left-auto sm:right-5 w-auto sm:w-96 max-h-[calc(100dvh-210px-env(safe-area-inset-bottom))] lg:max-h-[550px] flex flex-col rounded-lg border shadow-2xl overflow-hidden transition-all duration-200"
           style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
           role="dialog"
           aria-label="Pusat Bantuan"
@@ -301,7 +301,7 @@ export default function FaqWidget() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label={open ? "Tutup pusat bantuan" : "Buka pusat bantuan"}
-        className="fixed z-40 right-4 bottom-[72px] md:bottom-5 md:right-5 w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#0EA5A0] text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
+        className="fixed z-40 right-4 bottom-[calc(120px+env(safe-area-inset-bottom))] lg:bottom-5 md:right-5 w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#0EA5A0] text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
       >
         {open ? <X size={22} /> : <MessageCircle size={24} />}
       </button>

@@ -19,7 +19,7 @@ const variantStyles = {
   secondary:
     "bg-[#0B1F3A] text-white hover:bg-[#0e2a4d] shadow-sm hover:shadow-md",
   outline:
-    "border-2 border-[#0B1F3A] text-[#0B1F3A] hover:bg-[#0B1F3A] hover:text-white",
+    "border-2 border-navy-900 text-navy-900 hover:bg-navy-900 hover:text-white dark:border-slate-300 dark:text-slate-100 dark:hover:bg-slate-100 dark:hover:text-navy-900",
   "outline-white":
     "border-2 border-white text-white hover:bg-white hover:text-[#0B1F3A]",
   ghost: "text-[#0EA5A0] hover:bg-[#0EA5A0]/10",
@@ -43,7 +43,7 @@ export default function Button({
   id,
 }: ButtonProps) {
   const classes = cn(
-    "inline-flex items-center gap-2 font-semibold rounded-md transition-all duration-200 cursor-pointer",
+    "inline-flex items-center justify-center gap-2 min-w-0 text-center font-semibold rounded-md transition-all duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500",
     variantStyles[variant],
     sizeStyles[size],
     disabled && "opacity-50 cursor-not-allowed",

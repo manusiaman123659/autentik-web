@@ -25,7 +25,7 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
   return (
     <div
       className="rounded-sm border hover:border-[#0EA5A0] transition-colors flex flex-col overflow-hidden group"
-      style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
+      style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}
     >
       {/* Image */}
       <Link href={`/store/${product.slug}`} className="block relative aspect-square border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
@@ -35,7 +35,7 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
             alt={product.name}
             fill
             className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) 50vw, (max-width: 1279px) 35vw, (max-width: 1440px) 25vw, 320px"
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -91,7 +91,7 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
         {/* Title */}
         <Link href={`/store/${product.slug}`}>
           <h3
-            className="text-xs font-medium line-clamp-2 leading-snug hover:text-[#0EA5A0] transition-colors min-h-[2rem]"
+            className="text-sm font-medium line-clamp-2 leading-relaxed hover:text-[#0EA5A0] transition-colors min-h-[2.5rem] break-words"
             style={{ color: "var(--text-primary)" }}
           >
             {product.name}
@@ -99,7 +99,7 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
         </Link>
 
         {/* Brand */}
-        <p className="text-[10px] text-slate-400 mt-1 truncate">{product.brand}</p>
+        <p className="text-sm text-body mt-1 break-words">{product.brand}</p>
 
         {/* Price */}
         <div className="mt-auto pt-1.5">
@@ -115,7 +115,7 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
               </span>
             </div>
           ) : (
-            <span className="text-[11px] font-medium text-slate-400">Harga: hubungi kami</span>
+            <span className="text-sm font-medium text-body">Harga: hubungi kami</span>
           )}
         </div>
 
@@ -133,7 +133,7 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
           product.has_active_variants ? (
             <Link
               href={`/store/${product.slug}`}
-              className="w-full flex-shrink-0 flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-semibold transition-colors rounded-sm border border-[#0EA5A0] text-[#0EA5A0] hover:bg-[#0EA5A0]/10 text-center"
+              className="w-full flex-shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-3 text-sm font-semibold transition-colors rounded-sm border border-[#0EA5A0] text-teal-600 dark:text-teal-300 hover:bg-[#0EA5A0]/10 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
             >
               Pilih Varian
             </Link>

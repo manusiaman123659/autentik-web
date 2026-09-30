@@ -14,7 +14,7 @@ export default function FeaturedProducts({ products }: { products: ProductRow[] 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <AnimatedElement type="fade-up">
-          <div className="flex items-end justify-between mb-12">
+          <div className="flex items-end justify-between gap-6 mb-12">
             <SectionHeading
               title="Produk Manufaktur Unggulan"
               subtitle="Pilihan produk AKA untuk kebutuhan monitoring, laboratorium, dan pengolahan air."
@@ -35,7 +35,7 @@ export default function FeaturedProducts({ products }: { products: ProductRow[] 
             <div
               key={product.id}
               className="border rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group hover:border-[#14B8A6]/40"
-              style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
+              style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}
             >
               {/* Product Image */}
               <div
@@ -65,7 +65,7 @@ export default function FeaturedProducts({ products }: { products: ProductRow[] 
 
               {/* Product Info */}
               <div className="p-5">
-                <p className="text-[10px] font-medium uppercase tracking-wide mb-1.5 text-slate-400">
+                <p className="text-xs font-medium uppercase tracking-wide mb-1.5 text-body break-words">
                   {product.category}
                 </p>
                 <h3 className="text-base font-bold mb-1.5 group-hover:text-[#14B8A6] transition-colors line-clamp-2" style={{ color: "var(--text-primary)" }}>

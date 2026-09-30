@@ -21,27 +21,27 @@ function getEmploymentBadgeStyle(type: string) {
   if (t.includes("full-time") || t.includes("tetap")) {
     return {
       bg: "rgba(14, 165, 160, 0.12)",
-      color: "#14B8A6",
+      color: "var(--employment-teal)",
       border: "rgba(14, 165, 160, 0.35)",
     };
   }
   if (t.includes("intern") || t.includes("magang")) {
     return {
       bg: "rgba(6, 182, 212, 0.12)",
-      color: "#22D3EE",
+      color: "var(--employment-cyan)",
       border: "rgba(6, 182, 212, 0.35)",
     };
   }
   if (t.includes("contract") || t.includes("kontrak")) {
     return {
       bg: "rgba(245, 158, 11, 0.12)",
-      color: "#FBBF24",
+      color: "var(--employment-amber)",
       border: "rgba(245, 158, 11, 0.35)",
     };
   }
   return {
     bg: "rgba(14, 165, 160, 0.12)",
-    color: "#14B8A6",
+    color: "var(--employment-teal)",
     border: "rgba(14, 165, 160, 0.35)",
   };
 }
@@ -57,10 +57,10 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
 
   return (
     <div
-      className="group relative flex flex-col justify-between rounded-2xl border p-0 overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
+      className="group relative min-w-0 flex flex-col justify-between rounded-2xl border p-0 overflow-hidden shadow-sm transition-all duration-300 hover:-translate-y-0.5 [--employment-teal:#0f766e] [--employment-cyan:#0e7490] [--employment-amber:#92400e] dark:[--employment-teal:#2dd4bf] dark:[--employment-cyan:#67e8f9] dark:[--employment-amber:#fcd34d]"
       style={{
         backgroundColor: "var(--bg-card)",
-        borderColor: "var(--border-subtle)",
+        borderColor: "var(--border-color)",
       }}
     >
       {/* ── Top Section: Company Info + Employment Badge ── */}
@@ -84,17 +84,16 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
 
           {/* Company Name + Department + Job Tag */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <p
-                  className="text-sm font-semibold uppercase tracking-wide truncate"
+                  className="text-sm font-semibold uppercase tracking-wide break-words"
                   style={{ color: "var(--text-primary)" }}
                 >
                   {job.company.name}
                 </p>
                 <p
-                  className="text-xs font-medium mt-0.5"
-                  style={{ color: "#0EA5A0" }}
+                  className="text-sm font-medium mt-0.5 text-teal-700 dark:text-teal-300"
                 >
                   {job.department.name}
                 </p>
@@ -102,7 +101,7 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
 
               {/* Employment Type Badge */}
               <span
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide whitespace-nowrap shrink-0"
+                className="inline-flex max-w-full items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wide break-words"
                 style={{
                   backgroundColor: badgeStyle.bg,
                   color: badgeStyle.color,
@@ -117,7 +116,7 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
             {/* Position Tag */}
             <div className="mt-2">
               <span
-                className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border"
+                  className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold border break-words"
                 style={{
                   backgroundColor: "rgba(14, 165, 160, 0.08)",
                   borderColor: "rgba(14, 165, 160, 0.25)",
@@ -131,7 +130,7 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
         </div>
 
         {/* ── Job Title (Large) ── */}
-        <h3 className="text-lg font-bold tracking-tight mb-2">
+        <h3 className="text-lg font-bold tracking-tight mb-2 break-words">
           <Link
             href={`/careers/${job.id}`}
             className="transition-colors hover:underline decoration-[#0EA5A0]/40 underline-offset-2"
@@ -191,7 +190,7 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
 
       {/* ── Footer: Quota + CTA Button ── */}
       <div
-        className="px-5 py-4 flex items-center justify-between border-t mt-1"
+        className="px-5 py-4 flex flex-wrap gap-3 items-center justify-between border-t mt-1"
         style={{
           borderColor: "var(--border-subtle)",
           backgroundColor: "rgba(14, 165, 160, 0.03)",
@@ -200,7 +199,7 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
         {/* Quota */}
         <div className="flex items-center gap-1.5">
           <Users size={14} style={{ color: "var(--text-muted)" }} />
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
             Kuota:{" "}
             <strong style={{ color: "var(--text-primary)" }}>
               {job.quota > 0 ? job.quota : "—"}
