@@ -67,7 +67,7 @@ export default function Footer() {
           {/* Column 1: Brand */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 relative flex items-center justify-center">
+              <div className="w-9 h-9 relative flex items-center justify-center rounded-full overflow-hidden bg-white p-1.5">
                 <Image
                   src="/images/logo_aka/LOGO_AKA.jpg"
                   alt="Autentik Logo"
