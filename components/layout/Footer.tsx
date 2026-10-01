@@ -69,7 +69,7 @@ export default function Footer() {
             <Link href="/" className="flex items-center gap-2.5">
               <div className="w-9 h-9 relative flex items-center justify-center">
                 <Image
-                  src="/images/logo_aka/akaaaaaaa.png"
+                  src="/images/logo_aka/LOGO_AKA.jpg"
                   alt="Autentik Logo"
                   width={36}
                   height={36}

@@ -7,7 +7,7 @@ const baseUrl = getCanonicalOrigin();
 const COMPANY = {
   name: "PT Autentik Karya Analitika",
   url: baseUrl,
-  logo: `${baseUrl}/images/logo_aka/akaaaaaaa.png`,
+  logo: `${baseUrl}/images/logo_aka/LOGO_AKA.jpg`,
   address: {
     "@type": "PostalAddress",
     streetAddress: "Jl. Klipang Ruko Amsterdam No.9E, Sendangmulyo, Tembalang",

@@ -169,7 +169,7 @@ export default function Navbar() {
             <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
               <div className="w-9 h-9 relative flex items-center justify-center">
                 <Image
-                  src="/images/logo_aka/akaaaaaaa.png"
+                  src="/images/logo_aka/LOGO_AKA.jpg"
                   alt="Logo Autentik"
                   width={36}
                   height={36}

@@ -142,11 +142,11 @@ export default async function AboutPage() {
           <AnimatedElement type="fade-up" className="text-center mb-16">
             <div className="mb-8 w-32 h-32 mx-auto flex justify-center items-center hover:scale-105 transition-all duration-500 bg-white rounded-full p-4 shadow-2xl">
               <Image
-                src="/images/logo_aka/akaaaaaaa.png"
+                src="/images/logo_aka/LOGO_AKA.jpg"
                 alt="Autentik Logo"
                 width={200}
                 height={200}
-                className="w-24 h-24 object-contain transition-transform duration-500"
+                className="w-24 h-24 p-1 object-contain transition-transform duration-500"
               />
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-heading mb-4 leading-tight">
