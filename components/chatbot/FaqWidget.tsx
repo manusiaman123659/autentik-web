@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   MessageCircle,
   X,
@@ -22,6 +23,12 @@ interface ChatMessage {
 const CHAT_TIMEOUT_MS = 25000;
 
 export default function FaqWidget() {
+  const pathname = usePathname();
+  const storeSegment = pathname.split("/")[2];
+  const hasPurchaseBar = /^\/store\/[^/]+\/?$/.test(pathname)
+    && !["cart", "checkout", "orders"].includes(storeSegment);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [chatActive, setChatActive] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -53,6 +60,31 @@ export default function FaqWidget() {
   }, []);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const viewport = window.visualViewport;
+    const updateViewport = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      panel.style.setProperty("--chat-viewport-height", `${viewport?.height ?? window.innerHeight}px`);
+      panel.style.setProperty("--chat-viewport-bottom", `${Math.max(0, window.innerHeight - (viewport?.height ?? window.innerHeight) - (viewport?.offsetTop ?? 0))}px`);
+      panel.style.setProperty("--chat-bottom-gap", hasPurchaseBar && document.activeElement !== composerRef.current ? "120px" : "16px");
+    };
+    updateViewport();
+    viewport?.addEventListener("resize", updateViewport);
+    viewport?.addEventListener("scroll", updateViewport);
+    window.addEventListener("resize", updateViewport);
+    document.addEventListener("focusin", updateViewport);
+    document.addEventListener("focusout", updateViewport);
+    return () => {
+      viewport?.removeEventListener("resize", updateViewport);
+      viewport?.removeEventListener("scroll", updateViewport);
+      window.removeEventListener("resize", updateViewport);
+      document.removeEventListener("focusin", updateViewport);
+      document.removeEventListener("focusout", updateViewport);
+    };
+  }, [open, hasPurchaseBar]);
 
   useEffect(() => {
     if (!open) return;
@@ -122,14 +154,15 @@ export default function FaqWidget() {
       {/* Panel */}
       {open && (
         <div
-          className="fixed z-40 bottom-[calc(184px+env(safe-area-inset-bottom))] lg:bottom-24 right-3 left-3 sm:left-auto sm:right-5 w-auto sm:w-96 max-h-[calc(100dvh-210px-env(safe-area-inset-bottom))] lg:max-h-[550px] flex flex-col rounded-lg border shadow-2xl overflow-hidden transition-all duration-200"
+          ref={panelRef}
+          className={`fixed z-40 ${hasPurchaseBar ? "[--chat-bottom-gap:120px]" : "[--chat-bottom-gap:16px]"} bottom-[calc(var(--chat-viewport-bottom,0px)+var(--chat-bottom-gap)+env(safe-area-inset-bottom))] lg:bottom-24 right-3 left-3 sm:left-auto sm:right-5 w-auto sm:w-96 max-h-[min(550px,calc(var(--chat-viewport-height,100dvh)-var(--chat-bottom-gap)-env(safe-area-inset-bottom)-77px))] lg:max-h-[550px] flex flex-col rounded-lg border shadow-2xl overflow-hidden`}
           style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
           role="dialog"
           aria-label="Pusat Bantuan"
         >
           {/* Header */}
           <div
-            className="px-3 py-2.5 border-b flex items-center justify-between gap-3"
+            className="shrink-0 px-3 py-2.5 border-b flex items-center justify-between gap-3"
             style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}
           >
             <div className="flex items-center gap-2.5 min-w-0">
@@ -156,7 +189,7 @@ export default function FaqWidget() {
           </div>
 
           {/* Body */}
-          <div className="overflow-y-auto flex-1" style={{ backgroundColor: "var(--bg-card)" }}>
+          <div className="min-h-0 overflow-y-auto overscroll-contain flex-1" style={{ backgroundColor: "var(--bg-card)" }}>
             {chatActive ? (
               <div className="p-3 space-y-3">
                 <button
@@ -235,14 +268,15 @@ export default function FaqWidget() {
           </div>
 
           {/* Chat composer */}
-          <div className="px-3 py-2.5 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <div className="shrink-0 px-3 py-2.5 border-t" style={{ borderColor: "var(--border-subtle)" }}>
             <div className="flex items-center gap-2">
               <div
-                className="flex-1 flex items-center gap-2 rounded-lg border px-3 py-2"
+                className="min-w-0 flex-1 flex items-center gap-2 rounded-lg border px-3 py-2"
                 style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}
               >
                 <Bot size={16} className="text-[#0EA5A0] flex-shrink-0" />
                 <input
+                  ref={composerRef}
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
@@ -251,7 +285,7 @@ export default function FaqWidget() {
                   }}
                   placeholder="Tanya soal produk atau layanan Autentik…"
                   maxLength={500}
-                  className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-slate-400"
+                  className="min-w-0 flex-1 bg-transparent text-sm focus:outline-none placeholder:text-slate-400"
                   style={{ color: "var(--text-primary)" }}
                 />
               </div>
@@ -272,7 +306,7 @@ export default function FaqWidget() {
           </div>
 
           {/* Footer */}
-          <div className="px-3 py-2.5 border-t" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
+          <div className="shrink-0 px-3 py-2.5 border-t" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
             <div className="grid grid-cols-2 gap-2">
               <WhatsAppButton
                 number={waContacts.ppicAka?.number ?? null}
@@ -301,7 +335,7 @@ export default function FaqWidget() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label={open ? "Tutup pusat bantuan" : "Buka pusat bantuan"}
-        className="fixed z-40 right-4 bottom-[calc(120px+env(safe-area-inset-bottom))] lg:bottom-5 md:right-5 w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#0EA5A0] text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
+        className={`fixed z-40 right-4 ${hasPurchaseBar ? "bottom-[calc(120px+env(safe-area-inset-bottom))]" : "bottom-[calc(16px+env(safe-area-inset-bottom))]"} lg:bottom-5 md:right-5 w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#0EA5A0] text-white ${open ? "hidden lg:flex" : "flex"} items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500`}
       >
         {open ? <X size={22} /> : <MessageCircle size={24} />}
       </button>
