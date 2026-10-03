@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
 import { getCanonicalOrigin } from "@/lib/public-url";
+import { APPLICATION_ROLES, isCmsRole } from "@/lib/admin-permissions";
 
 export async function GET(request: NextRequest) {
   // Audit log request origin and proxy headers safely (NO cookies, tokens, or codes)
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
     return redirect("/auth/login?error=oauth_inactive");
   }
 
-  // 5. Customer role authorization (Strict fail-closed: reject admin, editor, viewer, unknown)
+  // 5. Customer role authorization (reject every CMS, legacy, or unknown role).
   if (profile.role !== "customer") {
     console.warn(`[OAuth Callback] Non-customer role '${profile.role}' attempted customer login:`, user.id);
     await supabase.auth.signOut();
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest) {
         .select("id")
         .neq("id", user.id)
         .ilike("email", normalizedEmail)
-        .in("role", ["admin", "editor"])
+        .in("role", APPLICATION_ROLES.filter(isCmsRole))
         .eq("is_active", true)
         .limit(1);
 

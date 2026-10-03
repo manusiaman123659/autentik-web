@@ -18,7 +18,8 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { ADMIN_NAV_GROUPS, type AdminUser } from "@/lib/admin-sections";
+import { getAdminNavGroups, type AdminUser } from "@/lib/admin-sections";
+import { ROLE_LABELS } from "@/lib/admin-permissions";
 import { SECTION_ICONS } from "@/components/admin/sectionIcons";
 import { createClient } from "@/utils/supabase/client";
 import { useAdminTheme } from "@/components/admin/AdminThemeProvider";
@@ -178,7 +179,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
             <LayoutDashboard size={16} />
             {!isCollapsed && "Dashboard"}
           </Link>
-          {ADMIN_NAV_GROUPS.map((group) => {
+          {getAdminNavGroups(user.role).map((group) => {
             const groupOpen = isGroupOpen(group.key);
             return (
               <div key={group.key}>
@@ -267,7 +268,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
                   Keluar
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wide bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded">
-                  {user.role === "admin" ? "Admin" : "Editor"}
+                  {ROLE_LABELS[user.role]}
                 </span>
               </>
             )}
@@ -327,7 +328,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wide bg-teal-500/15 text-[#0EA5A0] px-2 py-1 rounded">
-              {user.role === "admin" ? "Admin" : "Editor"}
+              {ROLE_LABELS[user.role]}
             </span>
           </div>
         </header>

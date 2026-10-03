@@ -8,7 +8,8 @@ import {
   heroSlidesReadSchema,
   type HeroSlideInput,
 } from "@/lib/validations/heroSchema";
-import { getAdminUser } from "@/lib/admin";
+import { getAdminUser, requireCapability } from "@/lib/admin";
+import { APPLICATION_ROLES, hasCapability, isCmsRole, type CmsRole } from "@/lib/admin-permissions";
 import { parseBankAccount, type BankAccount } from "@/lib/bank-account";
 
 export interface ProductRow {
@@ -127,7 +128,7 @@ export interface StaffRow {
   id: string;
   email?: string | null;
   full_name?: string | null;
-  role: "admin" | "editor";
+  role: CmsRole;
   is_active: boolean;
   created_at: string;
 }
@@ -169,6 +170,7 @@ const DEFAULT_COMPRO: ComproSettings = {
 };
 
 export async function getComproSettings(): Promise<ComproSettings> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("site_settings")
@@ -193,6 +195,7 @@ export async function getComproSettings(): Promise<ComproSettings> {
 }
 
 export async function getHeroSlidesSettings(): Promise<HeroSlideInput[]> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("site_settings")
@@ -205,6 +208,7 @@ export async function getHeroSlidesSettings(): Promise<HeroSlideInput[]> {
 }
 
 export async function getRecruitmentUrlSetting(): Promise<string> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("site_settings")
@@ -233,6 +237,7 @@ function fmtRp(n: number): string {
 export { fmtRp };
 
 export async function getDashboardStats() {
+  const user = await requireCapability("operations");
   const supabase = await getSupabase();
   const monthStart = new Date();
   monthStart.setDate(1);
@@ -241,12 +246,12 @@ export async function getDashboardStats() {
 
   const [pending, revenue, unread, lowStock] = await Promise.all([
     supabase.from("orders").select("id", { count: "exact" }).in("payment_status", ["pending"]).is("deleted_at", null),
-    supabase
+    hasCapability(user.role, "audit") ? supabase
       .from("orders")
       .select("total")
       .in("payment_status", ["paid"])
       .gte("created_at", iso)
-      .is("deleted_at", null),
+      .is("deleted_at", null) : Promise.resolve({ data: [] }),
     supabase.from("contact_messages").select("id", { count: "exact" }).eq("is_read", false),
     supabase
       .from("products")
@@ -273,6 +278,7 @@ export async function getDashboardStats() {
 }
 
 export async function getRecentOrders(limit = 5): Promise<OrderRow[]> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("orders")
@@ -288,6 +294,7 @@ export async function getRecentOrders(limit = 5): Promise<OrderRow[]> {
 }
 
 export async function getRecentMessages(limit = 5): Promise<ContactMessageRow[]> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("contact_messages")
@@ -310,6 +317,7 @@ export interface ListOrdersParams {
 }
 
 export async function listOrders(params: ListOrdersParams = {}): Promise<{ orders: OrderRow[]; total: number }> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const status = params.status ?? "all";
   const pageSize = params.pageSize ?? ORDER_DEFAULT_PAGE_SIZE;
@@ -336,6 +344,7 @@ export async function listOrders(params: ListOrdersParams = {}): Promise<{ order
 }
 
 export async function getOrder(id: string) {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data: order, error } = await supabase.from("orders").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !order) return null;
@@ -348,6 +357,7 @@ export async function getOrder(id: string) {
 }
 
 export async function listContactMessages(): Promise<ContactMessageRow[]> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("contact_messages")
@@ -361,6 +371,7 @@ export async function listContactMessages(): Promise<ContactMessageRow[]> {
 }
 
 export async function listLeads(): Promise<LeadRow[]> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("whatsapp_leads")
@@ -374,6 +385,7 @@ export async function listLeads(): Promise<LeadRow[]> {
 }
 
 export async function listRfq(): Promise<RfqRow[]> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("quotation_requests")
@@ -391,6 +403,7 @@ export async function listRfq(): Promise<RfqRow[]> {
 }
 
 export async function listTechnicalDocuments(productId: string): Promise<TechDocRow[]> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("technical_documents")
@@ -417,6 +430,7 @@ export interface HotspotRow {
 }
 
 export async function getProductHotspots(productId: string): Promise<HotspotRow[]> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("product_hotspots")
@@ -445,6 +459,7 @@ export interface PhotoHotspotRow {
 }
 
 export async function getProductPhotoHotspots(productId: string): Promise<PhotoHotspotRow[]> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("product_photo_hotspots")
@@ -460,11 +475,12 @@ export async function getProductPhotoHotspots(productId: string): Promise<PhotoH
 }
 
 export async function listStaff(): Promise<StaffRow[]> {
+  await requireCapability("users");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("profiles")
     .select("id, email, full_name, role, is_active, created_at")
-    .in("role", ["admin", "editor"])
+    .in("role", APPLICATION_ROLES.filter(isCmsRole))
     .order("created_at", { ascending: false });
   if (error) {
     console.error("[admin-data] staff", error);
@@ -472,12 +488,13 @@ export async function listStaff(): Promise<StaffRow[]> {
   }
 
   return (data ?? []).flatMap((row) => {
-    if (row.role !== "admin" && row.role !== "editor") return [];
+    if (!isCmsRole(row.role)) return [];
     return [{ ...row, role: row.role }];
   });
 }
 
 export async function listAudit(limit = 100): Promise<AuditRow[]> {
+  await requireCapability("audit");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("audit_log")
@@ -496,6 +513,7 @@ export async function listProductsByType(
   query?: string,
   options: { includeArchived?: boolean } = {}
 ): Promise<ProductRow[]> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   let builder = supabase
     .from("products")
@@ -545,6 +563,7 @@ export async function listStoreProducts(): Promise<ProductRow[]> {
 }
 
 export async function getProduct(id: string): Promise<ProductRow | null> {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data, error } = await supabase.from("products").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !data) return null;
@@ -646,6 +665,7 @@ export interface CareerRow {
 }
 
 export async function listCareers(): Promise<CareerRow[]> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("careers")
@@ -660,6 +680,7 @@ export async function listCareers(): Promise<CareerRow[]> {
 }
 
 export async function getCareer(id: string): Promise<CareerRow | null> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("careers")
@@ -687,6 +708,7 @@ export interface BrandRow {
 }
 
 export async function listBrands(): Promise<BrandRow[]> {
+  await requireCapability("cms");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("brands")
@@ -700,6 +722,7 @@ export async function listBrands(): Promise<BrandRow[]> {
 }
 
 export async function getProductVariants(productId: string) {
+  await requireCapability("operations");
   const supabase = await getSupabase();
   const { data } = await supabase
     .from("product_variants")
@@ -711,6 +734,7 @@ export async function getProductVariants(productId: string) {
 }
 
 export async function getBrand(id: string): Promise<BrandRow | null> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("brands")
@@ -734,6 +758,7 @@ export interface TeamMemberRow {
 }
 
 export async function listTeamMembers(): Promise<TeamMemberRow[]> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("team_members")
@@ -747,6 +772,7 @@ export async function listTeamMembers(): Promise<TeamMemberRow[]> {
 }
 
 export async function getTeamMember(id: string): Promise<TeamMemberRow | null> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("team_members")
@@ -769,6 +795,7 @@ export interface GroupCompanyRow {
 }
 
 export async function listGroupCompanies(): Promise<GroupCompanyRow[]> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("group_companies")
@@ -782,6 +809,7 @@ export async function listGroupCompanies(): Promise<GroupCompanyRow[]> {
 }
 
 export async function getGroupCompany(id: string): Promise<GroupCompanyRow | null> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("group_companies")
@@ -804,6 +832,7 @@ export interface PartnerRow {
 }
 
 export async function listPartners(): Promise<PartnerRow[]> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("partners")
@@ -817,6 +846,7 @@ export async function listPartners(): Promise<PartnerRow[]> {
 }
 
 export async function getPartner(id: string): Promise<PartnerRow | null> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("partners")
@@ -828,6 +858,7 @@ export async function getPartner(id: string): Promise<PartnerRow | null> {
 }
 
 export async function listEligibleHeroProducts(): Promise<ProductRow[]> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("products")
@@ -872,6 +903,7 @@ export interface DistributionEntityRow {
 }
 
 export async function listDistributionEntities(): Promise<DistributionEntityRow[]> {
+  await requireCapability("content");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("distribution_entities")
@@ -887,6 +919,7 @@ export async function listDistributionEntities(): Promise<DistributionEntityRow[
 }
 
 export async function getStoreSettings(): Promise<Record<string, unknown>> {
+  await requireCapability("sensitive");
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("site_settings")
@@ -948,6 +981,7 @@ export interface ShippingAdminData {
 }
 
 export async function countUnweightedStoreProducts(): Promise<number> {
+  await requireCapability("shipping");
   const supabase = await getSupabase();
   const { count, error } = await supabase
     .from("products")
@@ -962,6 +996,7 @@ export async function countUnweightedStoreProducts(): Promise<number> {
 }
 
 export async function getShippingAdminData(): Promise<ShippingAdminData> {
+  await requireCapability("shipping");
   const supabase = await getSupabase();
   const unweightedProductsCount = await countUnweightedStoreProducts();
 
@@ -1085,7 +1120,7 @@ export async function getShippingZones(): Promise<ShippingZoneWithDetails[]> {
 }
 
 export async function getAdminBankAccount(): Promise<BankAccount | null> {
-  const admin = await getAdminUser();
+  const admin = await getAdminUser("sensitive");
   if (!admin) return null;
   const supabase = await getSupabase();
   const { data, error } = await supabase

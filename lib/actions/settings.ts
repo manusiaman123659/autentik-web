@@ -20,7 +20,7 @@ function toErrors(error: ZodError): Record<string, string> {
 }
 
 export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await getAdminUser("sensitive");
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   const parsed = storeSettingsSchema.safeParse(input);
@@ -46,7 +46,7 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
 }
 
 export async function markMessageRead(id: string, isRead: boolean): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await getAdminUser("operations");
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   const cookieStore = await cookies();
@@ -74,7 +74,7 @@ export async function saveBankAccount(input: {
   accountNumber: string;
   accountHolder: string;
 }): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await getAdminUser("sensitive");
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   const cookieStore = await cookies();
@@ -96,7 +96,7 @@ export async function saveBankAccount(input: {
 }
 
 export async function saveHeroSlides(input: unknown): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await getAdminUser("content");
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   const parsed = heroSlidesSchema.safeParse(input);

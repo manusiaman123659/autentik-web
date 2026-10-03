@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import type { ZodError } from "zod";
-import { getAdminUser } from "@/lib/admin";
+import { requireContentManager as getAdminUser } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 import { comproSchema } from "@/lib/validations/comproSchema";
 import { recordAudit } from "@/lib/audit";

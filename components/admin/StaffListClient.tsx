@@ -4,12 +4,15 @@ import { useState } from "react";
 import type { StaffRow } from "@/lib/admin-data";
 import { Badge, TableShell, Th, Td, formatDateTime } from "@/components/admin/ui";
 import PaginationBar from "@/components/admin/PaginationBar";
+import { ROLE_LABELS } from "@/lib/admin-permissions";
 
 const ITEMS_PER_PAGE = 8;
 
 const STAFF_ROLE_DISPLAY: Record<StaffRow["role"], { label: string; tone: string }> = {
-  admin: { label: "Admin", tone: "amber" },
-  editor: { label: "Editor", tone: "slate" },
+  super_admin: { label: ROLE_LABELS.super_admin, tone: "red" },
+  admin: { label: ROLE_LABELS.admin, tone: "amber" },
+  staff: { label: ROLE_LABELS.staff, tone: "teal" },
+  editor: { label: ROLE_LABELS.editor, tone: "slate" },
 };
 
 export default function StaffListClient({

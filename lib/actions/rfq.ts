@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
-import { getAdminUser } from "@/lib/admin";
+import { requireOperationalStaff as getAdminUser } from "@/lib/admin";
 import { recordAudit } from "@/lib/audit";
 import type { ActionResult } from "./products";
 

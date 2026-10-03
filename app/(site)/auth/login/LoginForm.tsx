@@ -1,4 +1,5 @@
 "use client";
+import { isCmsRole } from "@/lib/admin-permissions";
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -88,7 +89,7 @@ export default function LoginForm() {
             .select("role")
             .eq("id", user.id)
             .single();
-          if (profile?.role === "admin" || profile?.role === "editor") {
+          if (isCmsRole(profile?.role)) {
             router.push("/admin");
           } else {
             router.push("/store");

@@ -8,6 +8,8 @@ import OrderStatusForm from "@/components/admin/OrderStatusForm";
 import OrderDeleteButton from "@/components/admin/OrderDeleteButton";
 import OrderPrintActions from "@/components/admin/OrderPrintActions";
 import AdminOrderDetailClient from "@/components/admin/AdminOrderDetailClient";
+import { requireCapability } from "@/lib/admin";
+import { hasCapability } from "@/lib/admin-permissions";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -20,6 +22,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function AdminOrderDetailPage({ params }: Props) {
+  const user = await requireCapability("operations");
+  const canManageFinance = hasCapability(user.role, "sensitive");
   const { id } = await params;
   const [data, companyContact] = await Promise.all([
     getOrder(id),
@@ -33,7 +37,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
     : order.midtrans_order_id === order.order_code
       ? "valid"
       : "mismatch";
-  const bankAccount = order.payment_method === "transfer"
+  const bankAccount = canManageFinance && order.payment_method === "transfer"
     ? await getAdminBankAccount()
     : null;
   const addr = (order.shipping_address ?? {}) as Record<string, string>;
@@ -103,6 +107,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           paidAt={order.paid_at ?? null}
           midtransRedirectUrl={order.midtrans_redirect_url ?? null}
           midtransIdentifierState={midtransIdentifierState}
+          canManageFinance={canManageFinance}
         />
       </div>
 

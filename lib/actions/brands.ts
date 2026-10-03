@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import type { ZodError } from "zod";
-import { getAdminUser } from "@/lib/admin";
+import { requireContentManager as getAdminUser, requireAdmin } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 import { brandSchema } from "@/lib/validations/brandSchema";
 import { recordAudit } from "@/lib/audit";
@@ -116,7 +116,7 @@ export async function upsertBrand(input: unknown): Promise<ActionResult> {
 }
 
 export async function deleteBrand(id: string): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await requireAdmin();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   const cookieStore = await cookies();

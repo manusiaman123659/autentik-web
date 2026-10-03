@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { getAdminUser } from "@/lib/admin";
+import { requireSuperAdmin as getAdminUser } from "@/lib/admin";
 import { inquireMidtransPaymentStatus } from "@/lib/payments/midtransInquiry";
 import { reconcileMidtransPayment } from "@/lib/payments/midtransReconciliation";
 import type { MidtransInquiryResult, MidtransReconciliationResult } from "@/lib/payments/types";

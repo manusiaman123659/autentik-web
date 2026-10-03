@@ -10,6 +10,7 @@ import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/validations/storeSc
 import { createClient } from "@/utils/supabase/client";
 
 interface Props {
+  canManageFinance?: boolean;
   orderId: string;
   orderCode: string;
   initialPaymentStatus: string;
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export default function AdminOrderDetailClient({
+  canManageFinance = false,
   orderId,
   orderCode,
   initialPaymentStatus,
@@ -128,7 +130,7 @@ export default function AdminOrderDetailClient({
             </a>
           </div>
         )}
-        {paymentMethod === "midtrans" && paymentStatus === "pending" && orderStatus === "pending" && (
+        {canManageFinance && paymentMethod === "midtrans" && paymentStatus === "pending" && orderStatus === "pending" && (
           midtransIdentifierState === "valid" ? (
             <MidtransPaymentStatusCheck orderId={orderId} />
           ) : midtransIdentifierState === "mismatch" ? (
@@ -137,7 +139,7 @@ export default function AdminOrderDetailClient({
             </div>
           ) : null
         )}
-        {paymentStatus === "paid" && orderStatus === "cancelled" && (
+        {canManageFinance && paymentStatus === "paid" && orderStatus === "cancelled" && (
           <ManualOrderRefundForm
             orderId={orderId}
             orderCode={orderCode}

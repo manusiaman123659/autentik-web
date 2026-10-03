@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ShoppingBag, Wallet, Inbox, Boxes, ChevronRight } from "lucide-react";
 import { Badge, Card } from "@/components/admin/ui";
 import RecentOrdersWidget from "@/components/admin/RecentOrdersWidget";
+import { hasCapability, ROLE_LABELS } from "@/lib/admin-permissions";
+import { getAdminNavGroups } from "@/lib/admin-sections";
 
 export const metadata = {
   title: "Dashboard | Autentik CMS",
@@ -11,6 +13,23 @@ export const metadata = {
 
 export default async function AdminDashboardPage() {
   const admin = await getAdminUser();
+  if (!admin) return null;
+  if (!hasCapability(admin.role, "operations")) {
+    return (
+      <div className="max-w-6xl space-y-6">
+        <h1 className="text-2xl font-bold">Dashboard {ROLE_LABELS[admin.role]}</h1>
+        <p>Pilih bagian konten yang ingin Anda kelola.</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {getAdminNavGroups(admin.role).flatMap((group) => group.items).map((section) => (
+            <Link key={section.key} href={section.href} className="rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+              <h2 className="font-bold">{section.label}</h2>
+              <p className="mt-2 text-sm text-slate-500">{section.description}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
   const [stats, recentOrders, recentMessages] = await Promise.all([
     getDashboardStats(),
     getRecentOrders(5),
@@ -60,7 +79,7 @@ export default async function AdminDashboardPage() {
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card) => {
+        {statCards.filter((card) => card.label !== "Pendapatan Bulan Ini" || hasCapability(admin.role, "audit")).map((card) => {
           const Icon = card.icon;
           return (
             <Link

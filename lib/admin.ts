@@ -3,11 +3,13 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import type { AdminUser } from "@/lib/admin-sections";
 import { ADMIN_SECTIONS } from "@/lib/admin-sections";
+import { hasCapability, isCmsRole, canAccessSection, type CmsCapability } from "@/lib/admin-permissions";
+import { notFound } from "next/navigation";
 
 export type { AdminUser };
 export { ADMIN_SECTIONS };
 
-export const getAdminUser = cache(
+const getCurrentCmsUser = cache(
   async (): Promise<AdminUser | null> => {
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
@@ -36,7 +38,7 @@ export const getAdminUser = cache(
     if (
       !profile ||
       profile.is_active !== true ||
-      (profile.role !== "admin" && profile.role !== "editor")
+      !isCmsRole(profile.role)
     ) {
       return null;
     }
@@ -49,3 +51,25 @@ export const getAdminUser = cache(
     };
   }
 );
+
+export async function getAdminUser(capability: CmsCapability = "cms"): Promise<AdminUser | null> {
+  const user = await getCurrentCmsUser();
+  return user && hasCapability(user.role, capability) ? user : null;
+}
+
+export const requireSuperAdmin = () => getAdminUser("sensitive");
+export const requireAdmin = () => getAdminUser("shipping");
+export const requireOperationalStaff = () => getAdminUser("operations");
+export const requireContentManager = () => getAdminUser("content");
+
+export async function requireCapability(capability: CmsCapability): Promise<AdminUser> {
+  const user = await getAdminUser(capability);
+  if (!user) notFound();
+  return user;
+}
+
+export async function requireSectionAccess(section: string): Promise<AdminUser> {
+  const user = await getAdminUser();
+  if (!user || !canAccessSection(user.role, section)) notFound();
+  return user;
+}

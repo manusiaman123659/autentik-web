@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import type { ZodError } from "zod";
-import { getAdminUser } from "@/lib/admin";
+import { requireOperationalStaff as getAdminUser, requireSuperAdmin, requireAdmin } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 import {
   manualOrderRefundSchema,
@@ -100,7 +100,7 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
 }
 
 export async function deleteOrder(orderId: string): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await requireAdmin();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   if (!orderId) return { success: false, message: "ID pesanan wajib diisi." };
@@ -132,7 +132,7 @@ export async function deleteOrder(orderId: string): Promise<ActionResult> {
 }
 
 export async function recordManualOrderRefund(orderId: string, input: unknown): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await requireSuperAdmin();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   const parsed = manualOrderRefundSchema.safeParse({
@@ -171,7 +171,7 @@ export async function recordManualOrderRefund(orderId: string, input: unknown): 
 }
 
 export async function restoreOrder(orderId: string): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await requireAdmin();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   if (!orderId) return { success: false, message: "ID pesanan wajib diisi." };

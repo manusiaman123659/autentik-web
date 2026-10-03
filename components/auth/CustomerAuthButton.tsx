@@ -1,4 +1,5 @@
 "use client";
+import { isCmsRole } from "@/lib/admin-permissions";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -51,11 +52,11 @@ export default function CustomerAuthButton({
 
           const { data: profile } = await supabase
             .from("profiles")
-            .select("role")
+            .select("role, is_active")
             .eq("id", session.user.id)
             .single();
           if (active && profile) {
-            setIsAdmin(profile.role === "admin" || profile.role === "editor");
+            setIsAdmin(profile.is_active === true && isCmsRole(profile.role));
           }
         }
         setLoading(false);

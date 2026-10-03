@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import type { ZodError } from "zod";
-import { getAdminUser } from "@/lib/admin";
+import { requireOperationalStaff as getAdminUser, requireAdmin } from "@/lib/admin";
 import { createClient } from "@/utils/supabase/server";
 import { productIdSchema, productSchema, type VariantRow } from "@/lib/validations/productSchema";
 import { recordAudit } from "@/lib/audit";
@@ -316,7 +316,7 @@ export async function upsertProduct(
 }
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await requireAdmin();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   const cookieStore = await cookies();
@@ -345,7 +345,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 }
 
 export async function restoreProduct(id: string): Promise<ActionResult> {
-  const admin = await getAdminUser();
+  const admin = await requireAdmin();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
   const parsedId = productIdSchema.safeParse(id);

@@ -12,7 +12,7 @@ export async function recordAudit(
     const admin = await getAdminUser();
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
-    await supabase.from("audit_log").insert({
+    const { error } = await supabase.from("audit_log").insert({
       user_id: admin?.id ?? null,
       user_email: admin?.email ?? "",
       action,
@@ -20,6 +20,7 @@ export async function recordAudit(
       entity_id: entityId ?? null,
       details: details ?? null,
     });
+    if (error) console.error("[audit] gagal mencatat aktivitas", { action, entityType, code: error.code });
   } catch (err) {
     console.error("[audit] gagal mencatat aktivitas", err);
   }

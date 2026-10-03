@@ -1,8 +1,10 @@
+import { canAccessSection, type CmsRole } from "@/lib/admin-permissions";
+
 export interface AdminUser {
   id: string;
   email: string;
   fullName?: string | null;
-  role: "admin" | "editor";
+  role: CmsRole;
 }
 
 export interface AdminSectionMeta {
@@ -62,6 +64,21 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
 export const ADMIN_SECTIONS: AdminSectionMeta[] = ADMIN_NAV_GROUPS.flatMap(
   (group) => group.items
 );
+
+export function getAdminNavGroups(role: CmsRole): AdminNavGroup[] {
+  return ADMIN_NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canAccessSection(role, item.key)).map((item) =>
+      item.key === "integrasi" && role !== "super_admin"
+        ? {
+            ...item,
+            label: role === "editor" ? "Hero Homepage" : "Hero & Ongkir",
+            description: role === "editor" ? "Kelola pilihan produk Hero Homepage" : "Kelola Hero Homepage dan tarif ongkir",
+          }
+        : item,
+    ),
+  })).filter((group) => group.items.length > 0);
+}
 
 export const BUILT_SECTION_KEYS: string[] = [
   "orders",
