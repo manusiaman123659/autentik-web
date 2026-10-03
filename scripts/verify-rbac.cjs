@@ -286,6 +286,49 @@ async function main() {
   assert.equal(oauthFailure.effects.filter((event) => event.signOut).length, 1);
   checks++;
   const migration = fs.readFileSync(path.join(root, 'supabase/migrations/0061_rbac_roles.sql'), 'utf8');
+  // Verify newsletter ACL + RLS composition against the actual migration
+  // declaration. This is a policy model, NOT execution of migration/live SQL.
+  assert.match(migration, /DROP POLICY IF EXISTS subscribers_staff_all ON public\.newsletter_subscribers/);
+  assert.match(migration, /DROP POLICY IF EXISTS subscribers_staff_select ON public\.newsletter_subscribers/);
+  const newsletterPolicy = migration.match(/CREATE POLICY subscribers_operational_all ON public\.newsletter_subscribers\s+FOR ALL TO authenticated\s+USING \(public\.has_cms_capability\('([^']+)'\)\)\s+WITH CHECK \(public\.has_cms_capability\('([^']+)'\)\);/);
+  assert.ok(newsletterPolicy, 'Newsletter management must be authenticated and guarded on old/new rows');
+  assert.equal(newsletterPolicy[1], 'operations');
+  assert.equal(newsletterPolicy[2], 'operations');
+  assert.doesNotMatch(migration, /(?:DROP|ALTER) POLICY(?: IF EXISTS)? subscribers_public_insert/);
+  assert.doesNotMatch(migration, /CREATE POLICY subscribers_staff_(?:all|select)/);
+  assert.match(migration, /REVOKE ALL ON public\.newsletter_subscribers FROM PUBLIC, anon, authenticated/);
+  const anonGrant = migration.match(/GRANT ([A-Z, ]+) ON public\.newsletter_subscribers TO anon;/);
+  const authenticatedGrant = migration.match(/GRANT ([A-Z, ]+) ON public\.newsletter_subscribers TO authenticated;/);
+  assert.ok(anonGrant && authenticatedGrant);
+  const privileges = {
+    anon: anonGrant[1].split(',').map((value) => value.trim()),
+    authenticated: authenticatedGrant[1].split(',').map((value) => value.trim()),
+  };
+  assert.deepEqual(privileges.anon, ['INSERT']);
+  for (const role of ['super_admin', 'admin', 'staff', 'editor', 'customer', 'viewer', 'unknown']) {
+    for (const command of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
+      const operational = pure.hasCapability(role, newsletterPolicy[1]);
+      // Existing PUBLIC INSERT policy remains applicable to authenticated
+      // customer/editor too: subscription is not subscriber administration.
+      const allowed = privileges.authenticated.includes(command) && (command === 'INSERT' || operational);
+      assert.equal(allowed, command === 'INSERT' || ['super_admin', 'admin', 'staff'].includes(role), `Newsletter ${role}/${command}`);
+      checks++;
+    }
+  }
+  for (const command of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
+    assert.equal(privileges.anon.includes(command) && command === 'INSERT', command === 'INSERT', `Public newsletter ${command}`);
+    checks++;
+  }
+  const knownNewsletterPolicies = [
+    { name: 'subscribers_staff_all', condition: 'is_staff()' },
+    { name: 'subscribers_staff_select', condition: 'is_staff()' },
+    { name: 'subscribers_public_insert', condition: 'true' },
+  ];
+  const remainingNewsletterPolicies = knownNewsletterPolicies.filter((policy) =>
+    !migration.includes(`DROP POLICY IF EXISTS ${policy.name} ON public.newsletter_subscribers`),
+  );
+  remainingNewsletterPolicies.push({ name: 'subscribers_operational_all', condition: `public.has_cms_capability('${newsletterPolicy[1]}')` });
+  assert.equal(remainingNewsletterPolicies.some((policy) => /(public[.])?is_staff[(][)]/.test(policy.condition)), false, 'Newsletter must not trigger the final legacy-is_staff guard');
   assert.match(migration, /CHECK \(role IN \('super_admin', 'admin', 'staff', 'editor', 'customer'\)\)/);
   assert.match(migration, /WHERE role = 'viewer'/);
   assert.match(migration, /DROP POLICY IF EXISTS profiles_admin_all/);

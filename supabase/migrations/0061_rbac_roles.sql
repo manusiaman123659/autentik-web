@@ -138,6 +138,28 @@ BEGIN
 END;
 $$;
 
+-- Newsletter exists on production despite the historical feature removal.
+-- Keep subscribers_public_insert (PUBLIC, INSERT, WITH CHECK true) unchanged.
+-- Fresh installations where the legacy table is absent need no policy patch.
+DO $$
+BEGIN
+  IF to_regclass('public.newsletter_subscribers') IS NOT NULL THEN
+    DROP POLICY IF EXISTS subscribers_staff_all ON public.newsletter_subscribers;
+    DROP POLICY IF EXISTS subscribers_staff_select ON public.newsletter_subscribers;
+    CREATE POLICY subscribers_operational_all ON public.newsletter_subscribers
+      FOR ALL TO authenticated
+      USING (public.has_cms_capability('operations'))
+      WITH CHECK (public.has_cms_capability('operations'));
+
+    -- RLS separates application roles within authenticated. Anonymous access
+    -- needs INSERT only; remove the old ALL/DDL privileges that bypass RLS.
+    REVOKE ALL ON public.newsletter_subscribers FROM PUBLIC, anon, authenticated;
+    GRANT INSERT ON public.newsletter_subscribers TO anon;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON public.newsletter_subscribers TO authenticated;
+  END IF;
+END;
+$$;
+
 -- Operational forms must be able to read inactive brand choices without
 -- giving staff editorial mutation rights.
 CREATE POLICY brands_operational_select ON public.brands FOR SELECT TO authenticated
