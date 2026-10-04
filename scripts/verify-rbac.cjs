@@ -42,10 +42,10 @@ function harness(role, options = {}) {
         id: actorId, email: 'rbac-test@example.com', user_metadata: { role: 'super_admin' },
       } } }),
       exchangeCodeForSession: async () => ({ error: null }),
-      signOut: async () => { effects.push({ signOut: true }); },
+      signOut: async (args) => { effects.push({ signOut: true, args }); if (options.logoutThrows) throw new Error('Logout unavailable'); return { error: options.logoutError ? { message: 'Logout unavailable' } : null }; },
     },
     from: query,
-    rpc: async (name, args) => { effects.push({ rpc: name, args }); return { data: true, error: null }; },
+    rpc: async (name, args) => { effects.push({ rpc: name, args }); if (options.rpcThrows) throw new Error('Transport unavailable'); return options.rpcResponse ?? { data: true, error: null }; },
   };
   const collisionFilters = {};
   const collisionQuery = {
@@ -72,7 +72,7 @@ function harness(role, options = {}) {
   const stubs = {
     react: { cache: (fn) => fn },
     'next/headers': { cookies: async () => ({}) },
-    'next/cache': { revalidatePath: () => {} },
+    'next/cache': { revalidatePath: (url) => { effects.push({ revalidate: url }); if (options.cacheThrows) throw new Error('Cache unavailable'); } },
     'next/server': { NextResponse: { redirect: (url) => ({ status: 307, location: String(url) }) } },
     'next/navigation': {
       notFound: () => { throw new Error('NOT_FOUND'); },
@@ -187,7 +187,7 @@ async function main() {
       settings: 'sensitive', store: 'operations', products: 'operations',
       brands: 'content', careers: 'content', compro: 'content', recruitment: 'content',
       relasi: 'content', rfq: 'operations', technicalDocuments: 'operations',
-      shipping: 'shipping', paymentInquiry: 'sensitive',
+      shipping: 'shipping', paymentInquiry: 'sensitive', staff: 'users',
     };
     for (const [file, defaultCapability] of Object.entries(guardedModules)) {
       const exports = harness(role).load(`@/lib/actions/${file}`);
@@ -232,7 +232,7 @@ async function main() {
   const staffRoles = ['super_admin', 'admin', 'staff', 'editor'];
   const mixedRows = [...staffRoles, 'customer', 'viewer', 'unknown'].map((role, index) => ({
     id: `staff-fixture-${index}`, email: `${role}@example.com`, full_name: role,
-    role, is_active: role !== 'staff', created_at: '2026-01-01T00:00:00Z',
+    role, is_active: role !== 'staff', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00.123456+00:00',
   }));
   const staffListHarness = harness('super_admin', { staffRows: mixedRows });
   const staffList = await staffListHarness.load('@/lib/admin-data').listStaff();
@@ -242,6 +242,81 @@ async function main() {
     checks++;
   }
   assert.equal(staffList.find((row) => row.role === 'staff').is_active, false, 'Inactive staff remains visible in the privileged directory');
+  assert.equal(staffList[0].updated_at, '2026-01-01T00:00:00.123456+00:00', 'Directory version must retain original microseconds');
+  // Real staff actions; only the transport is stubbed. SQL invariants are
+  // verified separately by the isolated PostgreSQL integration harness.
+  const targetId = '00000000-0000-4000-8000-000000000002';
+  const version = '2026-10-04T12:00:00.123456+00:00';
+  const input = { targetId, role: 'staff', isActive: true, expectedUpdatedAt: version, reason: 'Test' };
+  const committed = (id = targetId, role = 'staff', is_active = true, changed = true) => ({
+    data: { id, role, is_active, changed, updated_at: version }, error: null,
+  });
+  for (const options of [{ active: false }, { missingProfile: true }, { signedOut: true }]) {
+    for (const action of ['manageStaffAccess', 'provisionStaffAccess', 'lookupStaffCandidate']) {
+      const isolated = harness('super_admin', options);
+      assert.equal((await isolated.load('@/lib/actions/staff')[action](input)).success, false);
+      assert.equal(isolated.effects.length, 0);
+      checks++;
+    }
+  }
+  for (const patch of [{ role: 'customer' }, { role: 'viewer' }, { role: 'unknown' }, { isActive: null }, { expectedUpdatedAt: 'bad' }, { targetId: 'bad' }, { actorId }, { reason: 'x'.repeat(501) }]) {
+    const isolated = harness('super_admin');
+    assert.equal((await isolated.load('@/lib/actions/staff').manageStaffAccess({ ...input, ...patch })).success, false);
+    assert.equal(isolated.effects.length, 0);
+    checks++;
+  }
+  const managed = harness('super_admin', { rpcResponse: committed() });
+  assert.equal((await managed.load('@/lib/actions/staff').manageStaffAccess(input)).success, true);
+  assert.equal(managed.effects[0].args.p_expected_updated_at, version, 'Microsecond version passed verbatim');
+  assert.equal(managed.effects.filter((effect) => effect.rpc).length, 1);
+  assert.equal(managed.effects.some((effect) => effect.table === 'audit_log' || effect.table === 'profiles'), false);
+  assert.deepEqual(managed.effects.filter((effect) => effect.revalidate).map((effect) => effect.revalidate), ['/admin/akses-staff', '/admin/riwayat']);
+  checks++;
+  const provisioned = harness('super_admin', { rpcResponse: committed() });
+  assert.equal((await provisioned.load('@/lib/actions/staff').provisionStaffAccess({ targetId, role: 'staff', reason: '' })).success, true);
+  assert.equal(provisioned.effects[0].rpc, 'provision_staff_access');
+  assert.equal(provisioned.effects[0].args.p_target_user_id, targetId);
+  checks++;
+  const noop = harness('super_admin', { rpcResponse: committed(targetId, 'staff', true, false) });
+  assert.match((await noop.load('@/lib/actions/staff').manageStaffAccess(input)).message, /sudah sesuai/);
+  checks++;
+  for (const code of ['P0061', 'P0062', 'P0063', 'P0064', 'P0065', '42501', '22023', 'XX000']) {
+    const isolated = harness('super_admin', { rpcResponse: { data: null, error: { code } } });
+    assert.equal((await isolated.load('@/lib/actions/staff').manageStaffAccess(input)).success, false);
+    assert.equal(isolated.effects.length, 1);
+    checks++;
+  }
+  for (const options of [{ rpcThrows: true }, { rpcResponse: { data: true, error: null } }]) {
+    const isolated = harness('super_admin', options);
+    assert.match((await isolated.load('@/lib/actions/staff').manageStaffAccess(input)).message, /belum dapat dipastikan/);
+    checks++;
+  }
+  for (const role of ['admin','staff','editor']) {
+    const demoted = harness('super_admin', { rpcResponse: committed(actorId, role) });
+    await assert.rejects(() => demoted.load('@/lib/actions/staff').manageStaffAccess({ ...input, targetId: actorId, role }), /^Error: REDIRECT:\/admin$/);
+    assert.equal(demoted.effects.some((effect) => effect.signOut || effect.revalidate), false);
+    assert.equal(demoted.effects.filter((effect) => effect.rpc).length,1);
+    checks++;
+  }
+  for (const options of [{}, { logoutError: true }, { logoutThrows: true }]) {
+    const isolated = harness('super_admin', { ...options, rpcResponse: committed(actorId, 'super_admin', false) });
+    await assert.rejects(() => isolated.load('@/lib/actions/staff').manageStaffAccess({ ...input, targetId: actorId, role: 'super_admin', isActive: false }), /REDIRECT:\/admin\/login/);
+    assert.equal(isolated.effects.find((effect) => effect.signOut).args.scope, 'local');
+    assert.equal(isolated.effects.some((effect) => effect.revalidate),false);
+    assert.equal(isolated.effects[0].rpc,'manage_staff_access','Commit result precedes local logout');
+    checks++;
+  }
+  const cacheFailure = harness('super_admin', { cacheThrows: true, rpcResponse: committed() });
+  assert.equal((await cacheFailure.load('@/lib/actions/staff').manageStaffAccess(input)).success, true);
+  checks++;
+  const candidate = { id: targetId, email: 'customer@example.com', full_name: 'Customer', role: 'customer', is_active: true, updated_at: version };
+  for (const rows of [[], [candidate], [candidate, candidate]]) {
+    const isolated = harness('super_admin', { rpcResponse: { data: rows, error: null } });
+    const result = await isolated.load('@/lib/actions/staff').lookupStaffCandidate({ email: ' Customer@Example.com ' });
+    assert.equal(result.success, rows.length === 1);
+    assert.equal(isolated.effects[0].args.p_email, 'Customer@Example.com');
+    checks++;
+  }
   for (const options of [{ active: false }, { missingProfile: true }, { signedOut: true }]) {
     const isolated = harness('super_admin', options);
     assert.equal(await isolated.load('@/lib/admin').getAdminUser(), null);

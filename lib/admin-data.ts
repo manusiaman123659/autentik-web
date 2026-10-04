@@ -131,6 +131,7 @@ export interface StaffRow {
   role: CmsRole;
   is_active: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export interface RfqRow {
@@ -479,7 +480,7 @@ export async function listStaff(): Promise<StaffRow[]> {
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role, is_active, created_at")
+    .select("id, email, full_name, role, is_active, created_at, updated_at")
     .in("role", APPLICATION_ROLES.filter(isCmsRole))
     .order("created_at", { ascending: false });
   if (error) {

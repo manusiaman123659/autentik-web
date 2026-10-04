@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { UserCog } from "lucide-react";
 import { listStaff } from "@/lib/admin-data";
-import { getAdminUser } from "@/lib/admin";
-import { PageHeader, EmptyState } from "@/components/admin/ui";
+import { requireCapability } from "@/lib/admin";
+import { PageHeader } from "@/components/admin/ui";
 import StaffListClient from "@/components/admin/StaffListClient";
 
 export const metadata: Metadata = {
@@ -10,20 +9,17 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminStaffPage() {
-  const [staff, me] = await Promise.all([listStaff(), getAdminUser()]);
+  const me = await requireCapability("users");
+  const staff = await listStaff();
 
   return (
     <div className="max-w-6xl">
       <PageHeader
         title="Profil & Akses Staff"
-        description="Daftar staff, peran, dan status akun"
+        description="Kelola peran dan status akun CMS, atau tambahkan staf dari akun terdaftar"
       />
 
-      {staff.length === 0 ? (
-        <EmptyState icon={<UserCog size={26} />} title="Belum ada staff" />
-      ) : (
-        <StaffListClient staff={staff} meId={me?.id ?? null} />
-      )}
+      <StaffListClient staff={staff} meId={me.id} />
     </div>
   );
 }

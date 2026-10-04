@@ -5,6 +5,7 @@ import type { StaffRow } from "@/lib/admin-data";
 import { Badge, TableShell, Th, Td, formatDateTime } from "@/components/admin/ui";
 import PaginationBar from "@/components/admin/PaginationBar";
 import { ROLE_LABELS } from "@/lib/admin-permissions";
+import StaffAccessDialog from "@/components/admin/StaffAccessDialog";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -23,6 +24,8 @@ export default function StaffListClient({
   meId: string | null;
 }) {
   const [page, setPage] = useState(1);
+  const [dialog, setDialog] = useState<{ mode: "role" | "status" | "provision"; target?: StaffRow } | null>(null);
+  const activeSuperCount = staff.filter((row) => row.role === "super_admin" && row.is_active).length;
 
   const totalPages = Math.max(1, Math.ceil(staff.length / ITEMS_PER_PAGE));
   const safePage = Math.min(page, totalPages);
@@ -31,6 +34,9 @@ export default function StaffListClient({
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <button type="button" onClick={() => setDialog({ mode: "provision" })} className="rounded-lg bg-[#0EA5A0] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0C8C87]">Tambah Staff dari Akun</button>
+      </div>
       <TableShell>
         <thead>
           <tr>
@@ -39,9 +45,11 @@ export default function StaffListClient({
             <Th>Peran</Th>
             <Th>Status</Th>
             <Th>Terdaftar</Th>
+            <Th>Aksi</Th>
           </tr>
         </thead>
         <tbody>
+          {pageItems.length === 0 && <tr><Td className="text-slate-500">Belum ada data staf yang dapat ditampilkan.</Td><Td /><Td /><Td /><Td /><Td /></tr>}
           {pageItems.map((s) => {
             const roleDisplay = STAFF_ROLE_DISPLAY[s.role];
             return (
@@ -62,6 +70,15 @@ export default function StaffListClient({
                   </Badge>
                 </Td>
                 <Td className="text-xs text-slate-500 dark:text-slate-400">{formatDateTime(s.created_at)}</Td>
+                <Td>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setDialog({ mode: "role", target: s })} className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm">Ubah Role</button>
+                    <button type="button" disabled={s.role === "super_admin" && s.is_active && activeSuperCount === 1}
+                      onClick={() => setDialog({ mode: "status", target: s })}
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm disabled:opacity-50">{s.is_active ? "Nonaktifkan" : "Aktifkan"}</button>
+                  </div>
+                  {s.role === "super_admin" && s.is_active && activeSuperCount === 1 && <p className="mt-2 max-w-xs text-xs text-amber-700 dark:text-amber-300">Minimal satu Super Admin aktif harus tersedia.</p>}
+                </Td>
               </tr>
             );
           })}
@@ -75,6 +92,9 @@ export default function StaffListClient({
         onPageChange={setPage}
         noun="staff"
       />
+      {dialog && <StaffAccessDialog {...dialog} meId={meId}
+        soleActiveSuper={Boolean(dialog.target?.role === "super_admin" && dialog.target.is_active && activeSuperCount === 1)}
+        onClose={() => setDialog(null)} />}
     </div>
   );
 }
