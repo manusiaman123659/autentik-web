@@ -309,7 +309,7 @@ export default async function JobDetailPage({ params }: Props) {
                         <Banknote size={14} className="text-[#0EA5A0] shrink-0" />
                         <span
                           className={`text-sm font-semibold${compactSalary ? " whitespace-nowrap" : ""}`}
-                          style={{ color: "#0EA5A0" }}
+                          style={{ color: "var(--text-primary)" }}
                         >
                           {salaryDisplay}
                         </span>
