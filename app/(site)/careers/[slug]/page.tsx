@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { getMikaJobDetail } from "@/lib/api/mika-career";
 import { getRecruitmentUrl } from "@/lib/public-data";
+import { formatSalaryCompact } from "@/lib/format";
 import MikaJobCard from "@/components/careers/MikaJobCard";
 import ShareJobButton from "@/components/careers/ShareJobButton";
 import JsonLd from "@/components/seo/JsonLd";
@@ -143,6 +144,8 @@ export default async function JobDetailPage({ params }: Props) {
   };
 
   const applyUrl = getSafeRecruitmentUrl(mikaJob.apply_url) || getSafeRecruitmentUrl(recruitmentUrl) || "/contact";
+  const compactSalary = formatSalaryCompact(mikaJob.salary);
+  const salaryDisplay = compactSalary || mikaJob.salary.formatted || "Negosiasi";
   const isExpiringSoon = mikaJob.deadline_info.days_remaining <= 7 && !mikaJob.deadline_info.is_expired;
 
   const deadlineFormatted = new Date(mikaJob.deadline).toLocaleDateString("id-ID", {
@@ -304,8 +307,11 @@ export default async function JobDetailPage({ params }: Props) {
                       </span>
                       <div className="flex items-center gap-1.5">
                         <Banknote size={14} className="text-[#0EA5A0] shrink-0" />
-                        <span className="text-sm font-semibold" style={{ color: "#0EA5A0" }}>
-                          {mikaJob.salary.formatted || "Negosiasi"}
+                        <span
+                          className={`text-sm font-semibold${compactSalary ? " whitespace-nowrap" : ""}`}
+                          style={{ color: "#0EA5A0" }}
+                        >
+                          {salaryDisplay}
                         </span>
                       </div>
                     </div>
