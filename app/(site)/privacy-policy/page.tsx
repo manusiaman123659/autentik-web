@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Kebijakan Privasi | PT Autentik Karya Analitika",
+  title: "Kebijakan Privasi | Autentik",
   description:
-    "Kebijakan privasi PT Autentik Karya Analitika — informasi tentang pengumpulan, penggunaan, dan perlindungan data pribadi Anda di situs kami.",
+    "Kebijakan privasi PT Autentik Karya Analitika — informasi mengenai data yang diproses, tujuannya, dan hak Anda di situs kami.",
 };
+
+const LAST_UPDATED = "Terakhir diperbarui: 6 Oktober 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -31,7 +34,7 @@ export default function PrivacyPolicyPage() {
             className="mt-4 text-sm sm:text-base"
             style={{ color: "var(--text-secondary)" }}
           >
-            Terakhir diperbarui: [TANGGAL]
+            {LAST_UPDATED}
           </p>
         </div>
       </section>
@@ -49,146 +52,340 @@ export default function PrivacyPolicyPage() {
             }}
           >
             <p>
-              PT Autentik Karya Analitika (&quot;Kami&quot;) menghargai privasi
-              pengunjung situs ini. Kebijakan ini menjelaskan bagaimana kami
-              mengumpulkan, menggunakan, dan melindungi data pribadi Anda.
+              PT Autentik Karya Analitika (&quot;AKA&quot;, &quot;kami&quot;)
+              menghargai privasi setiap pengunjung dan pengguna situs ini.
+              Kebijakan ini menjelaskan informasi apa yang dapat kami proses,
+              bagaimana informasi diperoleh, untuk apa digunakan, serta hak Anda
+              terkait informasi tersebut.
             </p>
-
-            <h2>1. Data yang Kami Kumpulkan</h2>
-
-            <h3>1.1 Melalui Formulir Kontak</h3>
             <p>
-              Ketika Anda mengirim formulir kontak atau permintaan khusus, kami
-              mengumpulkan: nama lengkap, alamat email, nama perusahaan,
-              industri, dan isi pesan Anda.
+              Kebijakan ini berlaku untuk situs ini dan dibaca bersama dengan{" "}
+              <Link href="/terms-of-service">Syarat dan Ketentuan</Link> kami.
             </p>
 
-            <h3>1.2 Melalui Proses Pemesanan</h3>
+            <h2>1. Informasi yang Kami Proses</h2>
+
+            <h3>1.1 Melalui Formulir Kontak dan Permintaan Khusus</h3>
             <p>
-              Ketika Anda melakukan pemesanan di toko kami, kami mengumpulkan:
-              nama lengkap, alamat email, nomor telepon, alamat pengiriman
-              (termasuk kota, provinsi, dan kode pos), catatan pesanan, serta
-              detail item yang dipesan.
+              Saat Anda mengirim formulir kontak atau permintaan khusus, kami
+              menerima: nama lengkap, alamat email, nama perusahaan, pilihan
+              industri, serta isi pesan Anda.
             </p>
 
-            <h3>1.3 Melalui Fitur Chat AI</h3>
+            <h3>1.2 Melalui Pendaftaran dan Login Akun</h3>
             <p>
-              Ketika Anda menggunakan fitur chat AI, pesan yang Anda kirimkan
-              dikirim ke layanan Google Gemini (API pihak ketiga) untuk
-              mendapatkan jawaban. Kami tidak menyimpan riwayat percakapan chat
-              AI di server kami; hanya data rate-limit (identifikasi sesi anonim)
-              yang disimpan untuk mencegah penyalahgunaan.
+              Saat Anda membuat akun, kami menerima: nama lengkap, alamat
+              email, nomor telepon, serta kata sandi yang Anda buat. Kata sandi
+              disimpan dalam bentuk yang tidak dapat dibaca langsung oleh
+              sistem aplikasi kami. Anda juga dapat memilih opsi masuk dengan
+              Google, di mana identitas akun Anda diteruskan oleh penyedia
+              autentikasi terkait.
             </p>
 
-            <h2>2. Penyimpanan Data</h2>
+            <h3>1.3 Melalui Pemesanan dan Pengiriman</h3>
             <p>
-              Semua data pribadi disimpan dalam database PostgreSQL yang dikelola
-              oleh Supabase (layanan cloud database). Data keranjang belanja
-              disimpan di browser Anda (localStorage) dan tidak dikirim ke server
-              kami sampai Anda menyelesaikan checkout.
+              Saat Anda melakukan checkout, kami menerima: nama pembeli, alamat
+              email, nomor telepon, alamat pengiriman (alamat, kota, provinsi,
+              kode pos), catatan pesanan, serta rincian produk yang dipesan.
             </p>
 
-            <h2>3. Pihak Ketiga</h2>
-            <p>Kami membagikan data Anda kepada pihak ketiga berikut:</p>
+            <h3>1.4 Melalui RFQ dan Unduh Dokumen Teknis</h3>
+            <p>
+              Saat Anda mengajukan permintaan penawaran atau mengunduh dokumen
+              teknis yang memerlukan formulir, kami menerima: nama perusahaan,
+              nama PIC, alamat email, nomor telepon, perkiraan jumlah, tanggal
+              target, catatan, serta informasi produk atau dokumen terkait.
+            </p>
+
+            <h3>1.5 Melalui Asisten Chat AI</h3>
+            <p>
+              Saat Anda menggunakan asisten percakapan, pesan yang Anda ketik
+              (maksimal 500 karakter per pesan) dikirim ke server kami untuk
+              menghasilkan jawaban. Riwayat percakapan tidak kami simpan di
+              server; yang disimpan hanyalah penghitung penggunaan berdasarkan
+              sesi untuk mencegah penyalahgunaan layanan.
+            </p>
+
+            <h3>1.6 Informasi Teknis</h3>
+            <p>
+              Seperti layanan web pada umumnya, permintaan Anda dapat memuat
+              informasi teknis bawaan seperti alamat IP, jenis peramban, dan
+              waktu akses, yang diproses oleh penyedia hosting untuk
+              menjalankan dan mengamankan layanan.
+            </p>
+
+            <h2>2. Cara Informasi Diperoleh</h2>
             <ul>
               <li>
-                <strong>Google Gemini API</strong> — Pesan chat AI Anda dikirim ke
-                Google untuk pemrosesan. Kebijakan privasi Google:&nbsp;
-                <a
-                  href="https://policies.google.com/privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  https://policies.google.com/privacy
-                </a>
+                Anda mengisi formulir (kontak, permintaan khusus, RFQ, unduh
+                dokumen);
+              </li>
+              <li>Anda mendaftar dan masuk ke akun Anda;</li>
+              <li>Anda menyelesaikan checkout dan proses pemesanan;</li>
+              <li>
+                Anda menggunakan asisten chat serta preferensi yang tersimpan di
+                peramban Anda; dan
               </li>
               <li>
-                <strong>Supabase</strong> — Penyedia database dan autentikasi
-                yang mengelola penyimpanan data kami. Kebijakan privasi
-                Supabase:&nbsp;
-                <a
-                  href="https://supabase.com/privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  https://supabase.com/privacy
-                </a>
+                Informasi autentikasi yang diteruskan oleh penyedia login
+                eksternal apabila Anda memilih opsi masuk dengan Google.
+              </li>
+            </ul>
+
+            <h2>3. Tujuan Penggunaan</h2>
+            <p>Informasi Anda kami gunakan untuk:</p>
+            <ul>
+              <li>menyediakan dan mengelola akun Anda;</li>
+              <li>
+                memproses pesanan, pembayaran, pengiriman, serta menampilkan
+                status dan riwayat pesanan;
+              </li>
+              <li>
+                menjawab pertanyaan, permintaan penawaran, dan permintaan
+                khusus yang Anda ajukan;
+              </li>
+              <li>
+                berkomunikasi dengan Anda terkait layanan, pesanan, atau
+                permintaan informasi;
+              </li>
+              <li>
+                menjalankan asisten chat serta mencegah penyalahgunaan fitur;
+              </li>
+              <li>
+                mempertahankan keamanan, kinerja, dan integritas situs; serta
+              </li>
+              <li>
+                memenuhi kewajiban operasional dan peraturan yang berlaku.
+              </li>
+            </ul>
+
+            <h2>4. Pembayaran</h2>
+            <p>
+              Pembayaran diproses melalui penyedia layanan pembayaran Midtrans.
+              Data yang diperlukan untuk transaksi — seperti nama, kontak,
+              rincian pesanan, dan nilai transaksi — diteruskan kepada Midtrans
+              agar pembayaran dapat diproses.
+            </p>
+            <p>
+              Kami menyimpan informasi pesanan dan status pembayaran yang
+              diperlukan oleh aplikasi, misalnya kode pesanan, status pembayaran,
+              waktu pembayaran, serta identitas transaksi dari penyedia
+              pembayaran. Kami tidak menyimpan nomor, CVV, atau kredensial kartu
+              Anda.
+            </p>
+
+            <h2>5. Autentikasi dan Sesi</h2>
+            <p>
+              Login akun (termasuk opsi masuk dengan Google) ditangani oleh
+              penyedia autentikasi kami. Kami menerima status autentikasi dan
+              identitas akun Anda untuk mempertahankan sesi Anda.
+            </p>
+            <p>
+              Apabila Anda memilih masuk dengan Google, kata sandi Google Anda
+              tidak pernah diterima atau disimpan oleh AKA — proses tersebut
+              berlangsung pada layanan Google, lalu status berhasil/tidaknya
+              diteruskan kembali ke situs kami.
+            </p>
+
+            <h2>6. Penyimpanan di Peramban Anda</h2>
+            <p>
+              Situs ini menggunakan sejumlah penyimpanan lokal pada peramban
+              untuk kebutuhan fungsi dan kenyamanan penggunaan:
+            </p>
+            <ul>
+              <li>
+                <strong>Sesi dan autentikasi</strong> — menjaga Anda tetap
+                masuk dan melindungi sesi Anda;
+              </li>
+              <li>
+                <strong>Keranjang, wishlist, dan produk terakhir dilihat</strong>{" "}
+                — menyimpan preferensi belanja Anda di perangkat Anda;
+              </li>
+              <li>
+                <strong>Proses checkout dan status pesanan</strong> —
+                memungkinkan pemulihan dan penampilan konfirmasi pesanan;
+              </li>
+              <li>
+                <strong>Penghitung penggunaan chat dan RFQ</strong> — membatasi
+                frekuensi penggunaan formulir dan chat agar tidak
+                disalahgunakan; dan
+              </li>
+              <li>
+                <strong>Preferensi tampilan</strong> — mengingat tema terang/gelap
+                pilihan Anda.
               </li>
             </ul>
             <p>
-              Kami TIDAK menggunakan Google Analytics, Facebook Pixel, atau
-              layanan pelacakan pihak ketiga lainnya. Tidak ada cookie pelacakan
-              yang ditempatkan di perangkat Anda.
+              Penyimpanan ini bersifat fungsional untuk keamanan dan
+              kenyamanan layanan. Kami tidak menggunakan cookie atau penyimpanan
+              untuk iklan maupun analitik pihak ketiga di situs ini. Namun,
+              sebagian halaman memuat konten eksternal (misalnya peta lokasi)
+              yang dapat menetapkan penyimpanannya sendiri sebagaimana dijelaskan
+              pada bagian layanan pihak ketiga.
             </p>
 
-            <h2>4. Cookie</h2>
+            <h2>7. Asisten Chat AI</h2>
             <p>
-              Kami hanya menggunakan cookie yang diperlukan untuk operasional
-              situs:
+              Pesan yang Anda kirimkan ke asisten chat diteruskan ke layanan
+              kecerdasan buatan pihak ketiga (Google Gemini) untuk menghasilkan
+              jawaban. Sistem kami menambahkan konteks informasi umum tentang
+              produk dan layanan agar jawaban lebih relevan.
             </p>
             <ul>
               <li>
-                Cookie sesi Supabase (httpOnly) — untuk autentikasi admin dan
-                menjaga sesi Anda
+                Kami tidak secara sengaja memasukkan data pribadi Anda ke dalam
+                pesan chat; hindari menyertakan informasi pribadi di dalamnya.
               </li>
               <li>
-                Cookie sesi chat (httpOnly, <code>autentik-chat-session</code>)
-                — untuk menghitung batas penggunaan chat AI (berlaku 30 hari)
+                Jawaban dihasilkan secara otomatis dan dapat memiliki
+                keterbatasan.
+              </li>
+              <li>
+                Kami tidak membuat klaim mengenai lamanya penyimpanan atau
+                penggunaan data oleh penyedia layanan kecerdasan buatan
+                tersebut; keterangan lebih lanjut mengikuti ketentuan penyedia
+                terkait.
+              </li>
+            </ul>
+
+            <h2>8. Layanan Pihak Ketiga</h2>
+            <p>
+              Untuk menjalankan situs, informasi Anda dapat diproses oleh
+              penyedia layanan berikut sejauh diperlukan oleh fungsi layanan:
+            </p>
+            <ul>
+              <li>
+                <strong>Supabase</strong> — penyimpanan data, autentikasi, dan
+                fitur basis data yang menopang akun, pesanan, serta formulir
+                situs;
+              </li>
+              <li>
+                <strong>Midtrans</strong> — pemrosesan pembayaran pesanan;
+              </li>
+              <li>
+                <strong>Google (OAuth)</strong> — pilihan masuk akun menggunakan
+                Google;
+              </li>
+              <li>
+                <strong>Google Gemini</strong> — pemrosesan pesan chat untuk
+                menghasilkan jawaban asisten;
+              </li>
+              <li>
+                <strong>Vercel</strong> — hosting dan pengiriman halaman situs;
+              </li>
+              <li>
+                <strong>recruitment.tekna.id</strong> — portal rekrutmen yang
+                menerima data lamaran apabila Anda melanjutkan proses lamaran ke
+                sana.
               </li>
             </ul>
             <p>
-              Cookie ini tidak digunakan untuk pelacakan atau iklan.
+              Selain itu, situs menampilkan konten dan tautan eksternal seperti
+              peta lokasi Google, tautan WhatsApp, serta tautan media sosial
+              kami (Instagram, LinkedIn, YouTube). Tautan dan konten tersebut
+              hanya menerima data teknis yang wajar terkait kunjungan Anda
+              (misalnya alamat IP melalui permuatannya) dan tidak digunakan oleh
+              kami untuk meneruskan data akun atau pesanan Anda.
             </p>
 
-            <h2>5. Hak Anda</h2>
+            <h2>9. Lowongan Kerja dan Portal Rekrutmen</h2>
             <p>
-              Karena situs ini tidak memiliki sistem akun pelanggan, data Anda
-              hanya tersimpan saat Anda mengirim formulir atau melakukan
-              pemesanan. Untuk mengakses, mengubah, atau menghapus data pribadi
-              Anda, silakan hubungi kami melalui:
+              Halaman Karier menampilkan lowongan kerja AKA. Apabila Anda
+              melanjutkan proses lamaran ke{" "}
+              <a
+                href="https://recruitment.tekna.id"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                https://recruitment.tekna.id
+              </a>
+              , data yang Anda isi di sana diproses melalui sistem rekrutmen
+              tersebut dan tunduk pada kebijakan portal terkait, bukan oleh
+              sistem situs ini.
+            </p>
+
+            <h2>10. Pembagian Informasi</h2>
+            <p>
+              Kami tidak menjual data pribadi Anda. Informasi Anda dapat
+              diproses oleh penyedia layanan sebagaimana disebutkan di atas
+              sejauh diperlukan untuk mengoperasikan situs, memproses transaksi,
+              dan menjawab permintaan Anda, serta dapat diungkapkan apabila
+              diwajibkan oleh ketentuan peraturan perundang-undangan yang
+              berlaku.
+            </p>
+
+            <h2>11. Keamanan Informasi</h2>
+            <p>
+              Kami menerapkan langkah pengamanan teknis yang relevan, termasuk
+              kontrol akses, autentikasi, pembatasan akses sesuai kewenangan
+              (kebijakan akses tingkat baris pada basis data), serta koneksi
+              yang aman untuk mengurangi risiko akses yang tidak sah.
+            </p>
+            <p>
+              Tidak ada metode penyimpanan atau transmisi yang dapat dijamin
+              sepenuhnya bebas risiko. Kami terus berupaya menjaga praktik
+              keamanan yang wajar sebanding dengan sifat layanan situs ini.
+            </p>
+
+            <h2>12. Penyimpanan dan Retensi Informasi</h2>
+            <p>
+              Data disimpan selama masih diperlukan secara wajar untuk
+              menjalankan layanan, memenuhi kebutuhan operasional, keamanan,
+              penyelesaian transaksi, dan kewajiban yang berlaku. Kami tidak
+              menetapkan jangka waktu retensi tetap dalam kebijakan ini karena
+              mengikuti kebutuhan operasional dan kebijakan perusahaan yang
+              berlaku.
+            </p>
+
+            <h2>13. Hak dan Permintaan Anda</h2>
+            <p>
+              Anda dapat meminta koreksi informasi Anda, memperoleh informasi
+              mengenai data yang kami proses terkait dengan Anda, serta
+              meminta bantuan terkait akun atau data Anda dengan menghubungi
+              kami melalui kontak di bawah ini.
+            </p>
+
+            <h2>14. Privasi Anak</h2>
+            <p>
+              Layanan situs ini ditujukan untuk keperluan pengunjung dan
+              pelaku usaha pada umumnya. Kami tidak secara sengaja mengumpulkan
+              informasi pribadi dari anak. Jika Anda menemukan informasi
+              semacam dikirimkan kepada kami, silakan hubungi kami agar dapat
+              kami tindaklanjuti.
+            </p>
+
+            <h2>15. Tautan dan Konten Eksternal</h2>
+            <p>
+              Situs ini dapat memuat tautan ke situs, portal, atau layanan
+              pihak ketiga (termasuk portal rekrutmen, tautan WhatsApp, media
+              sosial, dan peta lokasi). AKA tidak bertanggung jawab atas
+              kebijakan privasi, ketentuan, maupun praktik pihak ketiga
+              tersebut. Kami menyarankan Anda meninjau kebijakan yang berlaku di
+              layanan tujuan.
+            </p>
+
+            <h2>16. Perubahan Kebijakan</h2>
+            <p>
+              Kebijakan ini dapat diperbarui dari waktu ke waktu. Tanggal
+              pembaruan tercantum pada bagian atas halaman ini. Perubahan
+              berlaku sejak dipublikasikan di halaman ini. Kami menyarankan Anda
+              meninjau halaman ini secara berkala.
+            </p>
+
+            <h2>17. Hubungi Kami</h2>
+            <p>
+              Jika Anda memiliki pertanyaan, permintaan koreksi, atau memerlukan
+              bantuan terkait informasi Anda, silakan hubungi kami:
             </p>
             <ul>
               <li>Email: autentik.info@gmail.com</li>
+              <li>
+                Formulir kontak pada halaman{" "}
+                <Link href="/contact">Kontak</Link> kami
+              </li>
             </ul>
-
-            <h2>6. Retensi Data</h2>
             <p>
-              {/* PLACEHOLDER: Keputusan manajemen diperlukan — berapa lama data
-              contact_messages & orders disimpan? Saat ini data tidak dihapus
-              otomatis dari database. */}
-              Data kontak dan pesanan disimpan selama diperlukan untuk keperluan
-              operasional dan layanan pelanggan. Untuk pertanyaan spesifik
-              tentang retensi data, silakan hubungi kami.
-            </p>
-
-            <h2>7. Keamanan Data</h2>
-            <p>
-              Data Anda dilindungi oleh keamanan bawaan Supabase (enkripsi saat
-              transit dan saat disimpan) serta kebijakan akses berbasis peran
-              (Row Level Security) yang memastikan hanya staf yang berwenang yang
-              dapat mengakses data Anda.
-            </p>
-
-            <h2>8. Perubahan Kebijakan</h2>
-            <p>
-              Kebijakan ini dapat diperbarui dari waktu ke waktu. Perubahan akan
-              dipublikasikan di halaman ini dengan tanggal pembaruan yang tertera
-              di atas.
-            </p>
-
-            <h2>9. Hubungi Kami</h2>
-            <p>
-              Jika Anda memiliki pertanyaan tentang kebijakan privasi ini,
-              silakan hubungi:
-            </p>
-            <p>
-              PT Autentik Karya Analitika
-              <br />
-              Jl. Klipang Ruko Amsterdam No.9E, Sendangmulyo, Tembalang,
-              <br />
-              Kota Semarang, Jawa Tengah 50272
-              <br />
-              Email: autentik.info@gmail.com
+              Alamat kantor kami juga tercantum pada halaman Kontak tersebut.
             </p>
           </div>
         </div>
