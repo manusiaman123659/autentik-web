@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, Package, Briefcase, FileText, ArrowRight } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import type { MikaJob } from "@/types/mika-career";
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -45,38 +46,46 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [jobs, setJobs] = useState<SearchJob[]>([]);
   const router = useRouter();
 
-  // Load published products & open careers once per modal open (client-side, RLS-filtered).
+  // Product search retains its existing RLS-filtered query. Careers use only
+  // the fixed-scope server proxy, never the unverified legacy careers table.
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
     const supabase = createClient();
-    Promise.all([
-      supabase
+    supabase
         .from("products")
         .select("slug, name, brand, category, description")
         .eq("product_type", "b2b_system")
         .eq("status", "published")
         .eq("is_active", true)
         .is("deleted_at", null)
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("careers")
-        .select("slug, title, department, type, summary")
-        .eq("status", "open")
-        .order("sort_order", { ascending: true }),
-    ]).then(([prodRes, careerRes]) => {
+        .order("sort_order", { ascending: true }).then((prodRes) => {
       if (cancelled) return;
       if (!prodRes.error && prodRes.data) {
         setProducts(prodRes.data as SearchProduct[]);
-      }
-      if (!careerRes.error && careerRes.data) {
-        setJobs(careerRes.data as SearchJob[]);
       }
     });
     return () => {
       cancelled = true;
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !query.trim()) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ search: query.trim(), page: "1", per_page: "4" });
+        const response = await fetch(`/api/careers/jobs?${params}`, { cache: "no-store", signal: controller.signal });
+        const json = await response.json();
+        if (controller.signal.aborted) return;
+        const data: MikaJob[] = response.ok && json.success && Array.isArray(json.data) ? json.data : [];
+        setJobs(data.map((job) => ({ slug: String(job.id), title: job.title, department: job.department.name,
+          type: job.employment_type, summary: job.description ?? "" })));
+      } catch { if (!controller.signal.aborted) setJobs([]); }
+    }, 280);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [isOpen, query]);
 
   // Keyboard shortcut listener (Cmd+K / Ctrl+K & Escape)
   useEffect(() => {
@@ -114,12 +123,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     : [];
 
   const filteredJobs = trimmed
-    ? jobs.filter(
-        (job) =>
-          job.title.toLowerCase().includes(trimmed) ||
-          job.department.toLowerCase().includes(trimmed) ||
-          job.summary.toLowerCase().includes(trimmed)
-      ).slice(0, 4)
+    ? jobs.slice(0, 4)
     : [];
 
   const handleSelect = (href: string) => {
@@ -143,7 +147,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setJobs([]); setQuery(e.target.value); }}
             placeholder="Cari produk, posisi karir, atau halaman... (contoh: Hardware Engineer, Talpha)"
             className="flex-1 bg-transparent text-base focus:outline-none placeholder:text-slate-400 font-medium"
             style={{ color: "var(--text-primary)" }}
@@ -151,7 +155,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           />
           {query && (
             <button
-              onClick={() => setQuery("")}
+              onClick={() => { setJobs([]); setQuery(""); }}
               className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X size={16} />

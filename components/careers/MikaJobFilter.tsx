@@ -1,18 +1,15 @@
 "use client";
 
 import { Search, X, Filter, RotateCcw } from "lucide-react";
-import type { MikaDepartment, MikaCompany } from "@/types/mika-career";
+import type { MikaDepartment } from "@/types/mika-career";
 
 interface MikaJobFilterProps {
   searchQuery: string;
   onSearchChange: (val: string) => void;
-  selectedCompany: string;
-  onCompanyChange: (val: string) => void;
   selectedDepartment: string;
   onDepartmentChange: (val: string) => void;
   selectedEmploymentType: string;
   onEmploymentTypeChange: (val: string) => void;
-  companies: MikaCompany[];
   departments: MikaDepartment[];
   onReset: () => void;
   totalResults: number;
@@ -29,20 +26,16 @@ const EMPLOYMENT_TYPES = [
 export default function MikaJobFilter({
   searchQuery,
   onSearchChange,
-  selectedCompany,
-  onCompanyChange,
   selectedDepartment,
   onDepartmentChange,
   selectedEmploymentType,
   onEmploymentTypeChange,
-  companies,
   departments,
   onReset,
   totalResults,
 }: MikaJobFilterProps) {
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
-    selectedCompany !== "all" ||
     selectedDepartment !== "all" ||
     selectedEmploymentType !== "all";
 
@@ -88,43 +81,7 @@ export default function MikaJobFilter({
       </div>
 
       {/* Filter Dropdowns Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mb-5">
-        {/* Company Filter (1st) */}
-        <div>
-          <label
-            className="block text-sm font-semibold mb-1.5 uppercase tracking-wider"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            Perusahaan
-          </label>
-          <div className="relative">
-            <select
-              aria-label="Filter perusahaan"
-              value={selectedCompany}
-              onChange={(e) => onCompanyChange(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border text-sm font-medium transition-all focus:outline-none focus:border-[#0EA5A0] appearance-none"
-              style={{
-                backgroundColor: "var(--bg-secondary)",
-                borderColor: "var(--border-subtle)",
-                color: "var(--text-primary)",
-              }}
-            >
-              <option value="all">Semua Perusahaan</option>
-              {companies.map((company) => (
-                <option key={company.id} value={String(company.id)}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
-            <div
-              className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-xs"
-              style={{ color: "var(--text-muted)" }}
-            >
-              ▼
-            </div>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-5">
         {/* Department Filter (2nd) */}
         <div>
           <label

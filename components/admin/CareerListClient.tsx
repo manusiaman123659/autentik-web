@@ -202,7 +202,7 @@ export default function CareerListClient({ careers }: { careers: CareerRow[] }) 
       {pendingDelete && (
         <ConfirmDialog
           title={`Hapus "${pendingDelete.title}"?`}
-          description="Lowongan ini akan dihapus permanen dan tidak tampil di halaman karir."
+          description="Arsip lowongan lokal ini akan dihapus permanen. Lowongan pada Recruitment API tidak ikut diubah."
           onConfirm={handleDelete}
           onCancel={() => setPendingDelete(null)}
           busy={busy}

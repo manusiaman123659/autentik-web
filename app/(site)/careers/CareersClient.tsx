@@ -15,13 +15,13 @@ import MikaJobCard from "@/components/careers/MikaJobCard";
 import MikaJobFilter from "@/components/careers/MikaJobFilter";
 import MikaPagination from "@/components/careers/MikaPagination";
 import EmptyState from "@/components/ui/EmptyState";
-import type { MikaJob, MikaCompany, MikaDepartment, MikaPaginationMeta } from "@/types/mika-career";
+import type { MikaJob, MikaDepartment, MikaPaginationMeta } from "@/types/mika-career";
 
 interface CareersClientProps {
   initialJobs: MikaJob[];
   initialMeta: MikaPaginationMeta;
   departments: MikaDepartment[];
-  companies: MikaCompany[];
+  available: boolean;
   recruitmentUrl: string | null;
   apiMessage?: string;
 }
@@ -30,23 +30,30 @@ export default function CareersClient({
   initialJobs,
   initialMeta,
   departments,
-  companies,
+  available,
   recruitmentUrl,
   apiMessage,
 }: CareersClientProps) {
   const [jobs, setJobs] = useState<MikaJob[]>(initialJobs);
   const [meta, setMeta] = useState<MikaPaginationMeta>(initialMeta);
   const [statusMessage, setStatusMessage] = useState(apiMessage);
+  const [isAvailable, setIsAvailable] = useState(available);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedEmploymentType, setSelectedEmploymentType] = useState("all");
-  const [selectedCompany, setSelectedCompany] = useState("all");
   const [isPending, startTransition] = useTransition();
   const hasFilterInteraction = useRef(false);
+  const requestSequence = useRef(0);
+  const requestController = useRef<AbortController | null>(null);
+  const hasFilters = searchQuery.trim() !== "" || selectedDept !== "all" || selectedEmploymentType !== "all";
 
   // Fetch jobs dynamically when filters or page change
   const fetchFilteredJobs = useCallback(
     (pageNumber: number = 1) => {
+      const sequence = ++requestSequence.current;
+      requestController.current?.abort();
+      const controller = new AbortController();
+      requestController.current = controller;
       startTransition(async () => {
         const searchParams = new URLSearchParams({
           page: String(pageNumber),
@@ -57,29 +64,37 @@ export default function CareersClient({
         if (selectedEmploymentType !== "all") {
           searchParams.set("employment_type", selectedEmploymentType);
         }
-        if (selectedCompany !== "all") searchParams.set("company_id", selectedCompany);
 
         try {
           const response = await fetch(`/api/careers/jobs?${searchParams.toString()}`, {
             headers: { Accept: "application/json" },
             cache: "no-store",
+            signal: controller.signal,
           });
           const result = await response.json();
           if (!response.ok || !result.success || !Array.isArray(result.data) || !result.meta) {
             throw new Error(result.message || "Respons lowongan tidak valid");
           }
 
+          if (sequence !== requestSequence.current) return;
+          setIsAvailable(true);
           setJobs(result.data);
           setMeta(result.meta);
           setStatusMessage(result.message);
         } catch (error) {
+          if (controller.signal.aborted || sequence !== requestSequence.current) return;
           console.error("[Careers] Gagal memperbarui lowongan:", error);
-          setStatusMessage("Lowongan belum dapat diperbarui. Menampilkan data terakhir.");
+          setIsAvailable(false);
+          setJobs([]);
+          setMeta({ current_page: 1, per_page: 10, total_items: 0, total_pages: 1, has_next: false, has_prev: false });
+          setStatusMessage("Informasi lowongan sedang tidak tersedia. Silakan coba lagi beberapa saat.");
         }
       });
     },
-    [searchQuery, selectedDept, selectedEmploymentType, selectedCompany]
+    [searchQuery, selectedDept, selectedEmploymentType]
   );
+
+  useEffect(() => () => requestController.current?.abort(), []);
 
   // Debounced search trigger
   useEffect(() => {
@@ -90,14 +105,13 @@ export default function CareersClient({
     }, 280);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedDept, selectedEmploymentType, selectedCompany, fetchFilteredJobs]);
+  }, [searchQuery, selectedDept, selectedEmploymentType, fetchFilteredJobs]);
 
   const handleResetFilters = () => {
     hasFilterInteraction.current = true;
     setSearchQuery("");
     setSelectedDept("all");
     setSelectedEmploymentType("all");
-    setSelectedCompany("all");
   };
 
   const handlePageChange = (newPage: number) => {
@@ -133,7 +147,7 @@ export default function CareersClient({
           <AnimatedElement type="fade-up" className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0EA5A0]/15 border border-[#0EA5A0]/30 text-[#14B8A6] text-xs font-semibold uppercase tracking-wider mb-6">
               <Sparkles size={14} />
-              Mika Career - Portal Rekrutmen & Karir
+              Karier AKA — Mika Career
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-heading mb-6 leading-tight">
@@ -148,7 +162,7 @@ export default function CareersClient({
             <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-base">
               <div>
                 <span className="block text-2xl font-bold text-heading">
-                  {meta.total_items}
+                   {isAvailable ? meta.total_items : "—"}
                 </span>
                 <span className="text-sm text-body">Posisi Lowongan Aktif</span>
               </div>
@@ -323,11 +337,6 @@ export default function CareersClient({
               hasFilterInteraction.current = true;
               setSearchQuery(value);
             }}
-            selectedCompany={selectedCompany}
-            onCompanyChange={(value) => {
-              hasFilterInteraction.current = true;
-              setSelectedCompany(value);
-            }}
             selectedDepartment={selectedDept}
             onDepartmentChange={(value) => {
               hasFilterInteraction.current = true;
@@ -338,7 +347,6 @@ export default function CareersClient({
               hasFilterInteraction.current = true;
               setSelectedEmploymentType(value);
             }}
-            companies={companies}
             departments={departments}
             onReset={handleResetFilters}
             totalResults={meta.total_items}
@@ -364,15 +372,18 @@ export default function CareersClient({
           ) : (
             <EmptyState
               icon={Search}
-              title="Tidak ada lowongan yang sesuai"
-              description="Kami tidak menemukan lowongan dengan kriteria filter yang Anda pilih. Coba sesuaikan kata kunci atau reset filter pencarian."
+              title={!isAvailable ? "Lowongan sementara tidak tersedia" : hasFilters ? "Tidak ada lowongan yang sesuai" : "Belum ada lowongan"}
+              description={!isAvailable
+                ? "Informasi lowongan sedang tidak tersedia. Silakan coba lagi beberapa saat."
+                : hasFilters ? "Kami tidak menemukan lowongan dengan kriteria filter yang Anda pilih. Coba sesuaikan kata kunci atau reset filter pencarian."
+                : "Saat ini belum ada lowongan yang tersedia di PT Autentik Karya Analitika."}
               action={
               <button
                 type="button"
-                onClick={handleResetFilters}
+                onClick={!isAvailable ? () => fetchFilteredJobs(1) : handleResetFilters}
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0c8e8a] transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
               >
-                Reset Semua Filter
+                {!isAvailable ? "Coba Lagi" : "Reset Semua Filter"}
               </button>
               }
             />

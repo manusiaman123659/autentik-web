@@ -3,11 +3,7 @@ import { ArrowRight, Briefcase, Building2, MapPin } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import type { MikaJob } from "@/types/mika-career";
 
-function plainText(value?: string): string {
-  return (value ?? "").replace(/<[^>]*>?/g, " ").replace(/\s+/g, " ").trim();
-}
-
-export default function HomeCareers({ items }: { items: MikaJob[] }) {
+export default function HomeCareers({ items, available }: { items: MikaJob[]; available: boolean }) {
   const featured = items.slice(0, 3);
 
   return (
@@ -52,7 +48,7 @@ export default function HomeCareers({ items }: { items: MikaJob[] }) {
                 </h3>
                 {job.description && (
                   <p className="mt-3 line-clamp-2 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                    {plainText(job.description)}
+                    {job.description}
                   </p>
                 )}
                 <div className="mt-auto space-y-2 border-t pt-5 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
@@ -72,7 +68,7 @@ export default function HomeCareers({ items }: { items: MikaJob[] }) {
         ) : (
           <AnimatedElement type="fade-up">
             <div className="border py-12 text-center" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-              <p className="font-semibold" style={{ color: "var(--text-primary)" }}>Belum ada posisi terbuka saat ini.</p>
+              <p className="font-semibold" style={{ color: "var(--text-primary)" }}>{available ? "Saat ini belum ada lowongan yang tersedia di PT Autentik Karya Analitika." : "Informasi lowongan sedang tidak tersedia. Silakan coba lagi beberapa saat."}</p>
               <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>Pantau halaman karir untuk informasi lowongan terbaru.</p>
             </div>
           </AnimatedElement>

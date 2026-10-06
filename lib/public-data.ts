@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { parseBankAccount, type BankAccount } from "@/lib/bank-account";
-import type { CareerPosition } from "@/lib/data/careers";
 import { groups as staticGroups } from "@/lib/data/groups";
 import { partners as staticPartners } from "@/lib/data/partners";
 import { teamMembers as staticTeamMembers } from "@/lib/data/team";
@@ -20,13 +19,9 @@ import {
   type ResolvedWhatsAppContacts,
   type WhatsAppContact,
 } from "@/lib/communication";
-import {
-  filterMikaJobs,
-  getMikaJobs,
-  legacyCareersToMikaJobs,
-} from "@/lib/api/mika-career";
-import type { MikaJob, MikaJobQueryParams, MikaJobsResponse } from "@/types/mika-career";
-import { getSafeExternalUrl } from "@/lib/public-url";
+import { getMikaJobs } from "@/lib/api/mika-career";
+import type { MikaJobQueryParams, MikaJobsResponse } from "@/types/mika-career";
+import { getSafeRecruitmentUrl } from "@/lib/recruitment-url";
 
 export type { ProductRow };
 
@@ -37,41 +32,6 @@ export interface PublicBrandItem {
   logoSrcDark?: string;
   /** Value used for ?brand= query param on /products */
   brandFilter: string;
-}
-
-interface CareerRow {
-  slug: string;
-  title: string;
-  department: string;
-  location: string;
-  type: string;
-  type_badge_color: string;
-  summary: string | null;
-  description: string;
-  responsibilities: unknown;
-  requirements: unknown;
-  benefits: unknown;
-}
-
-function toCareer(row: CareerRow): CareerPosition {
-  return {
-    slug: row.slug,
-    title: row.title,
-    department: row.department,
-    location: row.location as CareerPosition["location"],
-    type: row.type as CareerPosition["type"],
-    typeBadgeColor:
-      (row.type_badge_color as CareerPosition["typeBadgeColor"]) ?? "green",
-    summary: row.summary ?? "",
-    description: row.description ?? "",
-    responsibilities: Array.isArray(row.responsibilities)
-      ? (row.responsibilities as string[])
-      : [],
-    requirements: Array.isArray(row.requirements)
-      ? (row.requirements as string[])
-      : [],
-    benefits: Array.isArray(row.benefits) ? (row.benefits as string[]) : [],
-  };
 }
 
 async function getSupabase() {
@@ -113,76 +73,18 @@ export async function getPublicProductBySlug(slug: string): Promise<ProductRow |
   return data as ProductRow | null;
 }
 
-export async function listPublicCareers(): Promise<CareerPosition[]> {
-  const supabase = await getSupabase();
-  const { data, error } = await supabase
-    .from("careers")
-    .select(
-      "slug, title, department, location, type, type_badge_color, summary, description, responsibilities, requirements, benefits"
-    )
-    .eq("status", "open")
-    .is("deleted_at", null)
-    .order("sort_order", { ascending: true });
-  if (error) {
-    console.error("[public-data] careers", error);
-    return [];
-  }
-  if (!data || data.length === 0) return [];
-  return (data as unknown as CareerRow[]).map(toCareer);
-}
-
-export async function getPublicCareerBySlug(
-  slug: string
-): Promise<CareerPosition | null> {
-  const supabase = await getSupabase();
-  const { data, error } = await supabase
-    .from("careers")
-    .select(
-      "slug, title, department, location, type, type_badge_color, summary, description, responsibilities, requirements, benefits"
-    )
-    .eq("slug", slug)
-    .eq("status", "open")
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (error) {
-    console.error("[public-data] career by slug", error);
-    return null;
-  }
-  if (!data) return null;
-  return toCareer(data as unknown as CareerRow);
-}
-
 export interface PublicCareerListings {
   response: MikaJobsResponse;
-  fallbackJobs: MikaJob[];
-  source: "mika" | "supabase" | "empty";
+  source: "mika" | "unavailable";
 }
 
 export async function getPublicCareerListings(
   params: MikaJobQueryParams = {},
 ): Promise<PublicCareerListings> {
-  const [mikaResponse, legacyCareers] = await Promise.all([
-    getMikaJobs(params),
-    listPublicCareers(),
-  ]);
-  const fallbackJobs = legacyCareersToMikaJobs(legacyCareers);
-
-  if (mikaResponse.success) {
-    return { response: mikaResponse, fallbackJobs, source: "mika" };
-  }
-
-  const fallbackResponse = filterMikaJobs(
-    fallbackJobs,
-    params,
-    fallbackJobs.length > 0
-      ? "Mika Career tidak tersedia; menampilkan lowongan AKA"
-      : "Belum ada lowongan yang tersedia",
-  );
-  return {
-    response: fallbackResponse,
-    fallbackJobs,
-    source: fallbackJobs.length > 0 ? "supabase" : "empty",
-  };
+  // Legacy careers have no verifiable company/provenance. They are retained
+  // for admin CRUD only and must never resurrect on a recruitment outage.
+  const response = await getMikaJobs(params);
+  return { response, source: response.success ? "mika" : "unavailable" };
 }
 
 interface GroupRow {
@@ -376,7 +278,7 @@ export async function getRecruitmentUrl(): Promise<string | null> {
     .maybeSingle();
   if (error || !data) return null;
   const value = (data as { value: unknown }).value as { url?: string } | null;
-  return getSafeExternalUrl(value?.url);
+  return getSafeRecruitmentUrl(value?.url);
 }
 
 async function getWhatsAppSettingValue(): Promise<unknown | null> {

@@ -146,7 +146,7 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
             className="text-sm line-clamp-2 leading-relaxed mb-5"
             style={{ color: "var(--text-secondary)" }}
           >
-            {job.description.replace(/<[^>]*>?/gm, " ").replace(/\s+/g, " ").trim()}
+            {job.description}
           </p>
         )}
 

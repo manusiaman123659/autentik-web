@@ -196,6 +196,7 @@ const mockJob: MikaJob = {
   id: 10,
   title: "Frontend Developer",
   employment_type: "Full-time",
+  status: "Open",
   location: "Semarang",
   salary: { min: null, max: null, currency: "IDR", formatted: "" },
   quota: 2,

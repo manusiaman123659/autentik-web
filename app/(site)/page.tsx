@@ -64,7 +64,7 @@ export default async function HomePage() {
       )}
       <CtaBanner salesNumber={salesContact?.number ?? null} />
       <StoreTeaser />
-      <HomeCareers items={careerListings.response.data} />
+      <HomeCareers items={careerListings.response.data} available={careerListings.response.success} />
     </main>
   );
 }

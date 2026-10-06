@@ -12,6 +12,7 @@ const validJob = {
   id: 2,
   title: "IoT Engineer",
   employment_type: "Full-time",
+  status: "Open",
   location: "Semarang",
   salary: { min: null, max: null, currency: "IDR", formatted: "" },
   quota: 1,
@@ -23,7 +24,7 @@ const validJob = {
     badge: { status: "open", label: "Aktif", color: "emerald" },
   },
   company: {
-    id: 1,
+    id: 2,
     name: "PT Autentik Karya Analitika",
     logo: "/storage/logo/aka.png",
     city: "Semarang",
@@ -115,7 +116,7 @@ async function main() {
   mockFetch(async () => jsonResponse({ message: "Server error" }, 500));
   assert.deepEqual(await getMikaJobDetail(2), { status: "unavailable", reason: "upstream" });
 
-  mockFetch(async () => jsonResponse({ success: true, data: { id: 2 } }));
+  mockFetch(async () => jsonResponse({ success: true, data: { ...validJob, salary: null } }));
   assert.deepEqual(await getMikaJobDetail(2), {
     status: "unavailable",
     reason: "invalid_response",

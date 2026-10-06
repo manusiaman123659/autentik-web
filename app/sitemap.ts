@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getCanonicalOrigin } from "@/lib/public-url";
+import { getAllPublicMikaJobs } from "@/lib/api/mika-career";
 
 const STATIC_ROUTES: { path: string; priority: number }[] = [
   { path: "/", priority: 1 },
@@ -23,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const [{ data: b2bProducts }, { data: spareparts }, { data: careers }] =
+  const [{ data: b2bProducts }, { data: spareparts }, careers] =
     await Promise.all([
       supabase
         .from("products")
@@ -37,7 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .eq("product_type", "sparepart")
         .eq("is_store_visible", true)
         .is("deleted_at", null),
-      supabase.from("careers").select("slug, updated_at"),
+      getAllPublicMikaJobs(),
     ]);
 
   const toEntry = (
@@ -62,7 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     toEntry(`/store/${p.slug}`, p.updated_at)
   );
   const careerEntries = (careers ?? []).map((c) =>
-    toEntry(`/careers/${c.slug}`, c.updated_at)
+    toEntry(`/careers/${c.id}`, c.created_at ?? null)
   );
 
   return [

@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
     per_page: Math.min(positiveInteger(searchParams.get("per_page"), 10), 50),
     search: optionalFilter(searchParams.get("search")),
     department_id: optionalFilter(searchParams.get("department_id")),
-    company_id: optionalFilter(searchParams.get("company_id")),
+    // Company scope is fixed inside the shared fetcher, never visitor-owned.
+    location: optionalFilter(searchParams.get("location")),
     employment_type: optionalFilter(searchParams.get("employment_type")),
   };
 
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
         source: listings.source,
       },
       {
+        status: listings.response.success ? 200 : 503,
         headers: { "Cache-Control": "no-store" },
       },
     );

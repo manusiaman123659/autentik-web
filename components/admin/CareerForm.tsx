@@ -196,8 +196,8 @@ export default function CareerForm({ initial }: { initial?: CareerRow }) {
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             >
-              <option value="open">Terbuka (tampil publik)</option>
-              <option value="closed">Ditutup (tidak tampil)</option>
+              <option value="open">Terbuka (arsip lokal)</option>
+              <option value="closed">Ditutup (arsip lokal)</option>
             </select>
             <FieldError message={errors.status} />
           </div>

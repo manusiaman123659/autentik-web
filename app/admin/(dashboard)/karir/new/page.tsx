@@ -11,7 +11,7 @@ export default function AdminKarirNewPage() {
     <div>
       <PageHeader
         title="Tambah Lowongan"
-        description="Lowongan dengan status Terbuka akan tampil di halaman /careers."
+        description="Simpan arsip lowongan lokal. Publikasi di halaman karir dikelola melalui Recruitment API."
         backHref="/admin/karir"
       />
       <CareerForm />

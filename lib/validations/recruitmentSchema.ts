@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { getSafeExternalUrl } from "@/lib/public-url";
+import { getSafeRecruitmentUrl } from "@/lib/recruitment-url";
 
 export const recruitmentSchema = z.object({
   url: z
     .string()
     .trim()
     .refine(
-      (v) => v === "" || getSafeExternalUrl(v) !== null,
-      "URL wajib berupa alamat HTTP(S) yang aman — kosongkan untuk menonaktifkan tombol lamaran"
+      (v) => v === "" || getSafeRecruitmentUrl(v) !== null,
+      "URL wajib HTTPS pada recruitment.tekna.id tanpa kredensial — kosongkan untuk menonaktifkan tautan cadangan"
     ),
 });
 

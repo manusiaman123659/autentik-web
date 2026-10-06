@@ -41,6 +41,7 @@ export interface MikaJob {
   id: number | string;
   title: string;
   employment_type: string; // "Full-time" | "Internship" | "Part-time" | "Contract" | string
+  status: string; // Runtime public policy accepts the verified upstream value "Open" only.
   location: string;
   salary: MikaSalary;
   quota: number;

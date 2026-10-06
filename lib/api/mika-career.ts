@@ -1,4 +1,3 @@
-import type { CareerPosition } from "@/lib/data/careers";
 import type {
   MikaCompany,
   MikaDepartment,
@@ -8,8 +7,18 @@ import type {
   MikaJobsResponse,
 } from "@/types/mika-career";
 import { getSafeExternalUrl, isLocalHostname, isNgrokHostname } from "@/lib/public-url";
+import { htmlToPlainText } from "@/lib/html-to-plain-text";
+import { cache } from "react";
+import { getSafeRecruitmentUrl } from "@/lib/recruitment-url";
 
 export const MIKA_JOB_DETAIL_TIMEOUT_MS = 8000;
+
+// Server-owned scope. This module's fetchers are consumed by server readers /
+// route handlers only. Never read this identity from CMS, env, or visitor input.
+const AKA_RECRUITMENT_COMPANY_ID = 2 as const;
+const AKA_RECRUITMENT_COMPANY_NAME = "PT AUTENTIK KARYA ANALITIKA";
+const MAX_SNAPSHOT_PAGES = 20;
+const SNAPSHOT_PAGE_SIZE = 50;
 
 export type MikaJobDetailUnavailableReason =
   | "configuration"
@@ -148,7 +157,9 @@ export function normalizeMikaCompany(
   baseUrl?: string | null,
 ): MikaCompany {
   return {
-    ...company,
+    id: company.id,
+    name: company.name,
+    city: company.city,
     logo: normalizeMikaLogoUrl(company.logo, baseUrl),
   };
 }
@@ -159,21 +170,55 @@ export function normalizeMikaJob(
 ): MikaJob {
   const education = job.education_requirements;
   return {
-    ...job,
+    id: job.id,
+    title: job.title,
+    status: job.status,
+    employment_type: job.employment_type,
+    location: job.location,
+    salary: { min: job.salary.min, max: job.salary.max, currency: job.salary.currency, formatted: job.salary.formatted },
+    quota: job.quota,
+    deadline: job.deadline,
+    deadline_info: {
+      is_expired: job.deadline_info.is_expired,
+      is_active: job.deadline_info.is_active,
+      days_remaining: job.deadline_info.days_remaining,
+      badge: { status: job.deadline_info.badge.status, label: job.deadline_info.badge.label, color: job.deadline_info.badge.color },
+    },
+    department: { id: job.department.id, name: job.department.name },
     company: normalizeMikaCompany(job.company, baseUrl),
     education_requirements:
-      education == null || Array.isArray(education) ? undefined : education,
-    description: job.description ?? undefined,
+      education == null || Array.isArray(education) ? undefined : { degrees: [...education.degrees], majors: [...education.majors] },
+    description: job.description ? htmlToPlainText(job.description) : undefined,
     responsibilities: job.responsibilities ?? undefined,
     requirements: job.requirements ?? undefined,
     benefits: job.benefits ?? undefined,
     skills: job.skills ?? undefined,
-    created_at: job.created_at ?? undefined,
+    created_at: job.created_at && Number.isFinite(Date.parse(job.created_at)) ? job.created_at : undefined,
+    apply_url: getMikaApplyUrl(job.apply_url),
   };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isJobId(value: unknown): value is number | string {
+  return (typeof value === "number" || (typeof value === "string" && /^\d+$/.test(value)))
+    && Number.isSafeInteger(Number(value)) && Number(value) > 0;
+}
+
+function isPublicAkaJob(value: unknown): boolean {
+  return isRecord(value) && isRecord(value.company)
+    && value.company.id === AKA_RECRUITMENT_COMPANY_ID
+    && typeof value.company.name === "string"
+    && value.company.name.trim().replace(/\s+/g, " ").toUpperCase() === AKA_RECRUITMENT_COMPANY_NAME
+    && value.status === "Open" && isRecord(value.deadline_info)
+    && value.deadline_info.is_active === true && value.deadline_info.is_expired === false;
+}
+
+/** Both API and CMS fallback use the same fixed verified recruitment origin. */
+export function getMikaApplyUrl(value: unknown): string | null {
+  return getSafeRecruitmentUrl(value);
 }
 
 function isStringArray(value: unknown): value is string[] {
@@ -211,12 +256,15 @@ function isMikaJob(value: unknown): value is MikaJob {
   }
 
   return (
-    (typeof value.id === "number" || typeof value.id === "string") &&
+    isJobId(value.id) &&
     typeof value.title === "string" &&
+    value.title.trim().length > 0 &&
+    typeof value.status === "string" &&
     typeof value.employment_type === "string" &&
     typeof value.location === "string" &&
     typeof value.quota === "number" &&
-    typeof value.deadline === "string" &&
+    typeof value.deadline === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.deadline) &&
+    Number.isFinite(Date.parse(value.deadline)) &&
     (salary.min === null || typeof salary.min === "number") &&
     (salary.max === null || typeof salary.max === "number") &&
     typeof salary.currency === "string" &&
@@ -229,6 +277,7 @@ function isMikaJob(value: unknown): value is MikaJob {
     typeof deadlineBadge.color === "string" &&
     (typeof company.id === "number" || typeof company.id === "string") &&
     typeof company.name === "string" &&
+    company.name.trim().length > 0 &&
     (company.logo === null || typeof company.logo === "string") &&
     typeof company.city === "string" &&
     (typeof department.id === "number" || typeof department.id === "string") &&
@@ -263,97 +312,6 @@ const emptyMeta = (params: MikaJobQueryParams = {}) => ({
   has_prev: false,
 });
 
-export function legacyCareersToMikaJobs(careers: CareerPosition[]): MikaJob[] {
-  return careers.map((career) => ({
-    id: career.slug,
-    title: career.title,
-    employment_type: career.type === "Magang" ? "Internship" : career.type,
-    location: career.location,
-    salary: { min: null, max: null, currency: "IDR", formatted: "" },
-    quota: 0,
-    deadline: "",
-    deadline_info: {
-      is_expired: false,
-      is_active: true,
-      days_remaining: 0,
-      badge: { status: "open", label: "Posisi terbuka", color: "emerald" },
-    },
-    company: {
-      id: "legacy-aka",
-      name: "PT Autentik Karya Analitika",
-      logo: null,
-      city: "Semarang",
-    },
-    department: {
-      id: `legacy-${career.department.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      name: career.department,
-    },
-    description: career.summary || career.description.trim(),
-    responsibilities: career.responsibilities,
-    requirements: career.requirements,
-    benefits: career.benefits,
-    apply_url: null,
-  }));
-}
-
-export function filterMikaJobs(
-  jobs: MikaJob[],
-  params: MikaJobQueryParams = {},
-  message = "Data lowongan dimuat dari sumber cadangan AKA",
-): MikaJobsResponse {
-  let filtered = [...jobs];
-  const searchKeyword = (params.search || params.q || "").toLowerCase().trim();
-
-  if (searchKeyword) {
-    filtered = filtered.filter(
-      (job) =>
-        job.title.toLowerCase().includes(searchKeyword) ||
-        job.company.name.toLowerCase().includes(searchKeyword) ||
-        job.department.name.toLowerCase().includes(searchKeyword) ||
-        job.location.toLowerCase().includes(searchKeyword) ||
-        job.skills?.some((skill) => skill.toLowerCase().includes(searchKeyword)),
-    );
-  }
-  if (params.department_id && params.department_id !== "all") {
-    filtered = filtered.filter(
-      (job) => String(job.department.id) === String(params.department_id),
-    );
-  }
-  if (params.company_id && params.company_id !== "all") {
-    filtered = filtered.filter((job) => String(job.company.id) === String(params.company_id));
-  }
-  if (params.employment_type && params.employment_type !== "all") {
-    filtered = filtered.filter(
-      (job) => job.employment_type.toLowerCase() === params.employment_type!.toLowerCase(),
-    );
-  }
-  if (params.location && params.location !== "all") {
-    filtered = filtered.filter((job) =>
-      job.location.toLowerCase().includes(params.location!.toLowerCase()),
-    );
-  }
-
-  const page = Number(params.page) || 1;
-  const perPage = Number(params.per_page) || 10;
-  const totalItems = filtered.length;
-  const totalPages = Math.ceil(totalItems / perPage) || 1;
-  const startIndex = (page - 1) * perPage;
-
-  return {
-    success: true,
-    data: filtered.slice(startIndex, startIndex + perPage),
-    meta: {
-      current_page: page,
-      per_page: perPage,
-      total_items: totalItems,
-      total_pages: totalPages,
-      has_next: page < totalPages,
-      has_prev: page > 1,
-    },
-    message,
-  };
-}
-
 export function getDepartmentsFromJobs(jobs: MikaJob[]): MikaDepartment[] {
   return Array.from(
     new Map(jobs.map((job) => [String(job.department.id), job.department])).values(),
@@ -366,79 +324,124 @@ export function getCompaniesFromJobs(jobs: MikaJob[]): MikaCompany[] {
   );
 }
 
-export async function getMikaJobs(params: MikaJobQueryParams = {}): Promise<MikaJobsResponse> {
-  const searchParams = new URLSearchParams();
-  if (params.page) searchParams.set("page", String(params.page));
-  if (params.per_page) searchParams.set("per_page", String(params.per_page));
-  if (params.search || params.q) searchParams.set("search", (params.search || params.q || "").trim());
-  if (params.department_id && params.department_id !== "all") {
-    searchParams.set("department_id", String(params.department_id));
-  }
-  if (params.company_id && params.company_id !== "all") {
-    searchParams.set("company_id", String(params.company_id));
-  }
-  if (params.location && params.location !== "all") searchParams.set("location", params.location.trim());
-  if (params.employment_type && params.employment_type !== "all") {
-    searchParams.set("employment_type", params.employment_type.trim());
-  }
-
-  const baseUrl = getMikaApiBaseUrl();
-  if (!baseUrl) {
-    return {
-      success: false,
-      data: [],
-      meta: emptyMeta(params),
-      message: "Mika Career API sedang tidak tersedia",
-    };
-  }
-
-  const queryString = searchParams.toString();
-  const url = `${baseUrl}/jobs${queryString ? `?${queryString}` : ""}`;
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: getMikaApiHeaders(baseUrl),
-      signal: AbortSignal.timeout(4000),
-      next: { revalidate: 60 },
-    });
-    if (response.ok) {
-      const json = await response.json();
-      if (Array.isArray(json?.data)) {
-        const perPage = params.per_page ?? 10;
-        const normalizedJobs = json.data.map((job: MikaJob) => normalizeMikaJob(job, baseUrl));
-        return {
-          success: true,
-          data: normalizedJobs,
-          meta: json.meta ?? {
-            current_page: params.page ?? 1,
-            per_page: perPage,
-            total_items: json.data.length,
-            total_pages: Math.ceil(json.data.length / perPage) || 1,
-            has_next: false,
-            has_prev: false,
-          },
-          message: "Data berhasil dimuat dari Mika Career",
-        };
-      }
-    }
-  } catch (error) {
-    console.warn(
-      `[Mika Career] Live API fetch failed (${url}):`,
-      error instanceof Error ? error.message : String(error),
-    );
-  }
-
-  return {
-    success: false,
-    data: [],
-    meta: emptyMeta(params),
-    message: "Mika Career API sedang tidak tersedia",
-  };
+function positiveInteger(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : fallback;
 }
 
-export async function getMikaJobDetail(id: number | string): Promise<MikaJobDetailResult> {
-  if (!/^\d+$/.test(String(id))) return { status: "not_found" };
+function paginationParams(params: MikaJobQueryParams) {
+  return { page: positiveInteger(params.page, 1), per_page: Math.min(positiveInteger(params.per_page, 10), SNAPSHOT_PAGE_SIZE) };
+}
+
+function isPaginationMeta(value: unknown): value is MikaJobsResponse["meta"] {
+  if (!isRecord(value)) return false;
+  return [value.current_page, value.per_page, value.total_pages].every((n) => typeof n === "number" && Number.isSafeInteger(n) && n > 0)
+    && typeof value.total_items === "number" && Number.isSafeInteger(value.total_items) && value.total_items >= 0
+    && typeof value.has_next === "boolean" && typeof value.has_prev === "boolean"
+    && value.total_pages === Math.max(1, Math.ceil(value.total_items / Number(value.per_page)))
+    && value.has_next === (Number(value.current_page) < Number(value.total_pages))
+    && value.has_prev === (Number(value.current_page) > 1);
+}
+
+async function fetchJobsPage(baseUrl: string, params: MikaJobQueryParams, page: number, perPage: number) {
+  const query = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  for (const [key, value] of Object.entries({
+    search: params.search || params.q, department_id: params.department_id,
+    employment_type: params.employment_type, location: params.location,
+  })) {
+    if ((typeof value === "string" || typeof value === "number") && String(value).trim() && value !== "all") {
+      query.set(key, String(value).trim().slice(0, 100));
+    }
+  }
+  // Visitor company/company_id is deliberately not copied. Always set last.
+  query.set("company_id", String(AKA_RECRUITMENT_COMPANY_ID));
+  const response = await fetch(`${baseUrl}/jobs?${query}`, {
+    method: "GET", headers: getMikaApiHeaders(baseUrl), signal: AbortSignal.timeout(4000), next: { revalidate: 60 },
+  });
+  if (!response.ok) throw new Error("Upstream lowongan tidak tersedia");
+  const json: unknown = await response.json();
+  if (!isRecord(json) || json.success !== true || !Array.isArray(json.data) || !isPaginationMeta(json.meta)
+    || json.meta.current_page !== page || json.meta.per_page !== perPage
+    || json.data.length !== Math.max(0, Math.min(perPage, json.meta.total_items - (page - 1) * perPage))) {
+    throw new Error("Payload atau pagination lowongan tidak valid");
+  }
+  return { data: json.data as unknown[], meta: json.meta };
+}
+
+function publicJobs(data: unknown[], baseUrl: string): MikaJob[] {
+  return data.filter((job): job is MikaJob => isPublicAkaJob(job) && isMikaJob(job))
+    .map((job) => normalizeMikaJob(job, baseUrl));
+}
+
+async function publicSnapshot(baseUrl: string, params: MikaJobQueryParams): Promise<MikaJob[]> {
+  const first = await fetchJobsPage(baseUrl, params, 1, SNAPSHOT_PAGE_SIZE);
+  if (first.meta.total_pages > MAX_SNAPSHOT_PAGES || first.meta.total_items > MAX_SNAPSHOT_PAGES * SNAPSHOT_PAGE_SIZE) {
+    throw new Error("Snapshot lowongan melebihi batas");
+  }
+  const seenIds = new Set<string>();
+  const jobs: MikaJob[] = [];
+  let accumulatedRows = 0;
+  const append = (data: unknown[]) => {
+    // Prove completeness against ALL upstream rows before filtering ownership /
+    // availability. Repeated or unidentifiable rows cannot prove a snapshot.
+    for (const row of data) {
+      if (!isRecord(row) || !isJobId(row.id)) throw new Error("ID snapshot lowongan tidak valid");
+      const id = String(Number(row.id));
+      if (seenIds.has(id)) throw new Error("ID snapshot lowongan berulang");
+      seenIds.add(id);
+      accumulatedRows++;
+    }
+    jobs.push(...publicJobs(data, baseUrl));
+  };
+  append(first.data);
+  for (let page = 2; page <= first.meta.total_pages; page++) {
+    // Never follow upstream links: they omit company_id and can broaden scope.
+    const result = await fetchJobsPage(baseUrl, params, page, SNAPSHOT_PAGE_SIZE);
+    if (result.meta.total_items !== first.meta.total_items) throw new Error("Pagination lowongan berubah selama snapshot");
+    append(result.data);
+  }
+  if (accumulatedRows !== first.meta.total_items || seenIds.size !== first.meta.total_items) {
+    throw new Error("Snapshot lowongan tidak lengkap");
+  }
+  return jobs;
+}
+
+export async function getMikaJobs(params: MikaJobQueryParams = {}): Promise<MikaJobsResponse> {
+  const paging = paginationParams(params);
+  const baseUrl = getMikaApiBaseUrl();
+  if (baseUrl) {
+    try {
+      const result = await fetchJobsPage(baseUrl, params, paging.page, paging.per_page);
+      let jobs = publicJobs(result.data, baseUrl);
+      let meta = result.meta;
+      if (meta.total_pages > 1 || jobs.length !== result.data.length || new Set(jobs.map((job) => String(Number(job.id)))).size !== jobs.length) {
+        // Defense-in-depth can remove foreign/closed/malformed rows. Reconcile
+        // the bounded full result BEFORE pagination, rather than trust counts
+        // for dropped records or expose empty/miscounted intermediate pages.
+        const snapshot = await publicSnapshot(baseUrl, params);
+        const pages = Math.max(1, Math.ceil(snapshot.length / paging.per_page));
+        jobs = snapshot.slice((paging.page - 1) * paging.per_page, paging.page * paging.per_page);
+        meta = { current_page: paging.page, per_page: paging.per_page, total_items: snapshot.length, total_pages: pages,
+          has_next: paging.page < pages, has_prev: paging.page > 1 };
+      }
+      return { success: true, data: jobs, meta, message: "Lowongan PT Autentik Karya Analitika berhasil dimuat." };
+    } catch {
+      console.warn("[AKA Careers] Listing tidak tersedia atau payload tidak valid.");
+    }
+  }
+  return { success: false, data: [], meta: emptyMeta(paging),
+    message: "Informasi lowongan sedang tidak tersedia. Silakan coba lagi beberapa saat." };
+}
+
+/** Complete, scoped snapshot for sitemap; any page failure discards the result. */
+export async function getAllPublicMikaJobs(): Promise<MikaJob[] | null> {
+  const baseUrl = getMikaApiBaseUrl();
+  if (!baseUrl) return null;
+  try { return await publicSnapshot(baseUrl, {}); }
+  catch { return null; }
+}
+
+export const getMikaJobDetail = cache(async (id: number | string): Promise<MikaJobDetailResult> => {
+  if (!isJobId(id)) return { status: "not_found" };
   const baseUrl = getMikaApiBaseUrl();
   if (!baseUrl) return { status: "unavailable", reason: "configuration" };
   const url = `${baseUrl}/jobs/${id}`;
@@ -465,8 +468,14 @@ export async function getMikaJobDetail(id: number | string): Promise<MikaJobDeta
       return { status: "unavailable", reason: "invalid_response" };
     }
 
-    if (!isRecord(json) || !isMikaJob(json.data)) {
+    if (!isRecord(json) || json.success !== true) {
       console.warn(`[Mika Career] Job detail payload is invalid (id=${id})`);
+      return { status: "unavailable", reason: "invalid_response" };
+    }
+    // Foreign, missing ownership or uncertain availability is NOT a legacy
+    // lookup opportunity. Nothing from such a record is serialized publicly.
+    if (!isPublicAkaJob(json.data)) return { status: "not_found" };
+    if (!isMikaJob(json.data) || Number(json.data.id) !== Number(id)) {
       return { status: "unavailable", reason: "invalid_response" };
     }
 
@@ -474,19 +483,18 @@ export async function getMikaJobDetail(id: number | string): Promise<MikaJobDeta
     const relatedCandidate: unknown = json.related_jobs ?? rawDetail.related_jobs;
     if (
       relatedCandidate !== undefined &&
-      (!Array.isArray(relatedCandidate) || !relatedCandidate.every(isMikaJob))
+      !Array.isArray(relatedCandidate)
     ) {
       console.warn(`[Mika Career] Related job payload is invalid (id=${id})`);
       return { status: "unavailable", reason: "invalid_response" };
     }
 
-    const relatedJobs = relatedCandidate as MikaJob[] | undefined;
     const normalizedJob = normalizeMikaJob(rawDetail, baseUrl);
     return {
       status: "found",
       job: {
         ...normalizedJob,
-        related_jobs: relatedJobs?.map((relatedJob) => normalizeMikaJob(relatedJob, baseUrl)),
+        related_jobs: Array.isArray(relatedCandidate) ? publicJobs(relatedCandidate, baseUrl) : undefined,
       },
     };
   } catch (error) {
@@ -494,59 +502,14 @@ export async function getMikaJobDetail(id: number | string): Promise<MikaJobDeta
     console.warn(`[Mika Career] Job detail request failed (id=${id}, reason=${isTimeout ? "timeout" : "network"})`);
     return { status: "unavailable", reason: isTimeout ? "timeout" : "network" };
   }
-}
+});
 
 export async function getMikaDepartments(): Promise<MikaDepartment[]> {
-  const baseUrl = getMikaApiBaseUrl();
-  if (!baseUrl) return [];
-  try {
-    const response = await fetch(`${baseUrl}/departments`, {
-      headers: getMikaApiHeaders(baseUrl),
-      signal: AbortSignal.timeout(3000),
-      next: { revalidate: 300 },
-    });
-    if (response.ok) {
-      const json = await response.json();
-      if (Array.isArray(json?.data) && json.data.length > 0) return json.data;
-    }
-  } catch {
-    // Try deriving departments from live jobs below.
-  }
-
-  try {
-    const response = await fetch(`${baseUrl}/jobs?per_page=50`, {
-      headers: getMikaApiHeaders(baseUrl),
-      signal: AbortSignal.timeout(3000),
-      next: { revalidate: 300 },
-    });
-    if (response.ok) {
-      const json = await response.json();
-      if (Array.isArray(json?.data)) return getDepartmentsFromJobs(json.data);
-    }
-  } catch {
-    // Consumer derives options from the resolved fallback jobs.
-  }
-  return [];
+  const jobs = await getAllPublicMikaJobs();
+  return jobs ? getDepartmentsFromJobs(jobs) : [];
 }
 
 export async function getMikaCompanies(): Promise<MikaCompany[]> {
-  const baseUrl = getMikaApiBaseUrl();
-  if (!baseUrl) return [];
-  try {
-    const response = await fetch(`${baseUrl}/jobs?per_page=100`, {
-      headers: getMikaApiHeaders(baseUrl),
-      signal: AbortSignal.timeout(4000),
-      next: { revalidate: 300 },
-    });
-    if (response.ok) {
-      const json = await response.json();
-      if (Array.isArray(json?.data)) {
-        const normalizedJobs = json.data.map((job: MikaJob) => normalizeMikaJob(job, baseUrl));
-        return getCompaniesFromJobs(normalizedJobs);
-      }
-    }
-  } catch {
-    // Consumer derives options from the resolved fallback jobs.
-  }
-  return [];
+  const jobs = await getAllPublicMikaJobs();
+  return jobs ? getCompaniesFromJobs(jobs) : [];
 }

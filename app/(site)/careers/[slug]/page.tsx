@@ -18,12 +18,11 @@ import {
   CloudOff,
 } from "lucide-react";
 import { getMikaJobDetail } from "@/lib/api/mika-career";
-import { getPublicCareerBySlug, getRecruitmentUrl } from "@/lib/public-data";
-import AnimatedElement from "@/components/ui/ScrollAnimations";
+import { getRecruitmentUrl } from "@/lib/public-data";
 import MikaJobCard from "@/components/careers/MikaJobCard";
 import ShareJobButton from "@/components/careers/ShareJobButton";
 import JsonLd from "@/components/seo/JsonLd";
-import { getSafeExternalUrl } from "@/lib/public-url";
+import { getSafeRecruitmentUrl } from "@/lib/recruitment-url";
 
 export const dynamic = "force-dynamic";
 
@@ -45,13 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const legacyJob = await getPublicCareerBySlug(slug);
-  if (legacyJob) {
-    return {
-      title: `${legacyJob.title} - Karir | PT Autentik Karya Analitika`,
-      description: legacyJob.summary,
-    };
-  }
+  if (mikaResult.status === "not_found") notFound();
 
   if (mikaResult.status === "unavailable") {
     return {
@@ -72,12 +65,11 @@ export default async function JobDetailPage({ params }: Props) {
     getRecruitmentUrl(),
   ]);
 
-  // Gunakan data legacy untuk slug lama atau saat layanan Mika sedang terganggu.
+  // The same guarded fetcher serves metadata and content. Never fall back to
+  // an unverified legacy record for foreign/nonnumeric recruitment IDs.
   if (mikaResult.status !== "found") {
-    const legacyJob = await getPublicCareerBySlug(slug);
-    if (!legacyJob && mikaResult.status === "not_found") notFound();
+    if (mikaResult.status === "not_found") notFound();
 
-    if (!legacyJob) {
       return (
         <section
           className="min-h-[70vh] px-4 pb-20 pt-32 sm:px-6 lg:px-8"
@@ -111,77 +103,6 @@ export default async function JobDetailPage({ params }: Props) {
           </div>
         </section>
       );
-    }
-
-    // Render layout kompatibel untuk data legacy
-    return (
-      <>
-        <section
-          className="pt-32 pb-20 relative overflow-hidden public-page-hero"
-        >
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <AnimatedElement type="fade-up">
-              <Link
-                href="/careers"
-                className="inline-flex items-center gap-2 text-body hover:text-teal-600 text-sm mb-8 transition-colors"
-              >
-                <ArrowLeft size={16} />
-                Kembali ke Mika Career
-              </Link>
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full bg-teal-500/20 text-[#14B8A6] border border-teal-500/30">
-                  {legacyJob.type}
-                </span>
-                <span className="text-body text-sm font-medium flex items-center gap-1.5">
-                  <Briefcase size={14} className="text-[#14B8A6]" />
-                  {legacyJob.department}
-                </span>
-                <span className="text-body text-sm font-medium flex items-center gap-1.5">
-                  <MapPin size={14} className="text-[#14B8A6]" />
-                  {legacyJob.location}
-                </span>
-              </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-heading leading-tight mb-4 break-words">
-                {legacyJob.title}
-              </h1>
-              <p className="text-body text-lg leading-relaxed">{legacyJob.summary}</p>
-            </AnimatedElement>
-          </div>
-        </section>
-
-        <section className="py-16" style={{ backgroundColor: "var(--bg-primary)" }}>
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-            <div
-              className="p-8 rounded-2xl border"
-              style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
-            >
-              <h3 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
-                Deskripsi Pekerjaan
-              </h3>
-              <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: "var(--text-secondary)" }}>
-                {legacyJob.description.trim()}
-              </p>
-            </div>
-
-            <div className="pt-8 border-t flex items-center justify-between gap-4" style={{ borderColor: "var(--border-subtle)" }}>
-              <Link href="/careers" className="text-sm font-semibold text-[#0EA5A0] hover:underline">
-                ← Lihat lowongan lainnya di Mika Career
-              </Link>
-              {recruitmentUrl && (
-                <a
-                  href={recruitmentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-3 rounded-xl bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0c8e8a] transition-all"
-                >
-                  Lamar Sekarang
-                </a>
-              )}
-            </div>
-          </div>
-        </section>
-      </>
-    );
   }
 
   const mikaJob = mikaResult.job;
@@ -192,7 +113,7 @@ export default async function JobDetailPage({ params }: Props) {
     "@type": "JobPosting",
     title: mikaJob.title,
     description: mikaJob.description || mikaJob.title,
-    datePosted: mikaJob.created_at || "2026-09-01",
+    datePosted: mikaJob.created_at,
     validThrough: mikaJob.deadline,
     employmentType: mikaJob.employment_type.toUpperCase().replace("-", "_"),
     hiringOrganization: {
@@ -221,7 +142,7 @@ export default async function JobDetailPage({ params }: Props) {
       : undefined,
   };
 
-  const applyUrl = getSafeExternalUrl(mikaJob.apply_url) || recruitmentUrl || "/contact";
+  const applyUrl = getSafeRecruitmentUrl(mikaJob.apply_url) || getSafeRecruitmentUrl(recruitmentUrl) || "/contact";
   const isExpiringSoon = mikaJob.deadline_info.days_remaining <= 7 && !mikaJob.deadline_info.is_expired;
 
   const deadlineFormatted = new Date(mikaJob.deadline).toLocaleDateString("id-ID", {
@@ -448,20 +369,14 @@ export default async function JobDetailPage({ params }: Props) {
                   <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
                     Deskripsi Pekerjaan
                   </h2>
-                  {/\<[a-z][\s\S]*\>/i.test(mikaJob.description) ? (
-                    <div
-                      className="text-sm leading-relaxed space-y-3 prose prose-slate dark:prose-invert max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_p]:mb-3 [&_h3]:text-base [&_h3]:font-bold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-[#0EA5A0]"
-                      style={{ color: "var(--text-secondary)" }}
-                      dangerouslySetInnerHTML={{ __html: mikaJob.description }}
-                    />
-                  ) : (
-                    <p
-                      className="text-sm leading-relaxed whitespace-pre-line"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
-                      {mikaJob.description}
-                    </p>
-                  )}
+                  {/* Description is plain text converted at the DTO layer
+                      (lib/html-to-plain-text.ts); never interpret it as DOM markup. */}
+                  <p
+                    className="text-sm leading-relaxed whitespace-pre-line break-words"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {mikaJob.description}
+                  </p>
                 </div>
               )}
 
@@ -731,7 +646,7 @@ export default async function JobDetailPage({ params }: Props) {
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[#0EA5A0]/10 text-[#0EA5A0] border border-[#0EA5A0]/20 hover:bg-[#0EA5A0]/15 transition-colors"
                   >
                     <Globe size={14} />
-                    mikacares.co.id
+                     {applyUrl === "/contact" ? "Hubungi Tim Rekrutmen" : "Portal Rekrutmen"}
                   </a>
                 </div>
               </div>

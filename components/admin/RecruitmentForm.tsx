@@ -39,8 +39,8 @@ export default function RecruitmentForm({
         Pengaturan Lamaran
       </h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
-        Tautan pendaftaran eksternal untuk tombol Lamar Posisi Ini di
-        halaman /careers.
+        Tautan eksternal untuk lamaran terbuka dan cadangan CTA. Detail lowongan
+        mengutamakan apply_url dari Recruitment API.
       </p>
       <div className="grid sm:grid-cols-[1fr_auto] gap-3 items-start">
         <div>
@@ -56,11 +56,11 @@ export default function RecruitmentForm({
                 return next;
               });
             }}
-            placeholder="https://forms.google.com/..."
+            placeholder="https://recruitment.tekna.id/"
           />
           <FieldError message={errors.url} />
           <p className="mt-1 text-xs text-slate-400">
-            Kosongkan untuk menonaktifkan tombol lamaran.
+            Hanya origin HTTPS recruitment.tekna.id yang diperbolehkan. Kosongkan untuk menonaktifkan tautan cadangan; URL API valid tetap digunakan.
           </p>
         </div>
         <button

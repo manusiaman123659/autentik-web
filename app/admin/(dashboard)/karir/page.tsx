@@ -17,7 +17,7 @@ export default async function AdminKarirPage() {
     <div className="max-w-6xl">
       <PageHeader
         title="Karir"
-        description="Lowongan pekerjaan yang tampil di halaman /careers (hanya status Terbuka yang tampil publik)"
+        description="Arsip lowongan lokal. Lowongan publik berasal dari Recruitment API PT Autentik Karya Analitika; arsip ini tidak dipublikasikan sebagai fallback."
         actionLabel="Tambah Lowongan"
         actionHref="/admin/karir/new"
       />
@@ -30,7 +30,7 @@ export default async function AdminKarirPage() {
         <EmptyState
           icon={<Briefcase size={26} />}
           title="Belum ada lowongan"
-          description="Tambahkan lowongan pertama yang ingin tampil di halaman karir situs."
+          description="Tambahkan arsip lowongan lokal. Lowongan publik dikelola melalui Recruitment API."
           actionHref="/admin/karir/new"
           actionLabel="Tambah Lowongan"
         />

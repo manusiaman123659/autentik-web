@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/middleware";
+import { getCareerRoutingResponse } from "@/lib/api/career-routing";
 
-export async function proxy(request: NextRequest) {
+async function refreshSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
@@ -35,6 +36,15 @@ export async function proxy(request: NextRequest) {
       },
     });
   }
+}
+
+export async function proxy(request: NextRequest) {
+  // Existing session-refresh logic runs first and is otherwise unchanged.
+  const sessionResponse = await refreshSession(request);
+  const careerResponse = await getCareerRoutingResponse(request);
+  if (!careerResponse) return sessionResponse;
+  for (const cookie of sessionResponse.cookies.getAll()) careerResponse.cookies.set(cookie);
+  return careerResponse;
 }
 
 export const config = {
