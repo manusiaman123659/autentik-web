@@ -1,201 +1,31 @@
-"use client";
+import type { DeliveryNoteData, DocumentIdentity } from "@/lib/print/document-types";
+import PrintDocumentHeader from "@/components/print/PrintDocumentHeader";
+import DocumentSignatures from "@/components/print/DocumentSignatures";
 
-import type { OrderRow, OrderItemRow } from "@/lib/admin-data";
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-interface Props {
-  order: OrderRow;
-  items: OrderItemRow[];
-  companyContact: {
-    address: string;
-    email: string;
-    phone: string;
-    mapsQuery: string;
-    mapEmbed: string;
-  } | null;
-}
-
-export default function PrintPackingSlip({ order, items, companyContact }: Props) {
-  const addr = (order.shipping_address ?? {}) as Record<string, string>;
-  const addressParts = [addr.address, addr.city, addr.province, addr.postal_code].filter(Boolean);
-
+export default function PrintPackingSlip({ data, identity }: { data: DeliveryNoteData; identity: DocumentIdentity }) {
+  const showSku = data.items.some((item) => Boolean(item.sku));
   return (
-    <div
-      className="print-document text-slate-900 bg-white p-8 max-w-4xl mx-auto text-sm leading-relaxed"
-      style={{ position: "fixed", left: "-9999px", top: "-9999px" }}
-    >
-      {/* Header */}
-      <header className="flex items-start justify-between pb-6 mb-6 border-b-2 border-slate-900">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-[#0EA5A0] flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-black text-xl">AKA</span>
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-slate-900 leading-tight">
-              PT Autentik Karya Analitika
-            </h1>
-            <p className="text-xs text-slate-500 leading-snug">
-              Teknologi IoT &amp; Solusi Industri Terintegrasi
-            </p>
-          </div>
-        </div>
-        <div className="text-right">
-          <h2 className="text-lg font-black uppercase tracking-wide text-slate-900">
-            Surat Jalan &amp; Packing Slip
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            No. <strong className="text-slate-900">{order.order_code}</strong>
-          </p>
-          <p className="text-xs text-slate-400">{fmtDate(order.created_at)}</p>
-        </div>
-      </header>
-
-      {/* Info Pengirim & Penerima */}
-      <section className="grid grid-cols-2 gap-8 mb-8">
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 pb-1 border-b border-slate-200">
-            Pengirim
-          </h3>
-          <div className="space-y-1 text-xs">
-            <p className="font-semibold text-slate-900">PT Autentik Karya Analitika</p>
-            {companyContact?.address ? (
-              <p className="text-slate-600">{companyContact.address}</p>
-            ) : (
-              <>
-                <p className="text-slate-600">Jl. Raya Teknologi No. 123</p>
-                <p className="text-slate-600">Jakarta Selatan, 12345</p>
-              </>
-            )}
-            {companyContact?.phone && (
-              <p className="text-slate-600">Telp: {companyContact.phone}</p>
-            )}
-          </div>
-        </div>
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 pb-1 border-b border-slate-200">
-            Penerima
-          </h3>
-          <div className="space-y-1 text-xs">
-            <p className="font-semibold text-slate-900">{order.customer_name}</p>
-            {order.customer_phone && (
-              <p className="text-slate-600">Telp: {order.customer_phone}</p>
-            )}
-            {addressParts.length > 0 && (
-              <p className="text-slate-600 leading-relaxed">{addressParts.join(", ")}</p>
-            )}
-            {order.tracking_courier && (
-              <p className="text-slate-600">
-                Ekspedisi: <strong>{order.tracking_courier}</strong>
-                {order.tracking_number && ` — ${order.tracking_number}`}
-              </p>
-            )}
-          </div>
-        </div>
+    <article className="print-document" aria-label="Surat Jalan">
+      <PrintDocumentHeader identity={identity} title="SURAT JALAN" code={data.code} />
+      <section className="document-info"><div><h3>Penerima</h3><p><strong>{data.recipient.name}</strong></p>
+        {data.recipient.phone && <p>{data.recipient.phone}</p>}{data.recipient.address && <p>{data.recipient.address}</p>}
+      </div><dl><dt>Tanggal Pesanan</dt><dd>{data.orderDate}</dd>
+        {data.courier && <><dt>Kurir</dt><dd>{data.courier}</dd></>}
+        {data.trackingNumber && <><dt>Nomor Resi</dt><dd>{data.trackingNumber}</dd></>}
+      </dl></section>
+      <table className="document-table"><colgroup><col className="col-number" /><col />{showSku && <col className="col-sku" />}<col className="col-quantity" /><col className="col-description" /></colgroup><thead><tr>
+        <th scope="col">No.</th><th scope="col">Produk</th>{showSku && <th scope="col">SKU</th>}
+        <th scope="col" className="quantity">Qty</th><th scope="col">Keterangan</th>
+      </tr></thead><tbody>{data.items.map((item, index) => <tr key={item.id}>
+        <td className="number">{index + 1}</td><td>{item.name}</td>{showSku && <td>{item.sku ?? ""}</td>}
+        <td className="quantity">{item.quantity}</td><td>{item.variantLabel ? `Varian: ${item.variantLabel}` : ""}</td>
+      </tr>)}</tbody></table>
+      {data.notes && <section className="document-notes"><h3>Catatan Pesanan</h3><p>{data.notes}</p></section>}
+      <div className="document-closing"><section className="document-receipt"><p>Barang diterima dalam kondisi:</p><p><span className="receipt-box" aria-label="Kotak belum dicentang" />Baik</p>
+        <p>Catatan:</p><div className="receipt-line" /><div className="receipt-line" />
       </section>
-
-      {/* Tabel Checklist */}
-      <section className="mb-8">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 pb-1 border-b border-slate-200">
-          Daftar Barang
-        </h3>
-        <table className="w-full border-collapse text-xs">
-          <thead>
-            <tr className="bg-slate-100">
-              <th className="border border-slate-300 px-3 py-2 text-left font-bold text-slate-700 w-8">
-                No
-              </th>
-              <th className="border border-slate-300 px-3 py-2 text-left font-bold text-slate-700 w-28">
-                Kode / SKU
-              </th>
-              <th className="border border-slate-300 px-3 py-2 text-left font-bold text-slate-700">
-                Deskripsi Barang
-              </th>
-              <th className="border border-slate-300 px-3 py-2 text-center font-bold text-slate-700 w-16">
-                Qty
-              </th>
-              <th className="border border-slate-300 px-3 py-2 text-center font-bold text-slate-700 w-20">
-                Cek Fisik
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((it, idx) => (
-              <tr key={it.id} className="break-inside-avoid">
-                <td className="border border-slate-300 px-3 py-2 text-center text-slate-600">
-                  {idx + 1}
-                </td>
-                <td className="border border-slate-300 px-3 py-2 text-slate-700 font-mono">
-                  {it.sku || "—"}
-                </td>
-                <td className="border border-slate-300 px-3 py-2 text-slate-900 font-medium">
-                  {it.product_name}
-                </td>
-                <td className="border border-slate-300 px-3 py-2 text-center text-slate-700 font-semibold">
-                  {it.quantity}
-                </td>
-                <td className="border border-slate-300 px-3 py-2 text-center">
-                  <span className="inline-block w-5 h-5 border-2 border-slate-300 rounded" />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      {/* Catatan */}
-      {order.notes && (
-        <section className="mb-8 p-4 rounded-lg border border-slate-200 bg-slate-50 break-inside-avoid">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">
-            Catatan
-          </h3>
-          <p className="text-xs text-slate-700 whitespace-pre-wrap">{order.notes}</p>
-        </section>
-      )}
-
-      {/* Tanda Tangan */}
-      <section className="mt-12 break-inside-avoid">
-        <div className="grid grid-cols-3 gap-8">
-          <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-1">Gudang / Packing</p>
-            <div className="h-16" />
-            <div className="border-t border-slate-300 pt-2">
-              <p className="text-[11px] text-slate-500">(………………………)</p>
-            </div>
-          </div>
-          <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-1">Driver / Kurir</p>
-            <div className="h-16" />
-            <div className="border-t border-slate-300 pt-2">
-              <p className="text-[11px] text-slate-500">(………………………)</p>
-            </div>
-          </div>
-          <div className="text-center">
-            <p className="text-[11px] text-slate-400 mb-1">Penerima Barang</p>
-            <div className="h-16" />
-            <div className="border-t border-slate-300 pt-2">
-              <p className="text-[11px] text-slate-500">(………………………)</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <style>{`
-        @media print {
-          body { margin: 0; }
-          .print-document {
-            position: static !important;
-            left: auto !important;
-            top: auto !important;
-          }
-        }
-      `}</style>
-    </div>
+      <DocumentSignatures delivery />
+      </div>
+    </article>
   );
 }

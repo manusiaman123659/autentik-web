@@ -1,0 +1,76 @@
+@page { size: A4 portrait; margin: 12mm; }
+
+.print-preview { min-height: 100vh; padding: 24px 16px; background: #e8edf1; color: #142536; color-scheme: light; }
+.print-toolbar { max-width: 210mm; margin: 0 auto 20px; font-size: 12px; color: #334155; }
+.print-toolbar-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.print-toolbar a, .print-toolbar button { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px 14px; background: white; color: #142536; text-decoration: none; cursor: pointer; }
+.print-toolbar button { background: #0b1f3a; color: white; border-color: #0b1f3a; }
+.print-toolbar button:disabled { opacity: .6; cursor: wait; }
+.print-toolbar p { margin: 10px 0 0; line-height: 1.5; }
+.print-toolbar [role="alert"] { color: #991b1b; }
+.print-document { box-sizing: border-box; width: 210mm; max-width: 100%; min-height: 297mm; margin: 0 auto; padding: 12mm; background: white; color: #142536; font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.4; box-shadow: 0 2px 12px #0b1f3a18; overflow-wrap: anywhere; }
+.print-document p { margin: 0 0 3px; }
+.document-letterhead { display: flex; align-items: center; gap: 8mm; padding-bottom: 6mm; border-bottom: 2px solid #0b1f3a; }
+.document-logo { width: 29mm; height: 29mm; object-fit: contain; flex-shrink: 0; }
+.document-company h1 { margin: 0 0 3mm; font-size: 14pt; font-weight: 700; color: #0b1f3a; }
+.document-company p { font-size: 9pt; }
+.document-title { display: flex; justify-content: space-between; align-items: baseline; gap: 6mm; padding: 7mm 0; }
+.document-title h2 { margin: 0; font-size: 20pt; font-weight: 700; letter-spacing: .04em; color: #0b1f3a; }
+.document-title p { font-size: 9pt; text-align: right; }
+.document-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; margin-bottom: 7mm; }
+.document-info h3, .document-notes h3 { margin: 0 0 2mm; font-size: 10pt; font-weight: 700; }
+.document-info dl { margin: 0; }
+.document-info dt { font-size: 8.5pt; color: #475569; }
+.document-info dd { margin: 0 0 2mm; }
+.document-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9pt; }
+.col-number { width: 10mm; }
+.col-sku { width: 22mm; }
+.col-quantity { width: 12mm; }
+.col-money { width: 32mm; }
+.col-description { width: 40mm; }
+.document-table thead { display: table-header-group; }
+.document-table th, .document-table td { border: 1px solid #9aa8b5; padding: 2.5mm 2mm; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.document-table th { background: #eef2f5; font-weight: 700; color: #0b1f3a; }
+.document-table tr { break-inside: avoid; page-break-inside: avoid; }
+.document-table .number, .document-table .money { text-align: right; font-variant-numeric: tabular-nums; }
+.document-table .quantity { text-align: center; }
+.document-table .variant { display: block; font-size: 8pt; color: #475569; margin-top: 1mm; }
+.document-totals { width: 75mm; max-width: 100%; margin: 5mm 0 6mm auto; break-inside: avoid; }
+.document-closing { break-inside: avoid; }
+.document-totals dl { display: grid; grid-template-columns: 1fr auto; gap: 2mm 5mm; margin: 0; }
+.document-totals dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.document-totals .total { border-top: 2px solid #0b1f3a; padding-top: 3mm; font-size: 12pt; font-weight: 700; }
+.document-notes { margin: 5mm 0; break-inside: avoid; }
+.document-notes p { white-space: pre-wrap; }
+.document-receipt { margin-top: 7mm; break-inside: avoid; }
+.receipt-box { display: inline-block; width: 3.5mm; height: 3.5mm; border: 1px solid #142536; margin-right: 2mm; vertical-align: middle; }
+.receipt-line { border-bottom: 1px solid #9aa8b5; height: 6mm; }
+.document-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 15mm; margin-top: 8mm; break-inside: avoid; }
+.signature-space { height: 20mm; }
+.document-footer { border-top: 1px solid #9aa8b5; margin-top: 7mm; padding-top: 3mm; font-size: 8.5pt; break-inside: avoid; }
+.document-paid { display: inline-block; font-size: 9pt; font-weight: 700; border-bottom: 1px solid #0ea5a0; }
+
+@media screen and (max-width: 600px) {
+  .print-preview { padding: 12px 8px; }
+  .print-document { padding: 6mm; font-size: 9pt; min-height: 0; }
+  .document-logo { width: 20mm; height: 20mm; }
+  .document-company h1 { font-size: 11pt; }
+  .document-title { flex-wrap: wrap; }
+  .document-title h2 { font-size: 16pt; }
+  .document-info { gap: 4mm; }
+  .document-table { font-size: 8pt; }
+  .document-table th, .document-table td { padding: 1.5mm 1mm; }
+  .col-number { width: 6%; }
+  .col-sku { width: 13%; }
+  .col-quantity { width: 7%; }
+  .col-money { width: 20%; }
+  .col-description { width: 24%; }
+}
+
+@media print {
+  html:has(.print-preview), body:has(.print-preview) { background: white !important; color: #142536 !important; margin: 0 !important; }
+  .print-toolbar { display: none !important; }
+  .print-preview { min-height: 0; padding: 0; margin: 0; background: white; }
+  .print-document { width: auto; max-width: none; min-height: 0; margin: 0; padding: 0; box-shadow: none; background: white; color: #142536; }
+  .document-logo, .document-table th { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MapPin, Phone, Mail, Receipt } from "lucide-react";
-import { getAdminBankAccount, getOrder, getSupabase } from "@/lib/admin-data";
-import { getCompanyContact } from "@/lib/public-data";
+import { getOrder, getSupabase } from "@/lib/admin-data";
 import { PageHeader, Card, formatRupiah } from "@/components/admin/ui";
 import OrderStatusForm from "@/components/admin/OrderStatusForm";
 import OrderDeleteButton from "@/components/admin/OrderDeleteButton";
@@ -25,10 +24,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   const user = await requireCapability("operations");
   const canManageFinance = hasCapability(user.role, "sensitive");
   const { id } = await params;
-  const [data, companyContact] = await Promise.all([
-    getOrder(id),
-    getCompanyContact(),
-  ]);
+  const data = await getOrder(id);
   if (!data) notFound();
   const { order, items } = data;
   const { data: courierData, error: courierError } = await (await getSupabase()).rpc("get_order_couriers");
@@ -40,9 +36,6 @@ export default async function AdminOrderDetailPage({ params }: Props) {
     : order.midtrans_order_id === order.order_code
       ? "valid"
       : "mismatch";
-  const bankAccount = canManageFinance && order.payment_method === "transfer"
-    ? await getAdminBankAccount()
-    : null;
   const addr = (order.shipping_address ?? {}) as Record<string, string>;
 
   return (
@@ -56,10 +49,8 @@ export default async function AdminOrderDetailPage({ params }: Props) {
 
       <div className="mb-6 flex justify-end">
         <OrderPrintActions
-          order={order}
-          items={items}
-          companyContact={companyContact}
-          bankAccount={bankAccount}
+          orderId={order.id}
+          status={order.status}
         />
       </div>
 

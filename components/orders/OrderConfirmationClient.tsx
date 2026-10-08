@@ -22,7 +22,6 @@ import { formatRupiah } from "@/lib/format";
 import { regenerateMidtransPayment } from "@/lib/actions/checkout";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import OptimizedImage from "@/components/ui/OptimizedImage";
-import PrintCustomerInvoice from "./PrintCustomerInvoice";
 import OrderShippingInfo from "./OrderShippingInfo";
 
 type DbOrderItem = {
@@ -233,7 +232,6 @@ export default function OrderConfirmationClient({
 
   return (
     <>
-    <PrintCustomerInvoice snapshot={snapshot} bankAccount={bankAccount} showBankTransfer={paymentFlow === "manual_transfer"} />
     <div className="min-h-screen print:hidden" style={{ backgroundColor: "var(--bg-primary)" }}>
       {/* Header */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
@@ -295,15 +293,16 @@ export default function OrderConfirmationClient({
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${paymentBadge.className}`}>
               {paymentBadge.label}
             </span>
-            <button
-              type="button"
-              onClick={() => window.print()}
+            <Link
+              href={`/store/orders/${encodeURIComponent(code)}/print`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors"
               style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
             >
               <Printer size={14} />
               Cetak Bukti Pesanan
-            </button>
+            </Link>
           </div>
         </div>
       </div>
