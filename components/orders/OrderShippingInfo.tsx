@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { Check, Copy, ExternalLink, Truck } from "lucide-react";
-import { getTrackingDestination, isSafeCourier, isSafeTrackingNumber } from "@/lib/shipping/tracking";
+import { getSafeTrackingUrl, isSafeCourier, isSafeTrackingNumber } from "@/lib/shipping/tracking";
 
-export default function OrderShippingInfo({ status, paymentStatus, courier, trackingNumber }: {
+export default function OrderShippingInfo({ status, paymentStatus, courier, trackingNumber, trackingUrl }: {
   status: string;
   paymentStatus: string;
   courier: string | null;
   trackingNumber: string | null;
+  trackingUrl: string | null;
 }) {
   const [feedback, setFeedback] = useState("");
   const number = trackingNumber?.trim() ?? "";
@@ -16,7 +17,7 @@ export default function OrderShippingInfo({ status, paymentStatus, courier, trac
   const inactive = status === "cancelled" || ["failed", "refunded"].includes(paymentStatus);
   const available = !inactive && ["shipped", "completed"].includes(status)
     && Boolean(number && courierName) && isSafeTrackingNumber(number) && isSafeCourier(courierName);
-  const destination = available ? getTrackingDestination(courierName) : null;
+  const destination = available ? getSafeTrackingUrl(trackingUrl) : null;
   const copy = async () => {
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
@@ -61,7 +62,7 @@ export default function OrderShippingInfo({ status, paymentStatus, courier, trac
                 className="inline-flex items-center gap-2 rounded-sm bg-[#0EA5A0] px-4 py-2.5 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500">
                 Lacak Pengiriman<ExternalLink size={14} />
               </a>
-              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Salin resi lalu tempelkan pada halaman resmi kurir.</p>
+              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Salin nomor resi, lalu masukkan pada halaman pelacakan resmi kurir.</p>
             </div>
           ) : <p className="text-xs" style={{ color: "var(--text-secondary)" }}>Tautan pelacakan belum tersedia untuk kurir ini. Anda tetap dapat menyalin nomor resi.</p>}
         </div>

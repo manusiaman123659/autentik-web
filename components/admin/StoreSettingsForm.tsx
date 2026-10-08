@@ -6,7 +6,8 @@ import { Loader2, Save, Plus, X } from "lucide-react";
 import { saveStoreSettings } from "@/lib/actions/settings";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
 import { useToast } from "@/components/admin/Toast";
-import { courierNameSchema, storeSettingsSchema } from "@/lib/validations/storeSchema";
+import { courierNameSchema, courierTrackingUrlSchema, storeSettingsSchema } from "@/lib/validations/storeSchema";
+import { getTrackingDestination, normalizeCourierKey } from "@/lib/shipping/tracking";
 
 export default function StoreSettingsForm({ initial }: { initial: Record<string, unknown> }) {
   const router = useRouter();
@@ -22,6 +23,14 @@ export default function StoreSettingsForm({ initial }: { initial: Record<string,
     Array.isArray(get("couriers", [])) ? (get("couriers", []) as unknown[]).filter((value): value is string => typeof value === "string") : []
   );
   const [courierInput, setCourierInput] = useState("");
+  const [courierUrlInput, setCourierUrlInput] = useState("");
+  const [trackingUrls, setTrackingUrls] = useState<Record<string, string | null>>(() => {
+    const mapping = get("courierTrackingUrls", undefined);
+    const names = mapping && typeof mapping === "object" && !Array.isArray(mapping) ? Object.keys(mapping) : [];
+    return Object.fromEntries([...names, ...couriers].map((name) => [normalizeCourierKey(name), getTrackingDestination(name, mapping)]));
+  });
+  const [editingCourier, setEditingCourier] = useState<string | null>(null);
+  const [editingUrl, setEditingUrl] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
@@ -36,24 +45,42 @@ export default function StoreSettingsForm({ initial }: { initial: Record<string,
       setErrors({ courierInput: "Kurir ini sudah terdaftar. Gunakan nama kurir yang berbeda." });
       return;
     }
+    const url = courierTrackingUrlSchema.nullable().safeParse(courierUrlInput.trim() ? courierUrlInput : null);
+    if (!url.success) {
+      setErrors({ courierUrlInput: url.error.issues[0].message });
+      return;
+    }
     setErrors({});
     setCouriers([...couriers, c]);
+    setTrackingUrls({ ...trackingUrls, [normalizeCourierKey(c)]: url.data });
     setCourierInput("");
+    setCourierUrlInput("");
+  };
+
+  const saveCourierUrl = () => {
+    if (!editingCourier) return;
+    const parsed = courierTrackingUrlSchema.nullable().safeParse(editingUrl.trim() ? editingUrl : null);
+    if (!parsed.success) { setErrors({ editingUrl: parsed.error.issues[0].message }); return; }
+    setTrackingUrls({ ...trackingUrls, [normalizeCourierKey(editingCourier)]: parsed.data });
+    setEditingCourier(null);
+    setErrors({});
   };
 
   const removeCourier = (courier: string) => {
     if (!window.confirm(`Hapus "${courier}" dari daftar kurir aktif? Pesanan yang sudah tersimpan tidak akan diubah.`)) return;
     setCouriers(couriers.filter((value) => value !== courier));
+    if (editingCourier === courier) setEditingCourier(null);
     setErrors({});
   };
 
   const handleSubmit = async () => {
     setErrors({});
-    if (courierInput.trim()) {
+    if (courierInput.trim() || courierUrlInput.trim()) {
       setErrors({ courierInput: "Klik Tambah Kurir terlebih dahulu, lalu simpan pengaturan." });
       return;
     }
-    const parsed = storeSettingsSchema.safeParse({ currency, enableShipping, couriers });
+    if (editingCourier) { setErrors({ editingUrl: "Selesaikan atau batalkan edit URL sebelum menyimpan pengaturan." }); return; }
+    const parsed = storeSettingsSchema.safeParse({ currency, enableShipping, couriers, courierTrackingUrls: trackingUrls });
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((issue) => [issue.path.join("."), issue.message])));
       return;
@@ -120,26 +147,36 @@ export default function StoreSettingsForm({ initial }: { initial: Record<string,
               }}
               placeholder="mis. JNE, J&T, SiCepat"
             />
-            <button
-              type="button"
-              disabled={busy}
-              onClick={addCourier}
-              className="inline-flex shrink-0 items-center gap-1.5 px-4 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            >
-              <Plus size={15} />
-              Tambah Kurir
-            </button>
           </div>
           <div id="store-courier-error" role="status"><FieldError message={errors.courierInput} /></div>
-          <FieldError message={Object.entries(errors).find(([key]) => key === "couriers" || key.startsWith("couriers."))?.[1]} />
+          <div className="mt-3">
+            <label htmlFor="store-courier-url" className={labelClass}>URL Pelacakan Resmi (opsional)</label>
+            <input id="store-courier-url" className={inputClass} disabled={busy} value={courierUrlInput}
+              onChange={(e) => setCourierUrlInput(e.target.value)} placeholder="https://jne.co.id/tracking-package"
+              aria-invalid={Boolean(errors.courierUrlInput)} aria-describedby="store-courier-url-error" />
+            <div id="store-courier-url-error" role="status"><FieldError message={errors.courierUrlInput} /></div>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Opsional. Saat ini hanya domain jne.co.id yang terverifikasi. Kurir baru tetap dapat ditambahkan tanpa URL.</p>
+            <button type="button" disabled={busy} onClick={addCourier}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+              <Plus size={15} />Tambah Kurir
+            </button>
+          </div>
+          <FieldError message={Object.entries(errors).find(([key]) => key === "couriers" || key.startsWith("couriers.") || key.startsWith("courierTrackingUrls"))?.[1]} />
           {couriers.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-3">
+            <div className="space-y-2 mt-3">
               {couriers.map((c, index) => (
-                <span
+                <div
                   key={`${c}-${index}`}
-                  className="inline-flex max-w-full items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0EA5A0]/10 text-[#0C8C87] dark:text-teal-300 text-xs font-semibold"
+                  className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"
                 >
-                  <span className="min-w-0 break-all">{c}</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="break-all text-sm font-semibold text-slate-900 dark:text-white">{c}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Pelacakan: {getTrackingDestination(c, trackingUrls) ? new URL(getTrackingDestination(c, trackingUrls)!).hostname : "Belum diatur"}</p>
+                    </div>
+                    <div className="inline-flex shrink-0 items-center gap-3 text-xs font-semibold">
+                      <button type="button" disabled={busy} aria-label={`Edit URL ${c}`} className="text-[#0EA5A0]"
+                        onClick={() => { setEditingCourier(c); setEditingUrl(trackingUrls[normalizeCourierKey(c)] ?? ""); setErrors({}); }}>Edit URL</button>
                   <button
                     type="button"
                     disabled={busy}
@@ -149,7 +186,23 @@ export default function StoreSettingsForm({ initial }: { initial: Record<string,
                   >
                     <span className="inline-flex items-center gap-1"><X size={12} />Hapus</span>
                   </button>
-                </span>
+                    </div>
+                  </div>
+                  {editingCourier === c && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Nama kurir: {c} (tidak dapat diubah)</p>
+                      <label htmlFor="store-edit-tracking-url" className={labelClass}>URL Pelacakan Resmi (opsional)</label>
+                      <input id="store-edit-tracking-url" className={inputClass} disabled={busy} value={editingUrl}
+                        onChange={(e) => setEditingUrl(e.target.value)} aria-invalid={Boolean(errors.editingUrl)} aria-describedby="store-edit-url-error" />
+                      <div id="store-edit-url-error" role="status"><FieldError message={errors.editingUrl} /></div>
+                      <div className="flex gap-3 text-xs font-semibold">
+                        <button type="button" disabled={busy} onClick={saveCourierUrl} className="text-[#0EA5A0]">Simpan URL</button>
+                        <button type="button" disabled={busy} onClick={() => { setEditingCourier(null); setErrors({}); }} className="text-slate-500">Batal</button>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Kosongkan URL untuk menonaktifkan tautan. Klik Simpan Pengaturan untuk menyimpan perubahan.</p>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}

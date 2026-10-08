@@ -9,6 +9,7 @@ import { storeSettingsSchema } from "@/lib/validations/storeSchema";
 import { HERO_MAIN_BRAND_IDS, heroSlidesSchema } from "@/lib/validations/heroSchema";
 import { recordAudit } from "@/lib/audit";
 import type { ActionResult } from "./products";
+import { getTrackingDestination, normalizeCourierKey } from "@/lib/shipping/tracking";
 
 function toErrors(error: ZodError): Record<string, string> {
   const out: Record<string, string> = {};
@@ -38,9 +39,16 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
   }
   const currentValue = existing?.value && typeof existing.value === "object" && !Array.isArray(existing.value)
     ? existing.value as Record<string, unknown> : {};
+  const savedMapping = currentValue.courierTrackingUrls;
+  const retainedMapping = savedMapping && typeof savedMapping === "object" && !Array.isArray(savedMapping)
+    ? Object.fromEntries(Object.keys(savedMapping).map((name) => [normalizeCourierKey(name), getTrackingDestination(name, savedMapping)])) : {};
+  const value = { ...currentValue, ...parsed.data,
+    ...(parsed.data.courierTrackingUrls !== undefined
+      ? { courierTrackingUrls: { ...retainedMapping, ...parsed.data.courierTrackingUrls } } : {}),
+  };
   const { error } = await supabase
     .from("site_settings")
-    .upsert({ key: "store", value: { ...currentValue, ...parsed.data } as never }, { onConflict: "key" });
+    .upsert({ key: "store", value: value as never }, { onConflict: "key" });
   if (error) {
     console.error("[action] save store settings", error);
     return { success: false, message: "Gagal menyimpan pengaturan. " + error.message };
@@ -49,6 +57,7 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
   await recordAudit("site_settings.updated", "site_settings", "store", parsed.data);
   revalidatePath("/admin/integrasi");
   revalidatePath("/admin/orders", "layout");
+  revalidatePath("/store/orders", "layout");
 
   return { success: true, message: "Pengaturan toko berhasil disimpan." };
 }

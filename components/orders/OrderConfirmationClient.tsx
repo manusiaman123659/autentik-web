@@ -41,6 +41,7 @@ type DbOrder = {
   payment_status: string;
   tracking_courier: string | null;
   tracking_number: string | null;
+  tracking_url: string | null;
   payment_method: string | null;
   subtotal: number;
   shipping_cost: number;
@@ -439,6 +440,7 @@ export default function OrderConfirmationClient({
           paymentStatus={effectivePaymentStatus}
           courier={dbOrder.tracking_courier}
           trackingNumber={dbOrder.tracking_number}
+          trackingUrl={dbOrder.tracking_url}
         />
 
         {/* Daftar item */}

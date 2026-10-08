@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isSafeCourier, isSafeTrackingNumber } from "@/lib/shipping/tracking";
+import { getSafeTrackingUrl, normalizeCourierKey, isSafeCourier, isSafeTrackingNumber } from "@/lib/shipping/tracking";
 
 export const ORDER_STATUSES = ["pending", "processing", "shipped", "completed", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -120,10 +120,26 @@ export const courierListSchema = z.array(courierNameSchema).superRefine((values,
   });
 });
 
+export const courierTrackingUrlSchema = z.string()
+  .refine((value) => getSafeTrackingUrl(value) !== null, "Gunakan URL HTTPS halaman resmi pada domain terverifikasi, tanpa query, fragment, kredensial, atau template resi")
+  .transform((value) => getSafeTrackingUrl(value)!);
+
+export const courierTrackingUrlsSchema = z.record(courierNameSchema, courierTrackingUrlSchema.nullable())
+  .superRefine((value, ctx) => {
+    const seen = new Set<string>();
+    for (const name of Object.keys(value)) {
+      const key = normalizeCourierKey(name);
+      if (seen.has(key)) ctx.addIssue({ code: "custom", path: [name], message: "Konfigurasi URL kurir tidak boleh duplikat" });
+      seen.add(key);
+    }
+  })
+  .transform((value) => Object.fromEntries(Object.entries(value).map(([name, url]) => [normalizeCourierKey(name), url])));
+
 export const storeSettingsSchema = z.object({
   currency: z.string().min(1, "Mata uang wajib diisi"),
   enableShipping: z.boolean().default(false),
   couriers: courierListSchema.default([]),
+  courierTrackingUrls: courierTrackingUrlsSchema.optional(),
 });
 
 export type StoreSettingsFormData = z.infer<typeof storeSettingsSchema>;

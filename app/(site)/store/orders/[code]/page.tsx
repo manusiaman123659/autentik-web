@@ -7,6 +7,7 @@ import { getWhatsAppContact, getOwnedLegacyTransferBankAccount } from "@/lib/pub
 import { createClient } from "@/utils/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getSafeMidtransRedirectUrl } from "@/lib/payments/midtransInitialization";
+import { getOwnedOrderTrackingUrl } from "@/lib/shipping/tracking-data";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
   const rawOrder = data as RawOrder | null;
 
   if (orderError || !rawOrder) notFound();
+  const trackingUrl = await getOwnedOrderTrackingUrl(code);
 
   const paymentFlow =
     rawOrder?.payment_method === "transfer"
@@ -124,6 +126,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     payment_status: rawOrder.payment_status,
     tracking_courier: rawOrder.tracking_courier,
     tracking_number: rawOrder.tracking_number,
+    tracking_url: trackingUrl,
     payment_method: rawOrder.payment_method,
     subtotal: rawOrder.subtotal,
     shipping_cost: rawOrder.shipping_cost,

@@ -21,14 +21,15 @@ async function main() {
       import OrderStatusForm from './components/admin/OrderStatusForm';
       import StoreSettingsForm from './components/admin/StoreSettingsForm';
       import OrderConfirmationClient from './components/orders/OrderConfirmationClient';
+      import {getTrackingDestination} from './lib/shipping/tracking';
       const app=createRoot(document.getElementById('app')); let version=0;
       window.errors=[]; window.toasts=[]; window.submits=[]; window.refreshes=0;
       window.addEventListener('error',e=>window.errors.push(e.message));
       window.addEventListener('unhandledrejection',e=>window.errors.push(String(e.reason)));
-      window.shipping=(status='shipped',courier='JNE',trackingNumber='AWB123',paymentStatus='paid')=>app.render(<OrderShippingInfo key={++version} {...{status,courier,trackingNumber,paymentStatus}}/>);
+      window.shipping=(status='shipped',courier='JNE',trackingNumber='AWB123',paymentStatus='paid',trackingUrl=getTrackingDestination(courier))=>app.render(<OrderShippingInfo key={++version} {...{status,courier,trackingNumber,paymentStatus,trackingUrl}}/>);
       window.admin=(status='processing',courier='',number='',couriers=['JNE','UNKNOWN'])=>app.render(<OrderStatusForm key={++version} orderId='fixture' couriers={couriers} initial={{status,trackingCourier:courier,trackingNumber:number,cancelReason:'',updatedAt:'2026-10-06T12:00:00.123456Z'}}/>);
-      window.settings=(couriers=[])=>app.render(<StoreSettingsForm key={++version} initial={{currency:'IDR',enableShipping:false,couriers}}/>);
-      window.confirmation=(status='shipped',courier='JNE',trackingNumber='TEST123456789',paymentStatus='paid')=>app.render(<OrderConfirmationClient key={++version} code='ORD-20261007-9941' waNumber={null} bankAccount={null} paymentFlow='midtrans' paymentReturn={true} dbOrder={{order_code:'ORD-20261007-9941',customer_name:'Customer Fixture',status,payment_status:paymentStatus,tracking_courier:courier,tracking_number:trackingNumber,payment_method:'midtrans',subtotal:100000,shipping_cost:0,total:100000,shipping_total_weight_g:null,shipping_zone_id:null,shipping_rate_id:null,paid_at:'2026-10-07T12:00:00Z',midtrans_redirect_url:null,midtrans_order_id:null,midtrans_init_state:'idle',created_at:'2026-10-07T12:00:00Z',order_items:[]}}/>);
+      window.settings=(couriers=[],courierTrackingUrls)=>app.render(<StoreSettingsForm key={++version} initial={{currency:'IDR',enableShipping:false,couriers,...(courierTrackingUrls===undefined?{}:{courierTrackingUrls})}}/>);
+      window.confirmation=(status='shipped',courier='JNE',trackingNumber='TEST123456789',paymentStatus='paid',trackingUrl=getTrackingDestination(courier))=>app.render(<OrderConfirmationClient key={++version} code='ORD-20261007-9941' waNumber={null} bankAccount={null} paymentFlow='midtrans' paymentReturn={true} dbOrder={{order_code:'ORD-20261007-9941',customer_name:'Customer Fixture',status,payment_status:paymentStatus,tracking_courier:courier,tracking_number:trackingNumber,tracking_url:trackingUrl,payment_method:'midtrans',subtotal:100000,shipping_cost:0,total:100000,shipping_total_weight_g:null,shipping_zone_id:null,shipping_rate_id:null,paid_at:'2026-10-07T12:00:00Z',midtrans_redirect_url:null,midtrans_order_id:null,midtrans_init_state:'idle',created_at:'2026-10-07T12:00:00Z',order_items:[]}}/>);
       window.shipping();
     `, resolveDir: root, loader: 'jsx' }, bundle: true, write: false, platform: 'browser', jsx: 'automatic', alias: { '@': root },
     plugins: [{ name: 'boundaries', setup(build) {
@@ -119,6 +120,9 @@ async function main() {
     }
     await render('window.settings()');
     await test("document.querySelector('main').textContent.includes('Belum ada kurir yang dikonfigurasi.')", true, 'Settings empty state');
+    await setInput('#store-courier-name', 'JNE'); await setInput('#store-courier-url', 'https://unverified.example/'); await click('Tambah Kurir');
+    await test("document.querySelector('#store-courier-url-error').textContent.length>0", true, 'Unverified domain rejected in add UI');
+    await setInput('#store-courier-name', ''); await setInput('#store-courier-url', '');
     for (const label of ['JNE', 'J&T', 'SiCepat', 'Ninja Xpress']) {
       await setInput('#store-courier-name', ` ${label} `); await click('Tambah Kurir');
       await test(`Boolean(document.querySelector('[aria-label="Hapus kurir ${label}"]'))`, true, 'Courier added with exact display label');
@@ -137,6 +141,24 @@ async function main() {
     await evaluate(`window.confirm=()=>true;document.querySelector('[aria-label="Hapus kurir JNE"]').click()`); await sleep(80);
     await test(`document.querySelectorAll('[aria-label^="Hapus kurir"]').length`, 3, 'Confirmed removal');
     await click('Simpan Pengaturan'); await test('window.savedSettings.couriers.includes("JNE")', false, 'Removal persisted through existing save');
+    await render('window.settings()'); await setInput('#store-courier-name', 'JNE'); await setInput('#store-courier-url', 'https://jne.co.id/tracking-package');
+    await click('Tambah Kurir'); await click('Simpan Pengaturan');
+    await test('window.savedSettings.courierTrackingUrls.jne', 'https://jne.co.id/tracking-package', 'New JNE with verified URL added');
+    await render("window.settings(['JNE'])");
+    await test("document.querySelector('main').textContent.includes('Pelacakan: jne.co.id')", true, 'Legacy settings initialize verified JNE fallback');
+    await evaluate(`document.querySelector('[aria-label="Edit URL JNE"]').click()`); await sleep(80);
+    await test("document.querySelector('#store-edit-tracking-url').value", 'https://jne.co.id/tracking-package', 'Edit URL prefilled, name not editable');
+    await setInput('#store-edit-tracking-url', 'http://jne.co.id/'); await click('Simpan URL');
+    await test("document.querySelector('#store-edit-url-error').textContent.length>0", true, 'Edit rejects invalid URL');
+    await setInput('#store-edit-tracking-url', 'https://jne.co.id/'); await click('Simpan URL'); await click('Simpan Pengaturan');
+    await test('window.savedSettings.courierTrackingUrls.jne', 'https://jne.co.id/', 'Valid edited URL stored in additive mapping');
+    await evaluate(`document.querySelector('[aria-label="Edit URL JNE"]').click()`); await sleep(80);
+    await setInput('#store-edit-tracking-url', ''); await click('Simpan URL'); await click('Simpan Pengaturan');
+    await test('window.savedSettings.courierTrackingUrls.jne', null, 'Clearing URL explicitly disables fallback');
+    await test("document.querySelector('main').textContent.includes('Pelacakan: Belum diatur')", true, 'Explicit disabled URL shown as unavailable');
+    await render("window.settings(['JNE','Ninja Xpress'],{jne:'https://jne.co.id/tracking-package','ninja xpress':null})");
+    await evaluate(`window.confirm=()=>true;document.querySelector('[aria-label="Hapus kurir JNE"]').click()`); await sleep(80); await click('Simpan Pengaturan');
+    await test('window.savedSettings.courierTrackingUrls.jne', 'https://jne.co.id/tracking-package', 'Removed courier retains historical mapping');
     await render("window.admin('processing','','',[]);window.stale=false");
     await test('document.querySelector("select").disabled && document.querySelector("input").disabled', true, 'Empty list disables shipping fields');
     await test("document.querySelector('main').textContent.includes('Tambahkan kurir melalui Pengaturan Toko terlebih dahulu.')", true, 'Empty-list instruction');
@@ -199,6 +221,10 @@ async function main() {
     await test(`document.querySelector('[aria-label="Informasi Pengiriman"]').textContent.includes('Ninja Xpress')`, true, 'Full confirmation dynamic courier visible');
     await test(`document.querySelector('[aria-label="Informasi Pengiriman"]').querySelectorAll('a').length`, 0, 'Full confirmation no guessed dynamic destination');
     await click('Salin'); await test('window.copiedValue', 'TEST123456789', 'Full confirmation unknown courier copy');
+    await render("window.confirmation('shipped','JNE','TEST123456789','paid',null)");
+    await test(`document.querySelector('[aria-label="Informasi Pengiriman"]').querySelectorAll('a').length`, 0, 'Resolved explicit null cannot be overridden by client fallback');
+    await render("window.confirmation('shipped','JNE','TEST123456789','paid','https://jne.co.id.attacker.example/')");
+    await test(`document.querySelector('[aria-label="Informasi Pengiriman"]').querySelectorAll('a').length`, 0, 'Client revalidates malicious destination defensively');
     await render('window.shipping()'); await evaluate('document.querySelector("button").focus()');
     await test('document.activeElement.getAttribute("aria-label")', 'Salin nomor resi', 'Keyboard focus label');
     await test('window.errors.length', 0, 'No browser runtime errors');

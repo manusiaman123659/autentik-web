@@ -27,12 +27,12 @@ function fixture(role = 'staff', options = {}) {
         upsert: async (value) => { effects.push({ table, upsert: value }); return { error: null }; },
         maybeSingle: async () => ({ data: table === 'profiles'
           ? { id, email: 'actor@example.com', full_name: 'Fixture', role, is_active: options.active !== false }
-          : table === 'site_settings' ? { value: { currency: 'IDR', couriers: [], midtrans: { enabled: true }, retainedSetting: 'unchanged' } }
+          : table === 'site_settings' ? { value: { currency: 'IDR', couriers: [], midtrans: { enabled: true }, retainedSetting: 'unchanged', courierTrackingUrls: options.mapping }, tracking_urls: options.mapping }
           : options.foreign ? null : { order_code: 'ORD-FIXTURE', status: options.orderStatus ?? 'shipped', payment_status: options.paymentStatus ?? 'paid',
             tracking_courier: options.courier ?? 'JNE', tracking_number: options.trackingNumber ?? 'AWB123', order_items: [], midtrans_init_state: 'idle',
             customer_name: 'Customer Fixture', payment_method: 'midtrans', subtotal: 100000, shipping_cost: 0, total: 100000,
             shipping_total_weight_g: null, shipping_zone_id: null, shipping_rate_id: null, paid_at: version,
-            midtrans_redirect_url: null, midtrans_order_id: null, created_at: version }, error: null }),
+            midtrans_redirect_url: null, midtrans_order_id: null, created_at: version }, error: table === 'site_settings' && options.settingsError ? { message: 'Fixture read error' } : null }),
       };
       return q;
     },
@@ -44,6 +44,8 @@ function fixture(role = 'staff', options = {}) {
     'next/navigation': { useRouter: () => ({ refresh: () => {} }), redirect: () => { throw new Error('REDIRECT'); }, notFound: () => { throw new Error('NOT_FOUND'); } },
     'next/link': { __esModule: true, default: props => require('react').createElement('a', props) },
     '@/utils/supabase/server': { createClient: () => client },
+    'server-only': {},
+    '@/utils/supabase/admin': { createAdminClient: () => { effects.push({ privateReader: true }); return client; } },
     '@/lib/audit': { recordAudit: async (...args) => effects.push({ audit: args }) },
     '@/lib/logger': { logError: () => {} },
     '@/lib/public-data': { getWhatsAppContact: async () => null, getOwnedLegacyTransferBankAccount: async () => null },
@@ -143,6 +145,36 @@ async function main() {
   check(cancelled.effects.find(e => e.name)?.name === 'cancel_order', 'Cancellation/stock RPC unchanged');
   const urls = fixture().load('@/lib/shipping/tracking');
   check(urls.getTrackingDestination(' jne ') === 'https://jne.co.id/tracking-package', 'Exact verified JNE destination');
+  check(urls.getTrackingDestination('JNE', { jne: null }) === null, 'Explicit null disables legacy fallback');
+  check(urls.getTrackingDestination('JNE', { JnE: 'https://jne.co.id/tracking-package' }) === 'https://jne.co.id/tracking-package', 'Mapping lookup case-insensitive');
+  check(urls.getTrackingDestination('JNE', { JNE: 'https://jne.co.id/tracking-package', jne: null }) === null, 'Ambiguous manual mapping fails closed');
+  check(urls.getTrackingDestination('JNE', { jne: 'https://evil.test' }) === null, 'Invalid direct settings do not restore fallback');
+  for (const value of ['http://jne.co.id/tracking-package', 'https://user:pass@jne.co.id/', '//jne.co.id/', 'javascript:alert(1)', 'data:text/plain,x', 'file:///test', 'https://localhost/', 'https://127.0.0.1/', 'https://10.0.0.1/', 'https://192.168.1.1/', 'https://172.16.0.1/', 'https://[::1]/', 'https://2130706433/', 'https://internal.local/', 'https://jne.co.id.attacker.example/', 'https://jne.co.id:444/', 'https://jne.co.id/?resi=ABC', 'https://jne.co.id/#ABC', 'https://jne.co.id/?', 'https://jne.co.id/#', 'https://jne.co.id/{resi}', 'https://jne.co.id/%7Bawb%7D', 'https://jne.co.id/%0a', 'https://jne.co.id/' + 'A'.repeat(2048), 'https://jne.co.id/\n']) {
+    check(urls.getSafeTrackingUrl(value) === null, `Unsafe destination rejected: ${value.slice(0, 70)}`);
+    check(!storeSettingsSchema.safeParse({ ...settingsInput, courierTrackingUrls: { jne: value } }).success, 'Save validation rejects unsafe destination');
+  }
+  check(urls.getSafeTrackingUrl('https://JNE.CO.ID:443/tracking-package') === 'https://jne.co.id/tracking-package', 'Trusted hostname/default port normalized');
+  const mappingSaved = storeSettingsSchema.parse({ ...settingsInput, courierTrackingUrls: { ' JNE ': 'https://jne.co.id/tracking-package', 'Ninja Xpress': null } });
+  check(mappingSaved.courierTrackingUrls.jne === 'https://jne.co.id/tracking-package' && mappingSaved.courierTrackingUrls['ninja xpress'] === null, 'Normalized additive mapping shape');
+  const mappingRemoval = fixture('super_admin', { mapping: { jne: 'https://jne.co.id/tracking-package' } });
+  await mappingRemoval.load('@/lib/actions/settings').saveStoreSettings({ ...settingsInput, couriers: ['Ninja Xpress'], courierTrackingUrls: { 'ninja xpress': null } });
+  check(mappingRemoval.effects.find(e => e.upsert).upsert.value.courierTrackingUrls.jne === 'https://jne.co.id/tracking-package', 'Removed courier mapping retained for historical orders');
+  for (const [mapping, expected] of [[undefined, 'https://jne.co.id/tracking-package'], [{ jne: null }, null], [{ jne: 'https://evil.test' }, null], [{ jne: 'https://jne.co.id/tracking-package' }, 'https://jne.co.id/tracking-package']]) {
+    const f = fixture('customer', { mapping });
+    const result = await f.load('@/lib/shipping/tracking-data').getOwnedOrderTrackingUrl('ORD-FIXTURE');
+    check(result === expected, 'Owner reader returns only safe URL/null');
+    check(f.selections.some(([table, columns]) => table === 'site_settings' && columns === 'tracking_urls:value->courierTrackingUrls'), 'Private reader projects mapping only');
+    check(f.filters.some(([table, key, value]) => table === 'orders' && key === 'user_id' && value === id), 'Reader independently enforces ownership');
+  }
+  for (const options of [{ foreign: true }, { signedOut: true }]) {
+    const f = fixture('customer', options);
+    check(await f.load('@/lib/shipping/tracking-data').getOwnedOrderTrackingUrl('ORD-FIXTURE') === null, 'Foreign/anonymous reader denied');
+    check(!f.effects.some(e => e.privateReader), 'Unauthorized reader never uses privileged settings client');
+  }
+  const readFailure = fixture('customer', { settingsError: true });
+  check(await readFailure.load('@/lib/shipping/tracking-data').getOwnedOrderTrackingUrl('ORD-FIXTURE') === null, 'Settings failure never restores potentially disabled fallback');
+  const readerSource = fs.readFileSync(path.join(root, 'lib/shipping/tracking-data.ts'), 'utf8');
+  check(readerSource.includes('import "server-only"') && !/\bfetch\s*\(/.test(readerSource), 'Privileged reader server-only, no tracking URL fetch');
   for (const name of ['Unknown', 'JNE<script>', 'https://evil.test', null]) check(urls.getTrackingDestination(name) === null, 'Unknown destination fails closed');
   const owned = fixture('customer');
   const rendered = await owned.load('@/app/(site)/store/orders/[code]/page').default({ params: Promise.resolve({ code: 'ORD-FIXTURE' }), searchParams: Promise.resolve({}) });
@@ -155,6 +187,8 @@ async function main() {
   check(confirmationHtml.includes('Pembayaran Berhasil') && confirmationHtml.includes('Informasi Pengiriman'), 'Payment-success page mounts shipping card through actual component tree');
   check(confirmationHtml.includes('TEST123456789') && confirmationHtml.includes('Salin nomor resi'), 'Route DTO reaches shipment text and copy control');
   check(confirmationHtml.includes('href="https://jne.co.id/tracking-package"'), 'Actual confirmation page exposes exact JNE destination');
+  check(confirmationPage.props.dbOrder.tracking_url === 'https://jne.co.id/tracking-package'
+    && !Object.hasOwn(confirmationPage.props.dbOrder, 'courierTrackingUrls') && !Object.hasOwn(confirmationPage.props.dbOrder, 'value'), 'Customer DTO contains only resolved URL, not settings JSON');
   check(confirmationHtml.indexOf('Informasi Pengiriman') > confirmationHtml.indexOf('Status Pesanan')
     && confirmationHtml.indexOf('Informasi Pengiriman') < confirmationHtml.indexOf('Detail Pesanan'), 'Shipping card ordered between status and products');
   for (const options of [{ foreign: true }, { signedOut: true }]) {
