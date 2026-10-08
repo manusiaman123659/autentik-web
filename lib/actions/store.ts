@@ -72,18 +72,21 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
     return { success: true, message: "Pesanan dibatalkan dan stok berhasil dikembalikan." };
   }
 
-  const { data: updated, error } = await supabase.rpc("update_order_fulfillment", {
+  const { data: updated, error } = await supabase.rpc("update_order_fulfillment_v2", {
     p_order_id: id,
     p_status: data.status,
     p_tracking_courier: data.trackingCourier || null,
     p_tracking_number: data.trackingNumber || null,
+    p_expected_updated_at: data.expectedUpdatedAt,
   });
   if (error) {
     logError("action.update_order_fulfillment", error.message, {
       orderId: id,
       code: error.code,
     });
-    return { success: false, message: "Gagal memperbarui status pesanan. Silakan coba lagi." };
+    return { success: false, message: error.code === "P0063"
+      ? "Pesanan sudah berubah. Muat ulang halaman sebelum menyimpan kembali."
+      : "Gagal menyimpan perubahan. Periksa kurir, resi, dan status pesanan lalu coba lagi." };
   }
   if (updated !== true) {
     revalidateOrderPaths(id);
@@ -93,10 +96,9 @@ export async function updateOrderStatus(id: string, input: unknown): Promise<Act
     };
   }
 
-  await recordAudit("order.status_changed", "order", id, audit);
   revalidateOrderPaths(id);
 
-  return { success: true, message: "Status pesanan diperbarui." };
+  return { success: true, message: "Perubahan pesanan disimpan." };
 }
 
 export async function deleteOrder(orderId: string): Promise<ActionResult> {

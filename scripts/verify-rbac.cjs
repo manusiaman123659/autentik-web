@@ -108,7 +108,7 @@ function harness(role, options = {}) {
     }).outputText;
     vm.runInNewContext(source, {
       module: loadedModule, exports: loadedModule.exports, require: (name) => load(name, filename),
-      console, process: { env: {} }, URL, Date, Object, Set, Map, Promise,
+      console, process: { env: options.env ?? {} }, URL, Date, Object, Set, Map, Promise,
       setTimeout, clearTimeout,
     }, { filename });
     return loadedModule.exports;
@@ -154,7 +154,7 @@ async function main() {
       ['@/lib/actions/brands', 'upsertBrand', [{ name: 'Test', slug: 'test', segment: 'Lab', segmentColor: 'teal', tagline: 'Test', description: 'Test', accentColor: '#0EA5A0', logoLight: '', logoDark: '', isActive: true, sortOrder: 0 }], 'content'],
       ['@/lib/actions/settings', 'markMessageRead', [actorId, true], 'operations'],
       ['@/lib/actions/store', 'updateStock', ['test-product', { stock: 3 }], 'operations'],
-      ['@/lib/actions/store', 'updateOrderStatus', [actorId, { status: 'processing' }], 'operations'],
+      ['@/lib/actions/store', 'updateOrderStatus', [actorId, { status: 'processing', expectedUpdatedAt: '2026-10-06T12:00:00.123456Z' }], 'operations'],
       ['@/lib/actions/store', 'recordManualOrderRefund', [actorId, { note: 'Test only' }], 'sensitive'],
       ['@/lib/actions/rfq', 'updateRfqStatusAction', [actorId, 'processing'], 'operations'],
       ['@/lib/actions/shipping', 'saveZone', [{ name: 'Test', sortOrder: 0, isActive: true }], 'shipping'],
@@ -360,6 +360,38 @@ async function main() {
   assert.equal(failedCallback.location, 'https://example.com/auth/login?error=oauth_failed');
   assert.equal(oauthFailure.effects.filter((event) => event.signOut).length, 1);
   checks++;
+  const canonical = 'https://autentik-web.vercel.app';
+  for (const [runtime, origin, expectedOrigin] of [
+    ['development', 'http://localhost:3000', 'http://localhost:3000'],
+    ['development', canonical, canonical],
+    ['development', 'http://localhost:3001', canonical],
+    ['development', 'http://127.0.0.1:3000', canonical],
+    ['development', 'https://untrusted.example', canonical],
+    ['production', 'http://localhost:3000', canonical],
+    ['production', canonical, canonical],
+    ['production', 'https://untrusted.example', canonical],
+  ]) {
+    const env = { NODE_ENV: runtime, NEXT_PUBLIC_SITE_URL: canonical };
+    const callbackRequest = (query) => ({
+      url: `${origin}/auth/callback?${query}`,
+      nextUrl: { origin },
+      headers: new Headers({ 'x-forwarded-host': 'attacker.example', 'x-forwarded-proto': 'https' }),
+    });
+    for (const next of ['/store/orders/ORD-FIXTURE?payment=return', 'https://attacker.example', '//attacker.example', '/admin', '/store\\evil']) {
+      const isolated = harness('customer', { oauth: true, env });
+      const response = await isolated.load('@/app/(site)/auth/callback/route').GET(callbackRequest(`code=mock-code&next=${encodeURIComponent(next)}`));
+      assert.equal(response.location, `${expectedOrigin}${next.startsWith('/store/orders/') ? next : '/store'}`, `${runtime}/${origin}/${next}`);
+      checks++;
+    }
+    const providerFailure = harness('customer', { oauth: true, env });
+    const failure = await providerFailure.load('@/app/(site)/auth/callback/route').GET(callbackRequest('error=access_denied'));
+    assert.equal(failure.location, `${expectedOrigin}/auth/login?error=oauth_failed`);
+    checks++;
+    const accountDenied = harness('staff', { oauth: true, env });
+    const denied = await accountDenied.load('@/app/(site)/auth/callback/route').GET(callbackRequest('code=mock-code'));
+    assert.equal(denied.location, `${expectedOrigin}/auth/login?error=oauth_not_customer`);
+    checks++;
+  }
   const migration = fs.readFileSync(path.join(root, 'supabase/migrations/0061_rbac_roles.sql'), 'utf8');
   // Verify newsletter ACL + RLS composition against the actual migration
   // declaration. This is a policy model, NOT execution of migration/live SQL.

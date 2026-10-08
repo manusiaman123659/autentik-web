@@ -35,7 +35,7 @@ export default async function AdminIntegrasiPage() {
     <div>
       <PageHeader
         title={sensitive ? "Integrasi Toko" : shipping ? "Hero & Ongkir" : "Hero Homepage"}
-        description={sensitive ? "Kelola Hero Homepage, status Payment Gateway, dan tarif ongkir" : shipping ? "Kelola Hero Homepage dan tarif ongkir" : "Kelola pilihan produk Hero Homepage"}
+        description={sensitive ? "Kelola pengaturan toko dan kurir, Hero Homepage, status Payment Gateway, dan tarif ongkir" : shipping ? "Kelola Hero Homepage dan tarif ongkir" : "Kelola pilihan produk Hero Homepage"}
       />
       <div className="space-y-6">
         {content && <HeroSlidesForm initial={heroSlides} products={b2bProducts} />}

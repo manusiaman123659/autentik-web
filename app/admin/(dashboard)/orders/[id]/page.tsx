@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MapPin, Phone, Mail, Receipt } from "lucide-react";
-import { getAdminBankAccount, getOrder } from "@/lib/admin-data";
+import { getAdminBankAccount, getOrder, getSupabase } from "@/lib/admin-data";
 import { getCompanyContact } from "@/lib/public-data";
 import { PageHeader, Card, formatRupiah } from "@/components/admin/ui";
 import OrderStatusForm from "@/components/admin/OrderStatusForm";
@@ -31,6 +31,9 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   ]);
   if (!data) notFound();
   const { order, items } = data;
+  const { data: courierData, error: courierError } = await (await getSupabase()).rpc("get_order_couriers");
+  const couriers: string[] = Array.isArray(courierData)
+    ? courierData.filter((value): value is string => typeof value === "string") : [];
   const needsPaymentReconciliation = order.status === "cancelled" && order.payment_status === "paid";
   const midtransIdentifierState = !order.midtrans_order_id
     ? "missing"
@@ -144,13 +147,16 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         </div>
         <div className="p-5">
           <OrderStatusForm
-            key={`${order.id}-${order.status}`}
+            key={`${order.id}-${order.updated_at}-${order.status}-${order.tracking_courier}-${order.tracking_number}`}
             orderId={order.id}
+            couriers={couriers}
+            courierReadFailed={Boolean(courierError)}
             initial={{
               status: order.status,
               trackingCourier: order.tracking_courier ?? "",
               trackingNumber: order.tracking_number ?? "",
               cancelReason: order.cancel_reason ?? "",
+              updatedAt: order.updated_at,
             }}
           />
         </div>

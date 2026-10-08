@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSafeCourier, isSafeTrackingNumber } from "@/lib/shipping/tracking";
 
 export const ORDER_STATUSES = ["pending", "processing", "shipped", "completed", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -20,9 +21,19 @@ export const orderStatusSchema = z
     status: z.enum(ORDER_STATUSES),
     trackingCourier: z.string().default(""),
     trackingNumber: z.string().default(""),
+    expectedUpdatedAt: z.string().datetime({ offset: true }),
     cancelReason: z.string().default(""),
   })
   .superRefine((val, ctx) => {
+    if (["processing", "shipped"].includes(val.status) && !isSafeCourier(val.trackingCourier)) {
+      ctx.addIssue({ code: "custom", path: ["trackingCourier"], message: "Kurir harus berupa teks biasa, maksimal 80 karakter" });
+    }
+    if (["processing", "shipped"].includes(val.status) && !isSafeTrackingNumber(val.trackingNumber)) {
+      ctx.addIssue({ code: "custom", path: ["trackingNumber"], message: "Resi maksimal 100 karakter, hanya huruf, angka, spasi, - _ . / dan bukan URL" });
+    }
+    if (["processing", "shipped"].includes(val.status) && (val.trackingNumber.trim() || val.status === "shipped") && !val.trackingCourier.trim()) {
+      ctx.addIssue({ code: "custom", path: ["trackingCourier"], message: "Kurir wajib dipilih jika ada resi atau status Dikirim" });
+    }
     if (val.status === "shipped" && !val.trackingNumber.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -37,7 +48,10 @@ export const orderStatusSchema = z
         message: "Alasan pembatalan wajib diisi",
       });
     }
-  });
+  })
+  .transform((val) => ["processing", "shipped"].includes(val.status)
+    ? { ...val, trackingCourier: val.trackingCourier.trim(), trackingNumber: val.trackingNumber.trim() }
+    : val);
 
 export type OrderStatusFormData = z.infer<typeof orderStatusSchema>;
 
@@ -86,10 +100,30 @@ export type CheckoutOrderFormData = z.input<typeof checkoutOrderSchema>;
 export const checkoutFormSchema = checkoutOrderSchema.omit({ idempotencyKey: true, items: true });
 export type CheckoutFormData = z.input<typeof checkoutFormSchema>;
 
+export const courierNameSchema = z.string()
+  .refine((value) => !/[\u0000-\u001f\u007f-\u009f]/.test(value), "Nama kurir tidak boleh mengandung karakter kontrol")
+  .trim()
+  .min(1, "Nama kurir wajib diisi")
+  .max(80, "Nama kurir maksimal 80 karakter")
+  .refine((value) => /[^\s\u200b-\u200d\u2060\ufeff]/.test(value), "Nama kurir wajib memiliki karakter yang terlihat")
+  .refine(isSafeCourier, "Nama kurir harus berupa teks biasa, bukan HTML, script, atau URL")
+  .refine((value) => !/(?:^|[\s/])[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]|$)/i.test(value), "Nama kurir tidak boleh berupa URL");
+
+export const courierListSchema = z.array(courierNameSchema).superRefine((values, ctx) => {
+  const seen = new Set<string>();
+  values.forEach((value, index) => {
+    const key = value.toLowerCase();
+    if (seen.has(key)) {
+      ctx.addIssue({ code: "custom", path: [index], message: "Kurir ini sudah terdaftar. Nama kurir tidak boleh duplikat" });
+    }
+    seen.add(key);
+  });
+});
+
 export const storeSettingsSchema = z.object({
   currency: z.string().min(1, "Mata uang wajib diisi"),
   enableShipping: z.boolean().default(false),
-  couriers: z.array(z.string()).default([]),
+  couriers: courierListSchema.default([]),
 });
 
 export type StoreSettingsFormData = z.infer<typeof storeSettingsSchema>;

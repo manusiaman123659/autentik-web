@@ -50,9 +50,16 @@ export default function OrderHistoryList() {
   useEffect(() => {
     let active = true;
     const fetchOrders = async () => {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        if (active) { setOrders([]); setLoading(false); }
+        return;
+      }
       const { data, error } = await supabase
         .from("orders")
         .select("id, order_code, status, payment_status, total, created_at, order_items(product_name, quantity)")
+        .eq("user_id", user.id)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (active && !error) {

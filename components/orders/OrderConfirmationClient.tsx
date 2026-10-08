@@ -23,6 +23,7 @@ import { regenerateMidtransPayment } from "@/lib/actions/checkout";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import OptimizedImage from "@/components/ui/OptimizedImage";
 import PrintCustomerInvoice from "./PrintCustomerInvoice";
+import OrderShippingInfo from "./OrderShippingInfo";
 
 type DbOrderItem = {
   product_name: string;
@@ -38,6 +39,8 @@ type DbOrder = {
   customer_name: string;
   status: string;
   payment_status: string;
+  tracking_courier: string | null;
+  tracking_number: string | null;
   payment_method: string | null;
   subtotal: number;
   shipping_cost: number;
@@ -429,6 +432,14 @@ export default function OrderConfirmationClient({
             </div>
           );
         })()}
+
+        <OrderShippingInfo
+          key={`${dbOrder.order_code}-${dbOrder.tracking_number}`}
+          status={effectiveOrderStatus}
+          paymentStatus={effectivePaymentStatus}
+          courier={dbOrder.tracking_courier}
+          trackingNumber={dbOrder.tracking_number}
+        />
 
         {/* Daftar item */}
         <div className="rounded-2xl border shadow-sm p-6" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>

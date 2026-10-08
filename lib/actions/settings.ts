@@ -31,9 +31,16 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
+  const { data: existing, error: readError } = await supabase
+    .from("site_settings").select("value").eq("key", "store").maybeSingle();
+  if (readError) {
+    return { success: false, message: "Pengaturan toko belum dapat dimuat. Silakan coba lagi." };
+  }
+  const currentValue = existing?.value && typeof existing.value === "object" && !Array.isArray(existing.value)
+    ? existing.value as Record<string, unknown> : {};
   const { error } = await supabase
     .from("site_settings")
-    .upsert({ key: "store", value: parsed.data as never }, { onConflict: "key" });
+    .upsert({ key: "store", value: { ...currentValue, ...parsed.data } as never }, { onConflict: "key" });
   if (error) {
     console.error("[action] save store settings", error);
     return { success: false, message: "Gagal menyimpan pengaturan. " + error.message };
@@ -41,6 +48,7 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
 
   await recordAudit("site_settings.updated", "site_settings", "store", parsed.data);
   revalidatePath("/admin/integrasi");
+  revalidatePath("/admin/orders", "layout");
 
   return { success: true, message: "Pengaturan toko berhasil disimpan." };
 }

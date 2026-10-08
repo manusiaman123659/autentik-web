@@ -68,6 +68,7 @@ export interface OrderRow {
   notes?: string | null;
   cancel_reason?: string | null;
   created_at: string;
+  updated_at: string;
   deleted_at?: string | null;
   paid_at?: string | null;
   midtrans_order_id?: string | null;

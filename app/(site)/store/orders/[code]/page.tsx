@@ -66,6 +66,8 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     customer_name: string;
     status: string;
     payment_status: string;
+    tracking_courier: string | null;
+    tracking_number: string | null;
     payment_method: string | null;
     subtotal: number;
     shipping_cost: number;
@@ -90,7 +92,7 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
 
   const { data, error: orderError } = await supabase
     .from("orders")
-    .select("order_code, customer_name, status, payment_status, payment_method, subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total, paid_at, midtrans_redirect_url, midtrans_order_id, midtrans_init_state, created_at, order_items(product_name, sku, unit_price, quantity, product_id, variant_label)")
+    .select("order_code, customer_name, status, payment_status, tracking_courier, tracking_number, payment_method, subtotal, shipping_cost, shipping_total_weight_g, shipping_zone_id, shipping_rate_id, total, paid_at, midtrans_redirect_url, midtrans_order_id, midtrans_init_state, created_at, order_items(product_name, sku, unit_price, quantity, product_id, variant_label)")
     .eq("order_code", code)
     .eq("user_id", user.id)
     .is("deleted_at", null)
@@ -120,6 +122,8 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pr
     customer_name: rawOrder.customer_name,
     status: rawOrder.status,
     payment_status: rawOrder.payment_status,
+    tracking_courier: rawOrder.tracking_courier,
+    tracking_number: rawOrder.tracking_number,
     payment_method: rawOrder.payment_method,
     subtotal: rawOrder.subtotal,
     shipping_cost: rawOrder.shipping_cost,

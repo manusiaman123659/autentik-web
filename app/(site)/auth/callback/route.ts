@@ -15,8 +15,11 @@ export async function GET(request: NextRequest) {
     forwardedProto: request.headers.get("x-forwarded-proto"),
   });
 
-  const canonicalOrigin = getCanonicalOrigin(request.nextUrl.origin);
-  const redirect = (path: string) => NextResponse.redirect(new URL(path, canonicalOrigin));
+  const callbackOrigin = process.env.NODE_ENV === "development"
+    && request.nextUrl.origin === "http://localhost:3000"
+    ? request.nextUrl.origin
+    : getCanonicalOrigin(request.nextUrl.origin);
+  const redirect = (path: string) => NextResponse.redirect(new URL(path, callbackOrigin));
 
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
