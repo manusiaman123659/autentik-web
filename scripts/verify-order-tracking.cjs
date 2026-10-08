@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
+const crypto = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks++; };
@@ -221,6 +222,31 @@ async function main() {
     && afterNoOp.indexOf('INSERT INTO public.audit_log') > afterNoOp.indexOf('UPDATE public.orders'), 'Mutation and atomic audits remain after no-op return');
   check(sql.includes("auth.uid() IS NULL OR NOT public.has_cms_capability('operations')"), 'RPC capability guard');
   check(sql.includes("NEW.updated_at := GREATEST(pg_catalog.clock_timestamp()"), 'Tracking version strictly advances');
+  const immutableSql = sql.replace(/\r\n/g, '\n');
+  const immutableBlob = crypto.createHash('sha1').update(`blob ${Buffer.byteLength(immutableSql)}\0`).update(immutableSql).digest('hex');
+  check(immutableBlob === 'fae6fb784b2912a2ad2e9b6ddd9c9b7c9a443a67', 'Live immutable 0063 remains byte-identical after line-ending normalization');
+  const contractPath = path.join(root, 'supabase/migrations/0064_retire_legacy_order_fulfillment.sql');
+  check(fs.existsSync(contractPath), '0064 contract migration exists for review');
+  const contract = fs.readFileSync(contractPath, 'utf8');
+  const revoke = contract.match(/REVOKE EXECUTE ON FUNCTION public\.update_order_fulfillment\(uuid, text, text, text\)\s+FROM ([^;]+);/);
+  check(Boolean(revoke), 'Exact public V1 signature retired');
+  for (const role of ['PUBLIC', 'anon', 'authenticated', 'service_role']) check(revoke[1].split(',').map(v => v.trim()).includes(role), `V1 EXECUTE revoked from ${role}`);
+  check((contract.match(/\bREVOKE\b/g) ?? []).length === 1 && !/\bGRANT\b/.test(contract), 'Only public V1 receives an ACL write, no new grant');
+  check(!/\b(?:DROP|CREATE|ALTER)\s+(?:OR REPLACE\s+)?(?:FUNCTION|TABLE|POLICY|SCHEMA|TRIGGER)\b/i.test(contract), 'No function destruction/replacement, schema change, trigger change or RLS redesign');
+  check(!/\b(?:UPDATE|INSERT INTO|DELETE FROM|TRUNCATE|ALTER TABLE)\b/i.test(contract), 'No business-row or order/payment column mutation');
+  check(contract.trim().startsWith('BEGIN;') && contract.trim().endsWith('COMMIT;'), 'Contract transaction encloses all operations');
+  check(contract.includes('pg_catalog.to_regprocedure') && contract.includes("pg_catalog.pg_get_userbyid(p.proowner) = 'postgres'"), 'Exact function identities and owners checked');
+  check(contract.includes('p.prosecdef') && contract.includes("p.provolatile = 'v'") && contract.includes("setting LIKE 'search_path=%'"), 'V2 metadata baseline checked without replacement');
+  check(contract.includes("pg_catalog.aclexplode") && contract.includes('a.grantee = 0'), 'PUBLIC-equivalent ACL exposure checked');
+  check(contract.includes("pg_catalog.has_schema_privilege(v_role, v_private_schema, 'USAGE')"), 'Private schema effective access checked');
+  check(contract.includes("pg_catalog.has_function_privilege(v_role, v_public_v1, 'EXECUTE')")
+    && contract.includes("pg_catalog.has_function_privilege(v_role, v_public_v2, 'EXECUTE') IS DISTINCT FROM (v_role = 'authenticated')"), 'Effective API privileges and V2 authenticated grant verified');
+  check(contract.includes('IS DISTINCT FROM v_public_v1_definition') && contract.includes('IS DISTINCT FROM v_public_v2_definition')
+    && contract.includes('IS DISTINCT FROM v_private_v1_definition') && contract.includes('IS DISTINCT FROM v_v2_acl'), 'Definitions and exact V2 ACL retained');
+  const revokeOffset = contract.indexOf(revoke[0]);
+  check(revokeOffset > contract.indexOf('SELECT proacl INTO v_v2_acl')
+    && contract.indexOf('V1 masih executable', revokeOffset) > revokeOffset, 'Preflight snapshot before revoke, postconditions after revoke');
+  check(contract.indexOf("NOTIFY pgrst, 'reload schema';") < contract.lastIndexOf('COMMIT;'), 'Schema cache notification delivered only after successful contract commit');
   console.log(`PASS: ${checks} tracking validation/action/ownership/security checks (mocked boundaries; not live DB verification).`);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
