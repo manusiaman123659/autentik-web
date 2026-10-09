@@ -39,6 +39,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "merek", href: "/admin/merek", label: "Merek & Kategori", description: "Kelola merek dan kategori produk" },
       { key: "karir", href: "/admin/karir", label: "Karir", description: "Kelola lowongan pekerjaan dan posisi terbuka" },
       { key: "relasi", href: "/admin/relasi", label: "Tim, Mitra & Grup", description: "Kelola tim internal, mitra, dan grup perusahaan" },
+      { key: "portfolio", href: "/admin/portfolio", label: "Research & Partnership", description: "Kelola portofolio, kolaborasi, dan merek terdaftar" },
     ],
   },
   {
@@ -89,6 +90,7 @@ export const BUILT_SECTION_KEYS: string[] = [
   "merek",
   "karir",
   "relasi",
+  "portfolio",
   "inquiry",
   "lead",
   "rfq",

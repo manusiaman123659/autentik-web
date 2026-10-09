@@ -140,6 +140,11 @@ async function main() {
     }
     if (!permissions.includes('operations')) await assert.rejects(() => guards.requireSectionAccess('orders'), /NOT_FOUND/);
     if (!permissions.includes('users')) await assert.rejects(() => guards.requireSectionAccess('akses-staff'), /NOT_FOUND/);
+    assert.equal(pure.canAccessSection(role, 'portfolio'), permissions.includes('content'));
+    checks++;
+    const portfolioLayout = test.load('@/app/admin/(dashboard)/portfolio/layout');
+    if (!permissions.includes('content')) await assert.rejects(() => portfolioLayout.default({ children: 'portfolio' }), /NOT_FOUND/);
+    else assert.equal(await portfolioLayout.default({ children: 'portfolio' }), 'portfolio');
     const dashboardLayout = test.load('@/app/admin/(dashboard)/layout');
     if (!permissions.includes('cms')) {
       await assert.rejects(() => dashboardLayout.default({ children: null }), /REDIRECT:\/admin\/login/);
@@ -152,6 +157,9 @@ async function main() {
       ['@/lib/actions/settings', 'saveStoreSettings', [{ currency: 'IDR', enableShipping: false, couriers: [] }], 'sensitive'],
       ['@/lib/actions/settings', 'saveHeroSlides', [{ slides: [] }], 'content'],
       ['@/lib/actions/brands', 'upsertBrand', [{ name: 'Test', slug: 'test', segment: 'Lab', segmentColor: 'teal', tagline: 'Test', description: 'Test', accentColor: '#0EA5A0', logoLight: '', logoDark: '', isActive: true, sortOrder: 0 }], 'content'],
+      ['@/lib/actions/portfolio', 'savePortfolio', [{ title: 'Test' }], 'content'],
+      ['@/lib/actions/portfolio', 'setPortfolioStatus', [actorId, 'published'], 'content'],
+      ['@/lib/actions/portfolio', 'deletePortfolio', [actorId], 'content'],
       ['@/lib/actions/settings', 'markMessageRead', [actorId, true], 'operations'],
       ['@/lib/actions/store', 'updateStock', ['test-product', { stock: 3 }], 'operations'],
       ['@/lib/actions/store', 'updateOrderStatus', [actorId, { status: 'processing', expectedUpdatedAt: '2026-10-06T12:00:00.123456Z' }], 'operations'],
@@ -187,7 +195,7 @@ async function main() {
       settings: 'sensitive', store: 'operations', products: 'operations',
       brands: 'content', careers: 'content', compro: 'content', recruitment: 'content',
       relasi: 'content', rfq: 'operations', technicalDocuments: 'operations',
-      shipping: 'shipping', paymentInquiry: 'sensitive', staff: 'users',
+      shipping: 'shipping', paymentInquiry: 'sensitive', staff: 'users', portfolio: 'content',
     };
     for (const [file, defaultCapability] of Object.entries(guardedModules)) {
       const exports = harness(role).load(`@/lib/actions/${file}`);

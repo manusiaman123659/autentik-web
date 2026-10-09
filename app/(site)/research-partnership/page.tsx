@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,12 +8,19 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
-import {
-  developmentCapabilities,
-  registeredTrademarks,
-  trademarkDocuments,
-  verifiedCollaborations,
-} from "@/lib/data/research-partnership";
+import { developmentCapabilities } from "@/lib/data/research-partnership";
+import { listPublishedPortfolios } from "@/lib/portfolio-data";
+import PortfolioImage from "@/components/ui/PortfolioImage";
+
+export const dynamic = "force-dynamic";
+
+function Description({ text }: { text: string }) {
+  if (!text.trim()) return null;
+  return <details className="mt-4 text-sm">
+    <summary className="cursor-pointer font-semibold text-[#0EA5A0]">Selengkapnya</summary>
+    <p className="mt-3 whitespace-pre-wrap leading-relaxed">{text}</p>
+  </details>;
+}
 
 export const metadata: Metadata = {
   title: "Research & Partnership | PT Autentik Karya Analitika",
@@ -23,7 +29,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "/research-partnership" },
 };
 
-export default function ResearchPartnershipPage() {
+export default async function ResearchPartnershipPage() {
+  const { entries, unavailable } = await listPublishedPortfolios();
+  const portfolios = entries.filter(entry => entry.entry_kind === "portfolio");
+  const verifiedCollaborations = entries.filter(entry => entry.entry_kind === "collaboration");
+  const registeredTrademarks = entries.filter(entry => entry.entry_kind === "trademark");
+  // Only deduplicate shared document figures; every trademark entry remains visible.
+  const trademarkDocuments = registeredTrademarks.filter((entry, index, all) => entry.image_url
+    && all.findIndex(other => other.image_url === entry.image_url) === index);
   return (
     <main className="flex-grow">
       <section className="relative overflow-hidden public-page-hero px-6 pb-24 pt-36 text-heading lg:px-16">
@@ -106,6 +119,30 @@ export default function ResearchPartnershipPage() {
         </div>
       </section>
 
+      {(unavailable || entries.length === 0) && <section className="px-6 py-12 lg:px-16" style={{ backgroundColor: "var(--bg-secondary)", color: "var(--text-secondary)" }}>
+        <p className="mx-auto max-w-7xl" role={unavailable ? "status" : undefined}>
+          {unavailable ? "Informasi portofolio belum dapat dimuat. Silakan coba kembali nanti." : "Belum ada entri portofolio yang dipublikasikan."}
+        </p>
+      </section>}
+
+      {portfolios.length > 0 && <section className="px-6 py-24 lg:px-16" style={{ backgroundColor: "var(--bg-primary)", color: "var(--text-primary)" }}>
+        <div className="mx-auto max-w-7xl">
+          <AnimatedElement type="fade-up" className="mb-12"><h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Portofolio Pengembangan</h2></AnimatedElement>
+          <AnimatedElement type="stagger" className="divide-y border-y" style={{ borderColor: "var(--border-subtle)" }}>
+            {portfolios.map(entry => <article key={entry.id} className="grid gap-6 py-7 md:grid-cols-2">
+              <div>
+                {entry.category_label && <p className="text-xs font-bold uppercase tracking-wide text-[#0EA5A0]">{entry.category_label}</p>}
+                <h3 className="mt-3 text-xl font-bold">{entry.title}</h3>
+                {entry.organization_name && <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>{entry.organization_name}</p>}
+                <p className="mt-4 whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text-secondary)" }}>{entry.summary}</p>
+                <Description text={entry.description} />
+              </div>
+              {entry.image_url && entry.image_alt && <PortfolioImage key={entry.image_url} src={entry.image_url} alt={entry.image_alt} caption={entry.image_caption} />}
+            </article>)}
+          </AnimatedElement>
+        </div>
+      </section>}
+
       {verifiedCollaborations.length > 0 && (
         <section className="px-6 py-24 lg:px-16" style={{ backgroundColor: "var(--bg-secondary)" }}>
           <div className="mx-auto max-w-7xl">
@@ -128,7 +165,7 @@ export default function ResearchPartnershipPage() {
             <AnimatedElement type="stagger" className="divide-y border-y" style={{ borderColor: "var(--border-subtle)" }}>
               {verifiedCollaborations.map((collaboration, index) => (
                 <article
-                  key={`${collaboration.organization}-${collaboration.scope}`}
+                  key={collaboration.id}
                   className="grid gap-5 py-7 md:grid-cols-[64px_0.9fr_1.1fr] md:items-start"
                 >
                   <span className="text-sm font-bold tracking-[0.18em] text-[#0EA5A0]">
@@ -136,19 +173,22 @@ export default function ResearchPartnershipPage() {
                   </span>
                   <div>
                     <span className="inline-flex rounded-full bg-[#0EA5A0]/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[#0C8C87]">
-                      {collaboration.category}
+                      {collaboration.category_label || "Kolaborasi"}
                     </span>
                     <h3
                       className="mt-3 text-xl font-bold"
                       style={{ color: "var(--text-primary)" }}
                     >
-                      {collaboration.organization}
+                      {collaboration.title}
                     </h3>
                   </div>
                   <div>
                     <p className="leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                      {collaboration.scope}
+                      {collaboration.summary}
                     </p>
+                    {collaboration.organization_name && collaboration.organization_name !== collaboration.title && <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>{collaboration.organization_name}</p>}
+                    <Description text={collaboration.description} />
+                    {collaboration.image_url && collaboration.image_alt && <div className="mt-5" style={{ color: "var(--text-secondary)" }}><PortfolioImage key={collaboration.image_url} src={collaboration.image_url} alt={collaboration.image_alt} caption={collaboration.image_caption} /></div>}
                   </div>
                 </article>
               ))}
@@ -177,14 +217,16 @@ export default function ResearchPartnershipPage() {
             <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
               <AnimatedElement type="stagger" className="grid grid-cols-2 border-l border-t border-white/15">
                 {registeredTrademarks.map((trademark) => (
-                  <article key={trademark.name} className="border-b border-r border-white/15 p-5 sm:p-6">
-                    <p className="text-2xl font-black tracking-tight sm:text-3xl">{trademark.name}</p>
+                  <article key={trademark.id} className="border-b border-r border-white/15 p-5 sm:p-6">
+                    <p className="text-2xl font-black tracking-tight sm:text-3xl">{trademark.title}</p>
                     <p className="mt-3 text-[11px] font-bold uppercase tracking-wide text-[#14B8A6]">
-                      {trademark.category}
+                      {trademark.category_label || "Trademark / Sertifikat Merek"}
                     </p>
+                    {trademark.summary !== trademark.category_label && <p className="mt-3 whitespace-pre-wrap text-sm text-slate-300">{trademark.summary}</p>}
                     <div className="mt-5 text-xs text-slate-400">
-                      <p>{trademark.holder}</p>
+                      <p>{trademark.organization_name}</p>
                     </div>
+                    <Description text={trademark.description} />
                   </article>
                 ))}
               </AnimatedElement>
@@ -192,18 +234,7 @@ export default function ResearchPartnershipPage() {
               {trademarkDocuments.length > 0 && (
                 <AnimatedElement type="stagger" className="space-y-5">
                   {trademarkDocuments.map((document) => (
-                    <figure key={document.imageSrc} className="overflow-hidden rounded-2xl border border-white/15 bg-white/5">
-                      <Image
-                        src={document.imageSrc}
-                        alt={document.alt}
-                        width={2000}
-                        height={1125}
-                        className="h-auto w-full"
-                      />
-                      <figcaption className="px-5 py-4 text-xs text-slate-300">
-                        Sertifikat Merek: {document.marks.join(" dan ")}
-                      </figcaption>
-                    </figure>
+                    <PortfolioImage key={document.image_url} src={document.image_url!} alt={document.image_alt!} caption={document.image_caption} />
                   ))}
                 </AnimatedElement>
               )}

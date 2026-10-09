@@ -33,7 +33,7 @@ export function isCmsRole(role: unknown): role is CmsRole {
 export const SECTION_CAPABILITIES: Record<string, readonly CmsCapability[]> = {
   orders: ["operations"], sparepart: ["operations"], stok: ["operations"], produk: ["operations"],
   inquiry: ["operations"], lead: ["operations"], rfq: ["operations"],
-  compro: ["content"], merek: ["content"], karir: ["content"], relasi: ["content"],
+  compro: ["content"], merek: ["content"], karir: ["content"], relasi: ["content"], portfolio: ["content"],
   integrasi: ["content", "shipping", "sensitive"],
   "akses-staff": ["users"], riwayat: ["audit"],
 };

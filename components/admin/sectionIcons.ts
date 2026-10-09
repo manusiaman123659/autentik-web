@@ -14,6 +14,7 @@ import {
   History,
   Presentation,
   FileText,
+  Handshake,
 } from "lucide-react";
 
 export const SECTION_ICONS: Record<string, LucideIcon> = {
@@ -25,6 +26,7 @@ export const SECTION_ICONS: Record<string, LucideIcon> = {
   merek: Tags,
   karir: Briefcase,
   relasi: Users,
+  portfolio: Handshake,
   inquiry: Inbox,
   lead: MessageCircle,
   rfq: FileText,
