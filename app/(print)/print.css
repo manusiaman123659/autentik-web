@@ -13,16 +13,16 @@
 .document-letterhead { display: flex; align-items: center; gap: 8mm; padding-bottom: 6mm; border-bottom: 2px solid #0b1f3a; }
 .document-logo { width: 29mm; height: 29mm; object-fit: contain; flex-shrink: 0; }
 .document-company h1 { margin: 0 0 3mm; font-size: 14pt; font-weight: 700; color: #0b1f3a; }
-.document-company p { font-size: 9pt; }
+.document-company p { font-size: 9.5pt; }
 .document-title { display: flex; justify-content: space-between; align-items: baseline; gap: 6mm; padding: 7mm 0; }
 .document-title h2 { margin: 0; font-size: 20pt; font-weight: 700; letter-spacing: .04em; color: #0b1f3a; }
-.document-title p { font-size: 9pt; text-align: right; }
+.document-title p { font-size: 9.5pt; text-align: right; }
 .document-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; margin-bottom: 7mm; }
 .document-info h3, .document-notes h3 { margin: 0 0 2mm; font-size: 10pt; font-weight: 700; }
 .document-info dl { margin: 0; }
-.document-info dt { font-size: 8.5pt; color: #475569; }
+.document-info dt { font-size: 9pt; color: #475569; }
 .document-info dd { margin: 0 0 2mm; }
-.document-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9pt; }
+.document-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9.5pt; }
 .col-number { width: 10mm; }
 .col-sku { width: 22mm; }
 .col-quantity { width: 12mm; }
@@ -34,7 +34,7 @@
 .document-table tr { break-inside: avoid; page-break-inside: avoid; }
 .document-table .number, .document-table .money { text-align: right; font-variant-numeric: tabular-nums; }
 .document-table .quantity { text-align: center; }
-.document-table .variant { display: block; font-size: 8pt; color: #475569; margin-top: 1mm; }
+.document-table .variant { display: block; font-size: 8.5pt; color: #475569; margin-top: 1mm; }
 .document-totals { width: 75mm; max-width: 100%; margin: 5mm 0 6mm auto; break-inside: avoid; }
 .document-closing { break-inside: avoid; }
 .document-totals dl { display: grid; grid-template-columns: 1fr auto; gap: 2mm 5mm; margin: 0; }
@@ -47,7 +47,7 @@
 .receipt-line { border-bottom: 1px solid #9aa8b5; height: 6mm; }
 .document-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 15mm; margin-top: 8mm; break-inside: avoid; }
 .signature-space { height: 20mm; }
-.document-footer { border-top: 1px solid #9aa8b5; margin-top: 7mm; padding-top: 3mm; font-size: 8.5pt; break-inside: avoid; }
+.document-footer { border-top: 1px solid #9aa8b5; margin-top: 7mm; padding-top: 3mm; font-size: 9pt; break-inside: avoid; }
 .document-paid { display: inline-block; font-size: 9pt; font-weight: 700; border-bottom: 1px solid #0ea5a0; }
 
 @media screen and (max-width: 600px) {

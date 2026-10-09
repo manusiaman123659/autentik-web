@@ -13,6 +13,12 @@ const { renderToStaticMarkup } = require('react-dom/server');
 const root = path.resolve(__dirname, '..');
 const id = '00000000-0000-4000-8000-000000000001';
 const code = 'ORD-PRINT-FIXTURE';
+const longValues = {
+  name: 'tEsT Custmer WrOng Speling ' + 'nama panjang '.repeat(5),
+  email: 'Mixed.CASE.snapshot.'.repeat(6) + '@example.com',
+  phone: '08' + '1234567890'.repeat(8),
+  address: 'Jl. atak WrOnG, Semraang, Semraang, jawaa tengha. '.repeat(4),
+};
 let checks = 0;
 const check = (value, label) => { assert.ok(value, label); checks++; };
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -99,6 +105,8 @@ async function verifyModules() {
     check(JSON.stringify({ order: f.order, items: f.items }) === f.original, `${kind} source values unchanged`);
     if (kind === 'proof') check(f.filters.some(([table, key, value]) => table === 'orders' && key === 'user_id' && value === id), 'Proof explicit owner scope');
     if (kind === 'delivery') check(!/Harga|Subtotal|TOTAL|Rp|Status Pembayaran|BANK-/.test(html), 'Delivery HTML contains no financial data');
+    if (kind === 'invoice') check(html.includes('Email: customer@example.com') && html.includes('Telepon: CUSTOMER-PHONE'), 'Invoice contact labels explicit');
+    if (kind === 'delivery') check(html.includes('Telepon: CUSTOMER-PHONE'), 'Delivery recipient phone labeled');
   }
   for (const role of ['super_admin', 'admin', 'staff', 'editor', 'customer']) for (const kind of ['invoice', 'delivery']) {
     const f = fixture(role); const allowed = ['super_admin', 'admin', 'staff'].includes(role);
@@ -171,13 +179,17 @@ async function verifyBrowser(models) {
     import React from 'react';import {createRoot} from 'react-dom/client';
     import Invoice from './components/admin/PrintInvoiceDocument';import Delivery from './components/admin/PrintPackingSlip';
     import Proof from './components/orders/PrintCustomerInvoice';import Controls from './components/print/PrintDocumentControls';
-    const models=${JSON.stringify(models)};const app=createRoot(document.getElementById('app'));let key=0;
+    const models=${JSON.stringify(models)};const longValues=${JSON.stringify(longValues)};window.longValues=longValues;const app=createRoot(document.getElementById('app'));let key=0;
     window.errors=[];window.printCalls=0;window.print=()=>{window.printCalls++;window.logoReady=!!document.querySelector('.document-logo').naturalWidth;window.fontsReady=document.fonts.status;};
     window.addEventListener('error',e=>{if(e.error)window.errors.push(e.message)});window.addEventListener('unhandledrejection',e=>window.errors.push(String(e.reason)));
-    window.printFixture=(kind='invoice',count=1,logoPath=models.identity.logoPath)=>{
+    window.printFixture=(kind='invoice',count=1,logoPath=models.identity.logoPath,longInfo=false)=>{
       const source=models[kind];const items=Array.from({length:count},(_,i)=>({...source.items[0],id:'row-'+i,name:count>5?'Produk '+i+' '+('spesifikasi panjang '.repeat(9)):source.items[0].name}));
       const fixtureTotals=kind==='delivery'?{}:{subtotal:source.items[0].lineTotal*count,total:source.items[0].lineTotal*count+source.shippingCost};
-      const data={...source,...fixtureTotals,items};const identity={...models.identity,logoPath};const Component={invoice:Invoice,delivery:Delivery,proof:Proof}[kind];
+      const data={...source,...fixtureTotals,items};if(longInfo){
+        if(kind==='delivery')data.recipient={...source.recipient,name:longValues.name,phone:longValues.phone,address:longValues.address};
+        else data.customer=kind==='invoice'?{...source.customer,...longValues}:{...source.customer,name:longValues.name,address:longValues.address};
+        data.items=items.map(item=>({...item,name:item.name+' '+('produk panjang '.repeat(12)),sku:'SKU-SNAPSHOT-1234'.repeat(4)}));
+      }const identity={...models.identity,logoPath};const Component={invoice:Invoice,delivery:Delivery,proof:Proof}[kind];
       app.render(<main className='print-preview' key={++key}><Controls backHref='/fixture'/><Component data={data} identity={identity}/></main>);
     };window.printFixture();
   `, resolveDir: root, loader: 'jsx' }, bundle: true, write: false, platform: 'browser', jsx: 'automatic', alias: { '@': root }, plugins: [{ name: 'next-boundaries', setup(build) {
@@ -238,6 +250,27 @@ async function verifyBrowser(models) {
       }
       await cdp('Emulation.setEmulatedMedia', { media: 'screen' });
     }
+    const metrics = [];
+    for (const kind of ['invoice', 'delivery', 'proof']) {
+      await render(kind, 1);
+      metrics.push(await evaluate("(()=>{const rows=['.document-company h1','.document-company p','.document-title h2','.document-title','.print-document','.document-table'].map(selector=>{const css=getComputedStyle(document.querySelector(selector));return [css.fontSize,css.paddingTop,css.paddingBottom]});const logo=getComputedStyle(document.querySelector('.document-logo'));return [logo.width,logo.height,rows]})()"));
+      await evaluate(`window.printFixture(${JSON.stringify(kind)},1,undefined,true)`); await sleep(100);
+      await evaluate('document.querySelector(".document-logo").decode()');
+      check(await evaluate('document.querySelector(".document-info").textContent.includes(window.longValues.name)&&document.querySelector(".document-info").textContent.includes(window.longValues.address)'), 'Unusual snapshot spelling/case/repeated address preserved verbatim');
+      if (kind !== 'proof') check(await evaluate('document.querySelector(".document-info").textContent.includes("Telepon: "+window.longValues.phone)'), 'Long phone preserved and labeled');
+      if (kind === 'invoice') check(await evaluate('document.querySelector(".document-info").textContent.includes("Email: "+window.longValues.email)'), 'Long mixed-case email preserved and labeled');
+      if (kind === 'delivery') check(await evaluate('!/Harga|Subtotal|TOTAL|Rp|Status Pembayaran|BANK-/.test(document.querySelector(".print-document").textContent)'), 'Polished delivery still fulfillment-only');
+      if (kind === 'proof') check(await evaluate('!document.querySelector(".document-signatures")'), 'Customer proof remains unsigned');
+      for (const width of [375, 1100]) {
+        await cdp('Emulation.setDeviceMetricsOverride', { width, height: 1200, deviceScaleFactor: 1, mobile: false });
+        check(await evaluate('document.documentElement.scrollWidth<=innerWidth'), 'Long contact/address/product/SKU safely wraps in preview');
+      }
+      await cdp('Emulation.setEmulatedMedia', { media: 'print' });
+      const result = await cdp('Page.printToPDF', { preferCSSPageSize: true, printBackground: true, displayHeaderFooter: false });
+      fs.writeFileSync(path.join(output, `${kind}-long.pdf`), Buffer.from(result.data, 'base64'));
+      await cdp('Emulation.setEmulatedMedia', { media: 'screen' });
+    }
+    check(JSON.stringify(metrics[0]) === JSON.stringify(metrics[1]) && JSON.stringify(metrics[0]) === JSON.stringify(metrics[2]), 'Three documents share letterhead/title/body/table scale and spacing');
     await cdp('Emulation.setDeviceMetricsOverride', { width: 375, height: 900, deviceScaleFactor: 1, mobile: false });
     await render('invoice', 5); check(await evaluate('document.documentElement.scrollWidth<=innerWidth'), 'Mobile preview no horizontal overflow');
     await evaluate('document.querySelector(".print-toolbar button").click()'); await sleep(100);

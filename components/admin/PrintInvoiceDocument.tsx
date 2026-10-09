@@ -10,7 +10,7 @@ export default function PrintInvoiceDocument({ data, identity }: { data: Invoice
       <PrintDocumentHeader identity={identity} title="INVOICE" code={data.code} />
       <section className="document-info">
         <div><h3>Pembeli</h3><p><strong>{data.customer.name}</strong></p>
-          {data.customer.email && <p>{data.customer.email}</p>}{data.customer.phone && <p>{data.customer.phone}</p>}
+          {data.customer.email && <p>Email: {data.customer.email}</p>}{data.customer.phone && <p>Telepon: {data.customer.phone}</p>}
           {data.customer.address && <><h3>Alamat Pengiriman</h3><p>{data.customer.address}</p></>}
         </div>
         <dl><dt>Tanggal Pesanan</dt><dd>{data.orderDate}</dd><dt>Status Pembayaran</dt><dd><strong>{data.paymentStatus}</strong></dd>

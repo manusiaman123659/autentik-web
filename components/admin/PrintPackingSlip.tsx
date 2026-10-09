@@ -8,7 +8,7 @@ export default function PrintPackingSlip({ data, identity }: { data: DeliveryNot
     <article className="print-document" aria-label="Surat Jalan">
       <PrintDocumentHeader identity={identity} title="SURAT JALAN" code={data.code} />
       <section className="document-info"><div><h3>Penerima</h3><p><strong>{data.recipient.name}</strong></p>
-        {data.recipient.phone && <p>{data.recipient.phone}</p>}{data.recipient.address && <p>{data.recipient.address}</p>}
+        {data.recipient.phone && <p>Telepon: {data.recipient.phone}</p>}{data.recipient.address && <p>{data.recipient.address}</p>}
       </div><dl><dt>Tanggal Pesanan</dt><dd>{data.orderDate}</dd>
         {data.courier && <><dt>Kurir</dt><dd>{data.courier}</dd></>}
         {data.trackingNumber && <><dt>Nomor Resi</dt><dd>{data.trackingNumber}</dd></>}
