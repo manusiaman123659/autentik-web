@@ -3,11 +3,11 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/admin/Toast";
-import ImageUploadField, { type ImageUploadPhase, type ImageUploadPreview } from "@/components/admin/ImageUploadField";
+import ImageUploadField, { type ImagePreviewSurface, type ImageUploadPhase, type ImageUploadPreview } from "@/components/admin/ImageUploadField";
 import { logError } from "@/lib/logger";
 
 export default function MediaUploadField({
-  label, value, pathPrefix, errorContext, onChange, id, disabled = false, fieldError, onUploadingChange,
+  label, value, pathPrefix, errorContext, onChange, id, disabled = false, fieldError, onUploadingChange, previewSurface,
 }: {
   label: string;
   value: string;
@@ -18,6 +18,7 @@ export default function MediaUploadField({
   disabled?: boolean;
   fieldError?: string;
   onUploadingChange?: (uploading: boolean) => void;
+  previewSurface?: ImagePreviewSurface;
 }) {
   const generatedId = useId();
   const { toast } = useToast();
@@ -101,6 +102,7 @@ export default function MediaUploadField({
   }
 
   return <ImageUploadField id={id ?? `media-${generatedId}`} label={label} value={value} preview={preview}
+    previewSurface={previewSurface}
     phase={phase} accept="image/*" helperText="Pilih satu file gambar. SVG dan format image/* tetap didukung."
     error={error || fieldError} disabled={disabled} onFileSelected={file => { void upload(file); }}
     onRemove={() => {

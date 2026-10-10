@@ -5,6 +5,7 @@ import { Image as ImageIcon, Loader2, Upload } from "lucide-react";
 import { labelClass } from "@/components/admin/ui";
 
 export type ImageUploadPhase = "idle" | "validating" | "uploading" | "uploaded" | "error" | "removed";
+export type ImagePreviewSurface = "plain" | "contrast";
 export interface ImageUploadPreview {
   url: string;
   name: string;
@@ -14,7 +15,7 @@ export interface ImageUploadPreview {
 }
 
 export default function ImageUploadField({
-  id, label, value, preview, phase, accept, helperText, error, disabled = false, onFileSelected, onRemove,
+  id, label, value, preview, phase, accept, helperText, error, disabled = false, previewSurface = "plain", onFileSelected, onRemove,
 }: {
   id: string;
   label: string;
@@ -25,6 +26,7 @@ export default function ImageUploadField({
   helperText: string;
   error?: string;
   disabled?: boolean;
+  previewSurface?: ImagePreviewSurface;
   onFileSelected: (file: File) => void;
   onRemove: () => void;
 }) {
@@ -79,7 +81,11 @@ export default function ImageUploadField({
         </p> : (
           // eslint-disable-next-line @next/next/no-img-element -- Native preview supports local blob URLs without image optimization.
           <img key={src} src={src} alt={preview ? `Pratinjau ${preview.name}` : "Pratinjau gambar saat ini"}
-            className="block h-56 w-full rounded-lg border border-slate-200 bg-white object-contain dark:border-slate-700"
+            className={`block h-56 w-full rounded-lg border border-slate-200 object-contain dark:border-slate-700 ${previewSurface === "plain" ? "bg-white" : "bg-slate-200"}`}
+            style={previewSurface === "contrast" ? {
+              backgroundImage: "conic-gradient(#e2e8f0 25%, #64748b 0 50%, #e2e8f0 0 75%, #64748b 0)",
+              backgroundSize: "16px 16px",
+            } : undefined}
             onError={() => setFailedSrc(src)} />
         )}
         {preview && <div className="mt-3 min-w-0 text-sm">

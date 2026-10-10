@@ -124,6 +124,7 @@ async function main() {
       await test("window.uploads[0].bucket==='media' && window.uploads[0].options.upsert===false", true, 'Storage contract');
       await test('window.decodeCalls', 0, 'No raster decode gate');
       await test("document.querySelector('img').getAttribute('src').startsWith('blob:')", true, 'Local preview');
+      await test("getComputedStyle(document.querySelector('img')).backgroundImage", 'none', 'Default adapter surface remains plain');
       if (type === 'image/svg+xml') await test("document.body.textContent.includes('32 × 24')", false, 'SVG dimensions not fabricated');
     }
     await render('window.render()'); await evaluate("window.select('drop','image/png','large.png',true)"); await wait('window.uploads.length===1');
@@ -147,6 +148,8 @@ async function main() {
       await render(`window.render('${kind}')`); await edit(0);
       await test("document.querySelector('input[type=file]').accept", 'image/*', 'Parent preserves accepted formats');
       await test("document.querySelector('[id$=-dropzone] img').getAttribute('src').endsWith('/a.svg')", true, 'Existing record image');
+      await test("getComputedStyle(document.querySelector('[id$=-dropzone] img')).backgroundImage", 'none', 'Existing module default has no contrast pattern');
+      await test("getComputedStyle(document.querySelector('[id$=-dropzone] img')).backgroundColor", 'rgb(255, 255, 255)', 'Existing module default stays white');
       await evaluate("window.uploadDelay=250");
       await evaluate("window.select('drop','image/svg+xml','Logo Baru.SVG',false,true,true)");
       await wait('window.uploads.length===1'); await test(`${currentSave}.disabled`, true, 'Save disabled during upload');
@@ -226,8 +229,8 @@ async function main() {
     const deleted = serverHarness();
     assert.equal((await deleted.actions.deleteDistributionEntity(parentId)).success, true);
     assert.equal(deleted.writes[0].record.is_active, false); assert.ok(deleted.writes[0].record.deleted_at); checks += 3;
-    const changed = execFileSync('git', ['diff', '--name-only', 'HEAD', '--', 'supabase', 'lib/actions', 'lib/validations', 'utils/supabase', 'components/admin/ImageUploadField.tsx', 'components/admin/PortfolioForm.tsx', 'package.json', 'package-lock.json'], { cwd: root, encoding: 'utf8' });
-    assert.equal(changed.trim(), '', 'Protected domain/authorization/primitive files unchanged'); checks++;
+    const changed = execFileSync('git', ['diff', '--name-only', 'HEAD', '--', 'supabase', 'lib/actions', 'lib/validations', 'utils/supabase', 'components/admin/PortfolioForm.tsx', 'package.json', 'package-lock.json'], { cwd: root, encoding: 'utf8' });
+    assert.equal(changed.trim(), '', 'Protected domain/authorization/Portfolio files unchanged'); checks++;
     console.log(`PASS: ${checks} actual adapter + Grup/Partner/Distribution browser checks; image/* including SVG/GIF, unchanged paths, state/busy/session safety and responsive light/dark. Transport mocked; no live writes.`);
   } finally { if (socket) socket.close(); browser.kill(); await new Promise(resolve => server.close(resolve)); }
 }

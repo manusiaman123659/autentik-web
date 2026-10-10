@@ -1,19 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Image as ImageIcon,
   Loader2,
   Save,
-  Trash2,
-  Upload,
   Wand2,
 } from "lucide-react";
 import { upsertBrand } from "@/lib/actions/brands";
 import { inputClass, labelClass, FieldError } from "@/components/admin/ui";
 import { useToast } from "@/components/admin/Toast";
-import { createClient } from "@/utils/supabase/client";
+import MediaUploadField from "@/components/admin/MediaUploadField";
 import { brandSegments } from "@/lib/validations/brandSchema";
 import type { BrandRow } from "@/lib/admin-data";
 
@@ -33,35 +30,6 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .replace(/-{2,}/g, "-");
-
-async function uploadToMedia(
-  file: File,
-  options: { pathPrefix: string; contentType: string; errorContext: string }
-): Promise<string> {
-  const supabase = createClient();
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new Error("Sesi Anda telah berakhir. Silakan masuk kembali.");
-
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
-  const path = `${options.pathPrefix}/${Date.now()}-${safeName}`;
-  const { error } = await supabase.storage.from("media").upload(path, file, {
-    contentType: options.contentType,
-    upsert: false,
-  });
-  if (error) {
-    if (error.message.toLowerCase().includes("row-level security")) {
-      throw new Error(
-        "Gagal mengunggah: kebijakan akses storage belum diterapkan di Supabase (jalankan migrasi 0004)."
-      );
-    }
-    throw new Error(`Gagal mengunggah ${options.errorContext}. ${error.message}`);
-  }
-  const { data } = supabase.storage.from("media").getPublicUrl(path);
-  return data.publicUrl;
-}
 
 function ColorField({
   label,
@@ -99,69 +67,21 @@ function ColorField({
   );
 }
 
-function LogoField({
-  label,
-  value,
-  uploading,
-  onChange,
-  onPick,
-}: {
-  label: string;
-  value: string;
-  uploading: boolean;
-  onChange: (url: string) => void;
-  onPick: () => void;
-}) {
-  return (
-    <div>
-      <label className={labelClass}>{label}</label>
-      <div className="flex items-center gap-3">
-        {value ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={value}
-            alt=""
-            className="h-10 w-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white object-contain p-1"
-          />
-        ) : (
-          <div className="h-10 w-10 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400">
-            <ImageIcon size={16} />
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onPick}
-            disabled={uploading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors disabled:opacity-50"
-          >
-            <Upload size={14} />
-            {value ? "Ganti" : "Unggah"}
-          </button>
-          {value && (
-            <button
-              type="button"
-              onClick={() => onChange("")}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800 text-red-500 text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-            >
-              <Trash2 size={14} />
-              Hapus
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+export default function BrandForm({ initial }: { initial?: BrandRow }) {
+  return <BrandFormFields key={initial?.id ?? "new"} initial={initial} />;
 }
 
-export default function BrandForm({ initial }: { initial?: BrandRow }) {
+function BrandFormFields({ initial }: { initial?: BrandRow }) {
   const router = useRouter();
   const { toast } = useToast();
   const isEdit = Boolean(initial);
   const initialName = initial?.name ?? "";
 
-  const logoLightRef = useRef<HTMLInputElement>(null);
-  const logoDarkRef = useRef<HTMLInputElement>(null);
+  const active = useRef(true);
+  const submitLock = useRef(false);
+  const logoBusy = useRef({ light: false, dark: false });
+  const [uploadVersion, setUploadVersion] = useState(0);
+  const [closing, setClosing] = useState(false);
 
   const [id] = useState(initial?.id ?? "");
   const [name, setName] = useState(initial?.name ?? "");
@@ -184,13 +104,21 @@ export default function BrandForm({ initial }: { initial?: BrandRow }) {
   const [busy, setBusy] = useState(false);
   const [uploadingLight, setUploadingLight] = useState(false);
   const [uploadingDark, setUploadingDark] = useState(false);
-  const [uploadError, setUploadError] = useState("");
+  const isLogoUploading = uploadingLight || uploadingDark;
+  const formErrors = Object.entries(errors).filter(([key]) => key !== "logoLight" && key !== "logoDark");
+
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
 
   const setField = (key: string, value: string) => {
     if (key === "name") setName(value);
     if (key === "slug") setSlug(value);
     if (key === "tagline") setTagline(value);
     if (key === "description") setDescription(value);
+    if (key === "logoLight") setLogoLight(value);
+    if (key === "logoDark") setLogoDark(value);
     setErrors((prev) => {
       const next = { ...prev };
       delete next[key];
@@ -198,74 +126,51 @@ export default function BrandForm({ initial }: { initial?: BrandRow }) {
     });
   };
 
-  const handleLogoChange = async (
-    file: File | undefined,
-    key: "light" | "dark"
-  ) => {
-    if (!file) return;
-    setUploadError("");
-    if (!file.type.startsWith("image/")) {
-      setUploadError("File harus berupa gambar (PNG/JPG/WebP/SVG).");
-      return;
-    }
-    if (key === "light") setUploadingLight(true);
-    else setUploadingDark(true);
-    try {
-      const publicUrl = await uploadToMedia(file, {
-        pathPrefix: "brands",
-        contentType: file.type,
-        errorContext: "logo merek",
-      });
-      if (key === "light") setLogoLight(publicUrl);
-      else setLogoDark(publicUrl);
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Gagal mengunggah logo.");
-    } finally {
-      if (key === "light") setUploadingLight(false);
-      else setUploadingDark(false);
-    }
+  const cancel = () => {
+    if (!active.current) return;
+    active.current = false; setClosing(true);
+    setUploadVersion(version => version + 1);
+    router.push("/admin/merek");
   };
 
   const handleSubmit = async () => {
+    if (!active.current || busy || isLogoUploading || logoBusy.current.light || logoBusy.current.dark || submitLock.current) return;
+    submitLock.current = true;
     setBusy(true);
     setErrors({});
-    const result = await upsertBrand({
-      id: id || undefined,
-      name,
-      slug,
-      segment,
-      segmentColor,
-      tagline,
-      description,
-      accentColor,
-      logoLight,
-      logoDark,
-      isActive,
-      sortOrder: Number(sortOrder) || 0,
-    });
-    setBusy(false);
-    if (!result.success) {
-      setErrors(result.errors ?? {});
-      toast("error", result.message);
-      return;
-    }
-    toast("success", result.message);
-    if (isEdit) {
-      router.refresh();
-    } else {
-      router.push("/admin/merek");
+    try {
+      const result = await upsertBrand({
+        id: id || undefined, name, slug, segment, segmentColor, tagline, description,
+        accentColor, logoLight, logoDark, isActive, sortOrder: Number(sortOrder) || 0,
+      });
+      if (!active.current) return;
+      if (!result.success) {
+        setErrors(result.errors ?? {}); toast("error", result.message); return;
+      }
+      toast("success", result.message);
+      setUploadVersion(version => version + 1);
+      if (isEdit) {
+        router.refresh();
+      } else {
+        active.current = false; setClosing(true); router.push("/admin/merek");
+      }
+    } catch {
+      if (active.current) toast("error", "Gagal menyimpan merek. Silakan coba lagi.");
+    } finally {
+      submitLock.current = false;
+      if (active.current) setBusy(false);
     }
   };
 
   return (
     <div className="max-w-3xl space-y-6">
-      {Object.keys(errors).length > 0 && (
+      {formErrors.length > 0 && (
         <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-4 py-3">
           <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">
             Terdapat kesalahan pada isian:
           </p>
           <ul className="list-disc list-inside space-y-0.5">
-            {Object.entries(errors).map(([k, v]) => (
+            {formErrors.map(([k, v]) => (
               <li key={k} className="text-xs text-red-600 dark:text-red-400">
                 {k}: {v}
               </li>
@@ -407,45 +312,36 @@ export default function BrandForm({ initial }: { initial?: BrandRow }) {
             <FieldError message={errors.description} />
           </div>
           <div className="grid sm:grid-cols-2 gap-5">
-            <LogoField
+            <MediaUploadField key={`light-${uploadVersion}`} id="brand-logo-light"
               label="Logo Light (mode terang)"
               value={logoLight}
-              uploading={uploadingLight}
-              onChange={setLogoLight}
-              onPick={() => logoLightRef.current?.click()}
+              pathPrefix="brands" errorContext="Logo light merek" previewSurface="contrast"
+              disabled={busy || closing} fieldError={errors.logoLight}
+              onChange={url => { if (active.current) setField("logoLight", url); }}
+              onUploadingChange={uploading => {
+                if (!active.current) return;
+                logoBusy.current.light = uploading; setUploadingLight(uploading);
+              }}
             />
-            <LogoField
+            <MediaUploadField key={`dark-${uploadVersion}`} id="brand-logo-dark"
               label="Logo Dark (mode gelap)"
               value={logoDark}
-              uploading={uploadingDark}
-              onChange={setLogoDark}
-              onPick={() => logoDarkRef.current?.click()}
+              pathPrefix="brands" errorContext="Logo dark merek" previewSurface="contrast"
+              disabled={busy || closing} fieldError={errors.logoDark}
+              onChange={url => { if (active.current) setField("logoDark", url); }}
+              onUploadingChange={uploading => {
+                if (!active.current) return;
+                logoBusy.current.dark = uploading; setUploadingDark(uploading);
+              }}
             />
           </div>
-          {uploadError && (
-            <p className="text-xs text-red-500">{uploadError}</p>
-          )}
-          <input
-            ref={logoLightRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleLogoChange(e.target.files?.[0], "light")}
-          />
-          <input
-            ref={logoDarkRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleLogoChange(e.target.files?.[0], "dark")}
-          />
         </div>
       </section>
 
       <div className="flex items-center justify-end gap-3 pt-2 pb-10">
         <button
           type="button"
-          onClick={() => router.push("/admin/merek")}
+          onClick={cancel}
           className="px-5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           Batal
@@ -453,7 +349,7 @@ export default function BrandForm({ initial }: { initial?: BrandRow }) {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={busy}
+          disabled={busy || closing || isLogoUploading}
           className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0C8C87] transition-colors disabled:opacity-60"
         >
           {busy ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
