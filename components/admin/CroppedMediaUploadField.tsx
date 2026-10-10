@@ -1,189 +1,143 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Image as ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/admin/Toast";
-import dynamic from "next/dynamic";
+import ImageUploadField, { type ImageUploadPhase, type ImageUploadPreview } from "@/components/admin/ImageUploadField";
+import { logError } from "@/lib/logger";
 
-const ImageCropperModal = dynamic(() => import("./ImageCropperModal"), {
-  ssr: false,
-});
+const ImageCropperModal = dynamic(() => import("./ImageCropperModal"), { ssr: false });
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+type SourceCandidate = { file: File; url: string; token: object; opener: HTMLElement | null; previousPhase: ImageUploadPhase };
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-
-async function uploadToMedia(
-  file: File,
-  options: { pathPrefix: string; contentType: string; errorContext: string }
-): Promise<string> {
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new Error("Sesi Anda telah berakhir. Silakan masuk kembali.");
-
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
-  const path = `${options.pathPrefix}/${Date.now()}-${safeName}`;
-  const { error } = await supabase.storage.from("media").upload(path, file, {
-    contentType: options.contentType,
-    upsert: false,
-  });
-  if (error) {
-    if (error.message.toLowerCase().includes("row-level security")) {
-      throw new Error(
-        "Gagal mengunggah: kebijakan akses storage belum diterapkan di Supabase (jalankan migrasi 0004)."
-      );
-    }
-    throw new Error(`Gagal mengunggah ${options.errorContext}. ${error.message}`);
-  }
-  const { data } = supabase.storage.from("media").getPublicUrl(path);
-  return data.publicUrl;
-}
-
-export default function CroppedMediaUploadField({
-  label,
-  value,
-  pathPrefix,
-  errorContext,
-  onChange,
-}: {
+export default function CroppedMediaUploadField({ label, value, pathPrefix, errorContext, onChange, id, disabled = false, fieldError, onBusyChange }: {
   label: string;
   value: string;
   pathPrefix: string;
   errorContext: string;
   onChange: (url: string) => void;
+  id?: string;
+  disabled?: boolean;
+  fieldError?: string;
+  onBusyChange?: (busy: boolean) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const generatedId = useId();
+  const fieldId = id ?? `cropped-media-${generatedId}`;
   const { toast } = useToast();
-  const [uploading, setUploading] = useState(false);
+  const [candidate, setCandidate] = useState<SourceCandidate | null>(null);
+  const [preview, setPreview] = useState<ImageUploadPreview | null>(null);
+  const [phase, setPhase] = useState<ImageUploadPhase>("idle");
+  const [workflowBusy, setWorkflowBusy] = useState(false);
   const [error, setError] = useState("");
-  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const sourceUrl = useRef<string | null>(null);
+  const croppedUrl = useRef<string | null>(null);
+  const activeRequest = useRef<object | null>(null);
+  const mounted = useRef(true);
+  const workflowLock = useRef(false);
+  const applyLock = useRef(false);
+  const busyListener = useRef(onBusyChange);
 
+  useEffect(() => { busyListener.current = onBusyChange; }, [onBusyChange]);
   useEffect(() => {
+    mounted.current = true;
     return () => {
-      if (cropImageSrc) URL.revokeObjectURL(cropImageSrc);
+      mounted.current = false; activeRequest.current = null; workflowLock.current = false; applyLock.current = false;
+      if (sourceUrl.current) URL.revokeObjectURL(sourceUrl.current);
+      if (croppedUrl.current) URL.revokeObjectURL(croppedUrl.current);
+      sourceUrl.current = null; croppedUrl.current = null;
+      busyListener.current?.(false);
     };
-  }, [cropImageSrc]);
+  }, []);
 
-  const handleFileSelect = useCallback(
-    (file?: File) => {
-      if (!file) return;
-      setError("");
-      if (!file.type.startsWith("image/")) {
-        setError("File harus berupa gambar (PNG/JPG/WebP).");
-        return;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        setError("Ukuran file maksimal 5MB.");
-        return;
-      }
-      const objectUrl = URL.createObjectURL(file);
-      setCropImageSrc(objectUrl);
-    },
-    []
-  );
+  const current = (token: object) => mounted.current && activeRequest.current === token;
+  function releaseSource() {
+    if (sourceUrl.current) URL.revokeObjectURL(sourceUrl.current);
+    sourceUrl.current = null;
+  }
+  function releaseCropped() {
+    if (croppedUrl.current) URL.revokeObjectURL(croppedUrl.current);
+    croppedUrl.current = null; setPreview(null);
+  }
+  function finish(token: object) {
+    if (!current(token)) return;
+    activeRequest.current = null; workflowLock.current = false; applyLock.current = false;
+    releaseSource(); setCandidate(null); setWorkflowBusy(false); busyListener.current?.(false);
+  }
+  function fail(token: object, message: string, stage: string) {
+    if (!current(token)) return;
+    releaseCropped(); setError(message); setPhase("error");
+    logError("admin.photo_crop", "Photo workflow failed", { stage });
+    finish(token);
+  }
 
-  const handleCropApply = useCallback(
-    async (croppedBlob: Blob) => {
-      if (cropImageSrc) {
-        URL.revokeObjectURL(cropImageSrc);
-        setCropImageSrc(null);
-      }
+  function select(file: File) {
+    if (disabled || workflowLock.current) return;
+    setError("");
+    if (!file.type.startsWith("image/")) { setError("File harus berupa gambar."); setPhase("error"); return; }
+    if (file.size > MAX_FILE_SIZE) { setError("Ukuran gambar maksimal 5 MB."); setPhase("error"); return; }
+    const token = {}; activeRequest.current = token; workflowLock.current = true;
+    setWorkflowBusy(true); busyListener.current?.(true);
+    try {
+      releaseSource(); releaseCropped();
+      const url = URL.createObjectURL(file); sourceUrl.current = url;
+      setCandidate({ file, url, token, opener: document.getElementById(`${fieldId}-browse`), previousPhase: phase === "uploaded" ? "uploaded" : "idle" });
+    } catch { fail(token, "Gambar gagal diproses. Silakan coba lagi.", "source_preview"); }
+  }
 
-      const ext = croppedBlob.type.split("/")[1] ?? "webp";
-      const file = new File([croppedBlob], `cropped.${ext}`, {
-        type: croppedBlob.type,
-      });
-
-      setUploading(true);
-      try {
-        const publicUrl = await uploadToMedia(file, {
-          pathPrefix,
-          contentType: croppedBlob.type,
-          errorContext,
-        });
-        onChange(publicUrl);
-        toast("success", `${errorContext} berhasil diunggah.`);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Gagal mengunggah file.";
-        setError(message);
-        toast("error", message);
-      } finally {
-        setUploading(false);
-      }
-    },
-    [cropImageSrc, pathPrefix, errorContext, onChange, toast]
-  );
-
-  const handleCropClose = useCallback(() => {
-    if (cropImageSrc) {
-      URL.revokeObjectURL(cropImageSrc);
-      setCropImageSrc(null);
+  async function apply(blob: Blob, source: SourceCandidate) {
+    if (!current(source.token) || applyLock.current) return;
+    applyLock.current = true;
+    let stage = "result";
+    try {
+      const ext = blob.type.split("/")[1] ?? "webp";
+      const file = new File([blob], `cropped.${ext}`, { type: blob.type });
+      releaseCropped();
+      const url = URL.createObjectURL(blob); croppedUrl.current = url;
+      setPreview({ url, name: file.name, size: file.size });
+      setPhase("uploading"); stage = "session";
+      const supabase = createClient();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (!current(source.token)) return;
+      if (sessionError) throw sessionError;
+      if (!sessionData.session) throw new Error("session_missing");
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
+      const path = `${pathPrefix}/${Date.now()}-${safeName}`;
+      stage = "upload";
+      const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { contentType: blob.type, upsert: false });
+      if (!current(source.token)) return;
+      if (uploadError) throw uploadError;
+      stage = "url";
+      const { data } = supabase.storage.from("media").getPublicUrl(path);
+      if (!data.publicUrl) throw new Error("public_url_missing");
+      onChange(data.publicUrl); setPhase("uploaded"); finish(source.token);
+      toast("success", `${errorContext} berhasil diunggah. Simpan entri untuk menggunakan foto ini.`);
+    } catch (err) {
+      if (!current(source.token)) return;
+      const detail = err && typeof err === "object" ? err as { status?: unknown; statusCode?: unknown; code?: unknown } : {};
+      const status = Number(detail.status ?? detail.statusCode);
+      const message = (err instanceof Error && err.message === "session_missing") || status === 401 ? "Sesi Anda berakhir. Silakan masuk kembali."
+        : status === 403 || detail.code === "AccessDenied" || detail.code === "42501" ? "Akun Anda belum memiliki akses untuk mengunggah gambar."
+        : stage === "session" || stage === "upload" ? "Gambar gagal diunggah. Periksa koneksi lalu coba lagi." : "Gambar gagal diproses. Silakan coba lagi.";
+      fail(source.token, message, stage);
     }
-  }, [cropImageSrc]);
+  }
 
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
-        {label}
-      </label>
-      <div className="flex items-center gap-3">
-        {value ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={value}
-            alt=""
-            className="h-10 w-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white object-contain p-1"
-          />
-        ) : (
-          <div className="h-10 w-10 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400">
-            <ImageIcon size={16} />
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={uploading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors disabled:opacity-50"
-          >
-            {uploading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Upload size={14} />
-            )}
-            {value ? "Ganti" : "Unggah"}
-          </button>
-          {value && (
-            <button
-              type="button"
-              onClick={() => onChange("")}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800 text-red-500 text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-            >
-              <Trash2 size={14} />
-              Hapus
-            </button>
-          )}
-        </div>
-      </div>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          handleFileSelect(e.target.files?.[0]);
-          if (inputRef.current) inputRef.current.value = "";
-        }}
-      />
-      {cropImageSrc && (
-        <ImageCropperModal
-          imageSrc={cropImageSrc}
-          onApply={handleCropApply}
-          onClose={handleCropClose}
-        />
-      )}
-    </div>
-  );
+  return <>
+    <ImageUploadField id={fieldId} label={label} value={value} preview={preview} phase={phase} accept="image/*"
+      helperText="Gambar • Maks. 5 MB. Foto dipotong 1:1 sebelum diunggah; memilih file saja belum mengubah foto."
+      error={error || fieldError} disabled={disabled || workflowBusy} onFileSelected={select}
+      onRemove={() => {
+        if (disabled || workflowLock.current) return;
+        releaseSource(); releaseCropped(); setError(""); setPhase("removed"); onChange("");
+      }} />
+    {candidate && <ImageCropperModal key={candidate.url} imageSrc={candidate.url} sourceName={candidate.file.name} opener={candidate.opener}
+      progressText={phase === "uploading" ? "Mengunggah foto…" : "Memproses hasil crop…"}
+      onApply={blob => apply(blob, candidate)}
+      onError={stage => fail(candidate.token, stage === "source" ? "File tidak dapat dibaca sebagai gambar." : "Gambar gagal diproses saat pemotongan.", stage)}
+      onClose={() => {
+        if (!current(candidate.token)) return;
+        releaseCropped(); setError(""); setPhase(candidate.previousPhase); finish(candidate.token);
+      }} />}
+  </>;
 }

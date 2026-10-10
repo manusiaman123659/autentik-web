@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Save, Trash2, User, X } from "lucide-react";
 import type { TeamMemberRow } from "@/lib/admin-data";
@@ -55,6 +55,11 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
   const [form, setForm] = useState<FormState | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [formSession, setFormSession] = useState(0);
+  const activeSession = useRef(0);
+  const photoActivity = useRef(false);
+  const submitLock = useRef(false);
   const [pendingDelete, setPendingDelete] = useState<TeamMemberRow | null>(null);
   const [page, setPage] = useState(1);
 
@@ -64,6 +69,12 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
   const pageItems = team.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const isEdit = Boolean(form?.id);
+
+  const resetPhoto = () => {
+    activeSession.current++;
+    setFormSession(activeSession.current);
+    photoActivity.current = false; setPhotoBusy(false);
+  };
 
   const setField = (key: keyof FormState, value: string | boolean | number) => {
     setForm((f) => (f ? { ...f, [key]: value } : f));
@@ -75,11 +86,13 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
   };
 
   const openCreate = () => {
+    resetPhoto();
     setForm({ ...emptyForm });
     setErrors({});
   };
 
   const openEdit = (m: TeamMemberRow) => {
+    resetPhoto();
     setForm({
       id: m.id,
       name: m.name,
@@ -94,24 +107,27 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
   };
 
   const cancel = () => {
+    resetPhoto();
     setForm(null);
     setErrors({});
   };
 
   const submit = async () => {
-    if (!form) return;
+    if (!form || photoActivity.current || submitLock.current) return;
+    const session = activeSession.current;
+    submitLock.current = true;
     setBusy(true);
     setErrors({});
-    const result = await saveTeamMember(form);
-    setBusy(false);
-    if (!result.success) {
-      setErrors(result.errors ?? {});
-      toast("error", result.message);
-      return;
+    try {
+      const result = await saveTeamMember(form);
+      if (session !== activeSession.current) return;
+      if (!result.success) { setErrors(result.errors ?? {}); toast("error", result.message); return; }
+      toast("success", result.message); cancel(); router.refresh();
+    } catch {
+      if (session === activeSession.current) toast("error", "Gagal menyimpan anggota tim. Silakan coba lagi.");
+    } finally {
+      submitLock.current = false; setBusy(false);
     }
-    toast("success", result.message);
-    setForm(null);
-    router.refresh();
   };
 
   const handleDelete = async () => {
@@ -237,11 +253,16 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
             </div>
             <div className="sm:col-span-2">
           <CroppedMediaUploadField
+            key={formSession} id="team-photo" disabled={busy} fieldError={errors.imageUrl}
             label="Foto Profil"
             value={form.imageUrl}
             pathPrefix="team"
             errorContext="Foto profil"
-            onChange={(url) => setField("imageUrl", url)}
+            onChange={(url) => { if (activeSession.current === formSession) setField("imageUrl", url); }}
+            onBusyChange={(value) => {
+              if (activeSession.current !== formSession) return;
+              photoActivity.current = value; setPhotoBusy(value);
+            }}
           />
             </div>
             <div className="sm:col-span-2">
@@ -269,7 +290,7 @@ export default function TeamTab({ team }: { team: TeamMemberRow[] }) {
             <button
               type="button"
               onClick={submit}
-              disabled={busy}
+              disabled={busy || photoBusy}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0C8C87] transition-colors disabled:opacity-60"
             >
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
