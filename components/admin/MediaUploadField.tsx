@@ -1,135 +1,110 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Image as ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useToast } from "@/components/admin/Toast";
-
-async function uploadToMedia(
-  file: File,
-  options: { pathPrefix: string; contentType: string; errorContext: string }
-): Promise<string> {
-  const supabase = createClient();
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session) throw new Error("Sesi Anda telah berakhir. Silakan masuk kembali.");
-
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
-  const path = `${options.pathPrefix}/${Date.now()}-${safeName}`;
-  const { error } = await supabase.storage.from("media").upload(path, file, {
-    contentType: options.contentType,
-    upsert: false,
-  });
-  if (error) {
-    if (error.message.toLowerCase().includes("row-level security")) {
-      throw new Error(
-        "Gagal mengunggah: kebijakan akses storage belum diterapkan di Supabase (jalankan migrasi 0004)."
-      );
-    }
-    throw new Error(`Gagal mengunggah ${options.errorContext}. ${error.message}`);
-  }
-  const { data } = supabase.storage.from("media").getPublicUrl(path);
-  return data.publicUrl;
-}
+import ImageUploadField, { type ImageUploadPhase, type ImageUploadPreview } from "@/components/admin/ImageUploadField";
+import { logError } from "@/lib/logger";
 
 export default function MediaUploadField({
-  label,
-  value,
-  pathPrefix,
-  errorContext,
-  onChange,
+  label, value, pathPrefix, errorContext, onChange, id, disabled = false, fieldError, onUploadingChange,
 }: {
   label: string;
   value: string;
   pathPrefix: string;
   errorContext: string;
   onChange: (url: string) => void;
+  id?: string;
+  disabled?: boolean;
+  fieldError?: string;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const generatedId = useId();
   const { toast } = useToast();
-  const [uploading, setUploading] = useState(false);
+  const [phase, setPhase] = useState<ImageUploadPhase>("idle");
+  const [preview, setPreview] = useState<ImageUploadPreview | null>(null);
   const [error, setError] = useState("");
+  const activeRequest = useRef<object | null>(null);
+  const mounted = useRef(true);
+  const uploadLock = useRef(false);
+  const objectUrl = useRef<string | null>(null);
 
-  const handleChange = async (file?: File) => {
-    if (!file) return;
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false; activeRequest.current = null; uploadLock.current = false;
+      if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
+      objectUrl.current = null;
+    };
+  }, []);
+
+  function releasePreview() {
+    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
+    objectUrl.current = null; setPreview(null);
+  }
+
+  async function upload(file: File) {
+    if (disabled || uploadLock.current) return;
     setError("");
     if (!file.type.startsWith("image/")) {
-      setError("File harus berupa gambar (PNG/JPG/WebP/SVG).");
-      return;
+      setError("File harus berupa gambar."); setPhase("error"); return;
     }
-    setUploading(true);
+    uploadLock.current = true;
+    const request = {};
+    activeRequest.current = request;
+    const current = () => mounted.current && activeRequest.current === request;
+    onUploadingChange?.(true); setPhase("validating");
+    let stage = "preview";
     try {
-      const publicUrl = await uploadToMedia(file, {
-        pathPrefix,
-        contentType: file.type,
-        errorContext,
+      releasePreview();
+      const url = URL.createObjectURL(file); objectUrl.current = url;
+      setPreview({ url, name: file.name, size: file.size });
+      stage = "session";
+      const supabase = createClient();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (!current()) return;
+      if (sessionError) throw sessionError;
+      if (!sessionData.session) throw new Error("session_missing");
+      stage = "upload"; setPhase("uploading");
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").toLowerCase();
+      const path = `${pathPrefix}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from("media").upload(path, file, {
+        contentType: file.type, upsert: false,
       });
-      onChange(publicUrl);
+      if (!current()) return;
+      if (uploadError) throw uploadError;
+      stage = "url";
+      const { data } = supabase.storage.from("media").getPublicUrl(path);
+      if (!data.publicUrl) throw new Error("public_url_missing");
+      onChange(data.publicUrl); setPhase("uploaded");
       toast("success", `${errorContext} berhasil diunggah.`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Gagal mengunggah file.";
-      setError(message);
+      if (!current()) return;
+      const detail = err && typeof err === "object" ? err as { status?: unknown; statusCode?: unknown; code?: unknown } : {};
+      const status = Number(detail.status ?? detail.statusCode);
+      const message = (err instanceof Error && err.message === "session_missing") || status === 401
+        ? "Sesi Anda berakhir. Silakan masuk kembali."
+        : status === 403 || detail.code === "AccessDenied" || detail.code === "42501"
+          ? "Akun Anda belum memiliki akses untuk mengunggah gambar."
+          : stage === "upload" || stage === "session"
+            ? "Gambar gagal diunggah. Periksa koneksi lalu coba lagi."
+            : "Gambar gagal diproses. Silakan coba lagi.";
+      setError(message); releasePreview(); setPhase("error");
+      logError("admin.media_upload", "Image upload failed", {
+        stage, status: Number.isFinite(status) ? status : undefined,
+        code: typeof detail.code === "string" && /^[A-Za-z0-9_]{1,80}$/.test(detail.code) ? detail.code : undefined,
+      });
       toast("error", message);
     } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
+      if (current()) { uploadLock.current = false; onUploadingChange?.(false); }
     }
-  };
+  }
 
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
-        {label}
-      </label>
-      <div className="flex items-center gap-3">
-        {value ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={value}
-            alt=""
-            className="h-10 w-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white object-contain p-1"
-          />
-        ) : (
-          <div className="h-10 w-10 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400">
-            <ImageIcon size={16} />
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={uploading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors disabled:opacity-50"
-          >
-            {uploading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Upload size={14} />
-            )}
-            {value ? "Ganti" : "Unggah"}
-          </button>
-          {value && (
-            <button
-              type="button"
-              onClick={() => onChange("")}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 dark:border-red-800 text-red-500 text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-            >
-              <Trash2 size={14} />
-              Hapus
-            </button>
-          )}
-        </div>
-      </div>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => handleChange(e.target.files?.[0])}
-      />
-    </div>
-  );
+  return <ImageUploadField id={id ?? `media-${generatedId}`} label={label} value={value} preview={preview}
+    phase={phase} accept="image/*" helperText="Pilih satu file gambar. SVG dan format image/* tetap didukung."
+    error={error || fieldError} disabled={disabled} onFileSelected={file => { void upload(file); }}
+    onRemove={() => {
+      if (disabled || uploadLock.current) return;
+      activeRequest.current = null; releasePreview(); setError(""); setPhase("removed"); onChange("");
+    }} />;
 }

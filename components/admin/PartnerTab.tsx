@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Handshake, Loader2, Plus, Save, Trash2, X } from "lucide-react";
 import type { PartnerRow } from "@/lib/admin-data";
@@ -51,6 +51,11 @@ export default function PartnerTab({ partners }: { partners: PartnerRow[] }) {
   const [form, setForm] = useState<FormState | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [formSession, setFormSession] = useState(0);
+  const activeSession = useRef(0);
+  const uploadBusy = useRef(false);
+  const submitLock = useRef(false);
   const [pendingDelete, setPendingDelete] = useState<PartnerRow | null>(null);
   const [page, setPage] = useState(1);
 
@@ -60,6 +65,12 @@ export default function PartnerTab({ partners }: { partners: PartnerRow[] }) {
   const pageItems = partners.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const isEdit = Boolean(form?.id);
+
+  const resetUpload = () => {
+    activeSession.current++;
+    setFormSession(activeSession.current);
+    uploadBusy.current = false; setUploading(false);
+  };
 
   const setField = (key: keyof FormState, value: string | boolean | number) => {
     setForm((f) => (f ? { ...f, [key]: value } : f));
@@ -71,11 +82,13 @@ export default function PartnerTab({ partners }: { partners: PartnerRow[] }) {
   };
 
   const openCreate = () => {
+    resetUpload();
     setForm({ ...emptyForm });
     setErrors({});
   };
 
   const openEdit = (p: PartnerRow) => {
+    resetUpload();
     setForm({
       id: p.id,
       name: p.name,
@@ -89,24 +102,29 @@ export default function PartnerTab({ partners }: { partners: PartnerRow[] }) {
   };
 
   const cancel = () => {
+    resetUpload();
     setForm(null);
     setErrors({});
   };
 
   const submit = async () => {
-    if (!form) return;
+    if (!form || uploadBusy.current || submitLock.current) return;
+    const session = activeSession.current;
+    submitLock.current = true;
     setBusy(true);
     setErrors({});
-    const result = await savePartner(form);
-    setBusy(false);
-    if (!result.success) {
-      setErrors(result.errors ?? {});
-      toast("error", result.message);
-      return;
+    try {
+      const result = await savePartner(form);
+      if (session !== activeSession.current) return;
+      if (!result.success) {
+        setErrors(result.errors ?? {}); toast("error", result.message); return;
+      }
+      toast("success", result.message); cancel(); router.refresh();
+    } catch {
+      if (session === activeSession.current) toast("error", "Gagal menyimpan partner. Silakan coba lagi.");
+    } finally {
+      submitLock.current = false; setBusy(false);
     }
-    toast("success", result.message);
-    setForm(null);
-    router.refresh();
   };
 
   const handleDelete = async () => {
@@ -205,11 +223,16 @@ export default function PartnerTab({ partners }: { partners: PartnerRow[] }) {
             </div>
             <div className="sm:col-span-2">
               <MediaUploadField
+                key={formSession} id="partner-logo" disabled={busy} fieldError={errors.logoUrl}
                 label="Logo Partner"
                 value={form.logoUrl}
                 pathPrefix="partners"
                 errorContext="Logo partner"
-                onChange={(url) => setField("logoUrl", url)}
+                onChange={(url) => { if (activeSession.current === formSession) setField("logoUrl", url); }}
+                onUploadingChange={(value) => {
+                  if (activeSession.current !== formSession) return;
+                  uploadBusy.current = value; setUploading(value);
+                }}
               />
             </div>
             <div>
@@ -249,7 +272,7 @@ export default function PartnerTab({ partners }: { partners: PartnerRow[] }) {
             <button
               type="button"
               onClick={submit}
-              disabled={busy}
+              disabled={busy || uploading}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0C8C87] transition-colors disabled:opacity-60"
             >
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}

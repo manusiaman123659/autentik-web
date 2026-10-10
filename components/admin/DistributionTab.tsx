@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Loader2, MapPin, Network, Plus, Save, Trash2, X } from "lucide-react";
 import type { DistributionEntityRow } from "@/lib/admin-data";
@@ -102,6 +102,11 @@ export default function DistributionTab({ entities }: { entities: DistributionEn
   const [form, setForm] = useState<FormState | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [formSession, setFormSession] = useState(0);
+  const activeSession = useRef(0);
+  const uploadBusy = useRef(false);
+  const submitLock = useRef(false);
   const [pendingDelete, setPendingDelete] = useState<DistributionEntityRow | null>(null);
   const [page, setPage] = useState(1);
 
@@ -110,6 +115,14 @@ export default function DistributionTab({ entities }: { entities: DistributionEn
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
   const pageItems = entities.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   const entityNames = new Map(entities.map((entity) => [entity.id, entity.name]));
+
+  const resetUpload = () => {
+    activeSession.current++;
+    setFormSession(activeSession.current);
+    uploadBusy.current = false; setUploading(false);
+  };
+
+  const closeForm = () => { resetUpload(); setForm(null); setErrors({}); };
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => (current ? { ...current, [key]: value } : current));
@@ -122,19 +135,23 @@ export default function DistributionTab({ entities }: { entities: DistributionEn
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!form) return;
+    if (!form || uploadBusy.current || submitLock.current) return;
+    const session = activeSession.current;
+    submitLock.current = true;
     setBusy(true);
     setErrors({});
-    const result = await saveDistributionEntity(form);
-    setBusy(false);
-    if (!result.success) {
-      setErrors(result.errors ?? {});
-      toast("error", result.message);
-      return;
+    try {
+      const result = await saveDistributionEntity(form);
+      if (session !== activeSession.current) return;
+      if (!result.success) {
+        setErrors(result.errors ?? {}); toast("error", result.message); return;
+      }
+      toast("success", result.message); closeForm(); router.refresh();
+    } catch {
+      if (session === activeSession.current) toast("error", "Gagal menyimpan jaringan distribusi. Silakan coba lagi.");
+    } finally {
+      submitLock.current = false; setBusy(false);
     }
-    toast("success", result.message);
-    setForm(null);
-    router.refresh();
   };
 
   const handleToggle = async (entity: DistributionEntityRow) => {
@@ -170,6 +187,7 @@ export default function DistributionTab({ entities }: { entities: DistributionEn
         <button
           type="button"
           onClick={() => {
+            resetUpload();
             setForm({ ...emptyForm });
             setErrors({});
           }}
@@ -193,7 +211,7 @@ export default function DistributionTab({ entities }: { entities: DistributionEn
             </div>
             <button
               type="button"
-              onClick={() => setForm(null)}
+              onClick={closeForm}
               aria-label="Tutup form"
               className="text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
             >
@@ -289,8 +307,13 @@ export default function DistributionTab({ entities }: { entities: DistributionEn
               <FieldError message={errors.description} />
             </div>
             <div className="sm:col-span-2">
-              <MediaUploadField label="Logo Perusahaan" value={form.logoUrl} pathPrefix="distribution" errorContext="Logo jaringan distribusi" onChange={(url) => setField("logoUrl", url)} />
-              <FieldError message={errors.logoUrl} />
+              <MediaUploadField key={formSession} id="distribution-logo" label="Logo Perusahaan" value={form.logoUrl}
+                pathPrefix="distribution" errorContext="Logo jaringan distribusi" disabled={busy} fieldError={errors.logoUrl}
+                onChange={(url) => { if (activeSession.current === formSession) setField("logoUrl", url); }}
+                onUploadingChange={(value) => {
+                  if (activeSession.current !== formSession) return;
+                  uploadBusy.current = value; setUploading(value);
+                }} />
             </div>
             <div>
               <label className={labelClass}>Urutan</label>
@@ -306,8 +329,8 @@ export default function DistributionTab({ entities }: { entities: DistributionEn
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-6">
-            <button type="button" onClick={() => setForm(null)} className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Batal</button>
-            <button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-lg bg-[#0EA5A0] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0C8C87] disabled:opacity-60">
+            <button type="button" onClick={closeForm} className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Batal</button>
+            <button type="submit" disabled={busy || uploading} className="inline-flex items-center gap-2 rounded-lg bg-[#0EA5A0] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#0C8C87] disabled:opacity-60">
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               Simpan
             </button>
@@ -350,7 +373,7 @@ export default function DistributionTab({ entities }: { entities: DistributionEn
                 <Td><VisibleToggle checked={entity.is_active} disabled={busy} onToggle={() => handleToggle(entity)} /></Td>
                 <Td><SortCell value={entity.sort_order} disabled={busy} onCommit={(next) => commitSort(entity, next)} /></Td>
                 <Td className="whitespace-nowrap text-right">
-                  <button type="button" onClick={() => { setForm(rowToForm(entity)); setErrors({}); }} className="mr-3 text-xs font-semibold text-[#0EA5A0] hover:underline">Edit</button>
+                  <button type="button" onClick={() => { resetUpload(); setForm(rowToForm(entity)); setErrors({}); }} className="mr-3 text-xs font-semibold text-[#0EA5A0] hover:underline">Edit</button>
                   <button type="button" onClick={() => setPendingDelete(entity)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-2.5 py-1.5 text-red-500 transition-colors hover:border-red-300 hover:bg-red-50 dark:border-red-800 dark:hover:border-red-700 dark:hover:bg-red-950/40"><Trash2 size={13} />Hapus</button>
                 </Td>
               </tr>
