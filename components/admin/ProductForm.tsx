@@ -706,13 +706,13 @@ export default function ProductForm({
     }
 
     const productId = result.productId ?? form.id;
-    if (!initial) {
+    if (!initial && !isSparepart) {
       setSaving(false);
       if (!productId) {
         toast("error", "Produk tersimpan, tetapi ID produk tidak tersedia. Muat ulang daftar produk sebelum melanjutkan.");
         return;
       }
-      router.push(`/admin/${isSparepart ? "sparepart" : "produk"}/${encodeURIComponent(productId)}?created=1`);
+      router.push(`/admin/produk/${encodeURIComponent(productId)}?created=1`);
       return;
     }
 

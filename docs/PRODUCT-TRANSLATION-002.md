@@ -28,8 +28,9 @@ AI, dimensions, shipping or stock-architecture changes are included.
 ## Create and edit
 
 Create source content normally. Translation tabs are visible but disabled until
-the canonical Product has been saved. Both B2B and Komponen creates redirect to
-their saved edit route. No translation is required.
+the canonical Product has been saved. B2B creates redirect to their saved edit
+route. Komponen creates return to `/admin/sparepart` after the first successful
+save; reopen the created record to author translations. No translation is required.
 
 The canonical form keeps its existing configuration/children and edit-save
 navigation. If translation buffers are dirty, canonical Save/Cancel and internal
@@ -140,7 +141,7 @@ sets source-only QA features/specs (including a text-classified spec) because 00
 intentionally adds no classification control. All translation lifecycle writes
 are performed through the actual UI/actions; cleanup uses guarded delete RPCs.
 
-Tests cover create redirects, EN/ZH lifecycle, six-field preservation, technical
+Tests cover B2B create-to-edit and Komponen create-to-list/reopen, EN/ZH lifecycle, six-field preservation, technical
 read-only/text values, stale source edit/review and real two-editor version/source/
 UUID delete-recreate conflicts, narrow layout and keyboard/dark presentation.
 Cleanup removes only owned translations and soft-archives only owned Products.
@@ -172,8 +173,8 @@ Next task: PRODUCT-TRANSLATION-003 — Public B2B Product Consumption (not start
 - Foundation regression: 201 passed; closed 001 live suite not rerun.
 - Existing RBAC verifier: 546 passed (isolated roles/auth/data).
 - Production build/TypeScript and ESLint passed.
-- Final live UI run: 46 assertions passed using a normal active Admin session.
-  Both creates redirected to edit; EN/ZH lifecycle, canonical integrity, stale
+- Original 002 live UI run: 46 assertions passed using a normal active Admin session.
+  At that time both creates redirected to edit; EN/ZH lifecycle, canonical integrity, stale
   review and real source/version/UUID conflicts passed.
 - All four Products created across the two live QA passes had their translations
   removed through guarded RPCs and were soft-archived. No physical Product deletion.
@@ -185,3 +186,20 @@ Next task: PRODUCT-TRANSLATION-003 — Public B2B Product Consumption (not start
 Live negative-role sessions were not created/altered. Their checks use isolated
 fixtures and the existing RBAC regression; only the active Admin was exercised
 against the live application.
+
+### Komponen first-save navigation correction
+
+The subsequent navigation hotfix restores Komponen create → list after one
+successful submission. B2B create → saved edit and both edit → list flows remain
+unchanged. Product persistence, translation lifecycle and dirty confirmation are
+unchanged. `node scripts/verify-komponen-save-navigation.cjs` exercises the actual
+canonical form with isolated boundaries; its `--live` mode checks only owned QA
+records, first-save payload/result/DB values, blur timing and cleanup.
+
+Hotfix verification: 27 actual-form fixture assertions and 555 live assertions
+across 22 save flows passed. Komponen creation returned to the list after one
+action with stock 17, price 12345 and weight 250; reopening edit required no
+additional save. Native immediate-click and explicit-blur checks passed for all
+eight representative fields. EN/ZH dirty cancellation/continuation and B2B
+create/edit destinations passed. Owned QA records were soft-archived with no
+translations/children remaining; canonical rows still exist.

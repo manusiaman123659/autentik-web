@@ -10,12 +10,12 @@ const esbuild = require('esbuild');
 const root = path.resolve(__dirname, '..');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let checks = 0;
-async function connection(port, targetId) {
+async function connection(port, targetId, onEvent) {
   const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
   const target = targetId ? targets.find(item => item.id === targetId) : targets.find(item => item.type === 'page'); assert.ok(target, 'Controlled browser page required.');
   const socket = new WebSocket(target.webSocketDebuggerUrl); await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   let seq = 0; const pending = new Map();
-  socket.onmessage = event => { const result = JSON.parse(event.data); if (!result.id) return; const waiter = pending.get(result.id); pending.delete(result.id); if (!waiter) return; if (result.error) waiter.reject(Error('Browser command failed.')); else waiter.resolve(result.result); };
+  socket.onmessage = event => { const result = JSON.parse(event.data); if (!result.id) { onEvent?.(result); return; } const waiter = pending.get(result.id); pending.delete(result.id); if (!waiter) return; if (result.error) waiter.reject(Error('Browser command failed.')); else waiter.resolve(result.result); };
   const cdp = (method, params = {}) => new Promise((resolve, reject) => { const id = ++seq; const timer = setTimeout(() => { pending.delete(id); reject(Error('Browser command timed out.')); }, 120000); pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } }); socket.send(JSON.stringify({ id, method, params })); });
   const evaluate = async expression => { const result = await cdp('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture: true }); if (result.exceptionDetails) throw Error('Browser expression failed; no private exception data exported.'); return result.result.value; };
   const wait = async expression => { for (let i = 0; i < 1200; i++) { try { if (await evaluate(`Boolean(${expression})`)) return; } catch { /* navigation */ } await sleep(100); } throw Error('Timed out waiting for ' + expression); };
@@ -198,6 +198,10 @@ async function liveTests() {
       if (fixture.type === 'sparepart') { await canonical(driver, 'SKU', fixture.id); await canonical(driver, 'Harga (Rp)', '1000'); await canonical(driver, 'Berat (gram)', '100'); await canonical(driver, 'Stok', '0'); }
       await evaluate("[...document.querySelectorAll('#product-panel-source label')].filter(e=>e.textContent.includes('Aktif & tampil di situs')||e.textContent.includes('Tampil di Marketplace Komponen')).forEach(label=>{const c=label.querySelector('input[type=checkbox]');if(c?.checked)c.click()})");
       await click(fixture.type === 'sparepart' ? 'Simpan Komponen' : 'Simpan Produk');
+      if (fixture.type === 'sparepart') {
+        await wait('location.pathname==="/admin/sparepart"');
+        await navigate(driver, editRoute(fixture));
+      }
       await wait(`location.pathname===${JSON.stringify(editRoute(fixture))} && !document.getElementById('product-tab-en').disabled`);
       checks++; fixture.created = true;
       const created = await inspect(fixture.id); assert.equal(created.product.is_active, false); checks++; assert.equal(created.product.status, 'draft'); checks++;
@@ -258,4 +262,5 @@ async function liveTests() {
     console.log(JSON.stringify(report, null, 2));
   }
 }
-(process.argv.includes('--live') ? liveTests() : fixtureTests()).catch(error => { console.error(error.message); process.exitCode = 1; });
+module.exports = { connection };
+if (require.main === module) (process.argv.includes('--live') ? liveTests() : fixtureTests()).catch(error => { console.error(error.message); process.exitCode = 1; });
