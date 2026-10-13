@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getProduct, listBrands, getProductVariants } from "@/lib/admin-data";
 import { PageHeader } from "@/components/admin/ui";
-import ProductForm from "@/components/admin/ProductForm";
+import ProductEditor from "@/components/admin/ProductEditor";
+import { readManagedProductTranslations } from "@/lib/admin-product-translations";
+import { parseEditorSnapshot, type ProductTranslationEditorSnapshot } from "@/lib/product-translation-editor";
 import type { VariantRow } from "@/lib/validations/productSchema";
 
 interface Props {
@@ -23,6 +25,10 @@ export default async function AdminSparepartEditPage({ params }: Props) {
     getProductVariants(id),
   ]);
   if (!product || product.product_type !== "sparepart") notFound();
+  let initialSnapshot: ProductTranslationEditorSnapshot | null = null;
+  let translationError = "";
+  try { initialSnapshot = parseEditorSnapshot(product as unknown as Record<string, unknown>, await readManagedProductTranslations(id)); }
+  catch { translationError = "Data terjemahan produk belum dapat dimuat. Muat ulang data sebelum menyimpan."; }
 
   const initialVariants: VariantRow[] = (variants ?? []).map((v) => ({
     id: v.id,
@@ -36,7 +42,7 @@ export default async function AdminSparepartEditPage({ params }: Props) {
   return (
     <div>
       <PageHeader title="Edit Komponen" description={product.name} backHref="/admin/sparepart" />
-      <ProductForm productType="sparepart" initial={product} brands={brands} initialVariants={initialVariants} />
+      <ProductEditor key={product.id} productType="sparepart" initial={product} brands={brands} initialVariants={initialVariants} initialSnapshot={initialSnapshot} translationError={translationError} />
     </div>
   );
 }

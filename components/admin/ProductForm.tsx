@@ -295,6 +295,8 @@ export default function ProductForm({
   initialVariants = [],
   initialHotspots = [],
   initialPhotoHotspots = [],
+  onBeforeNavigate,
+  onSavingChange,
 }: {
   productType: ProductType;
   initial?: ProductRow;
@@ -303,6 +305,8 @@ export default function ProductForm({
   initialVariants?: VariantRow[];
   initialHotspots?: HotspotItem[];
   initialPhotoHotspots?: PhotoHotspotItem[];
+  onBeforeNavigate?: () => Promise<boolean>;
+  onSavingChange?: (saving: boolean) => void;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -312,6 +316,7 @@ export default function ProductForm({
   }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  useEffect(() => { onSavingChange?.(saving); }, [saving, onSavingChange]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [galleryUploading, setGalleryUploading] = useState(false);
@@ -630,6 +635,7 @@ export default function ProductForm({
   }, [recalcMarkerPositions]);
 
   const handleSubmit = async () => {
+    if (saving || (onBeforeNavigate && !await onBeforeNavigate())) return;
     if (documentsUploading) {
       toast("error", "Tunggu hingga unggahan dokumen selesai.");
       return;
@@ -700,13 +706,13 @@ export default function ProductForm({
     }
 
     const productId = result.productId ?? form.id;
-    if (!initial && !isSparepart) {
+    if (!initial) {
       setSaving(false);
       if (!productId) {
         toast("error", "Produk tersimpan, tetapi ID produk tidak tersedia. Muat ulang daftar produk sebelum melanjutkan.");
         return;
       }
-      router.push(`/admin/produk/${encodeURIComponent(productId)}?created=1`);
+      router.push(`/admin/${isSparepart ? "sparepart" : "produk"}/${encodeURIComponent(productId)}?created=1`);
       return;
     }
 
@@ -1906,7 +1912,7 @@ onChange={(e) => set("description", e.target.value)}
       <div className="flex items-center justify-end gap-3 pt-2 pb-10">
         <button
           type="button"
-          onClick={() => router.push(isSparepart ? "/admin/sparepart" : "/admin/produk")}
+          onClick={async () => { if (!onBeforeNavigate || await onBeforeNavigate()) router.push(isSparepart ? "/admin/sparepart" : "/admin/produk"); }}
           className="px-5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           Batal

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getProduct, listBrands, listTechnicalDocuments, getProductHotspots, getProductPhotoHotspots } from "@/lib/admin-data";
 import { PageHeader } from "@/components/admin/ui";
-import ProductForm from "@/components/admin/ProductForm";
+import ProductEditor from "@/components/admin/ProductEditor";
+import { readManagedProductTranslations } from "@/lib/admin-product-translations";
+import { parseEditorSnapshot, type ProductTranslationEditorSnapshot } from "@/lib/product-translation-editor";
 import type { HotspotItem, PhotoHotspotItem } from "@/components/admin/ProductForm";
 
 interface Props {
@@ -27,6 +29,10 @@ export default async function AdminProdukEditPage({ params, searchParams }: Prop
     getProductPhotoHotspots(id),
   ]);
   if (!product || product.product_type !== "b2b_system") notFound();
+  let initialSnapshot: ProductTranslationEditorSnapshot | null = null;
+  let translationError = "";
+  try { initialSnapshot = parseEditorSnapshot(product as unknown as Record<string, unknown>, await readManagedProductTranslations(id)); }
+  catch { translationError = "Data terjemahan produk belum dapat dimuat. Muat ulang data sebelum menyimpan."; }
 
   const initialHotspots: HotspotItem[] = hotspots.map((h) => ({
     id: h.id,
@@ -60,7 +66,10 @@ export default async function AdminProdukEditPage({ params, searchParams }: Prop
           Produk berhasil dibuat. Lengkapi hotspot dan dokumen teknis di bawah.
         </div>
       )}
-      <ProductForm
+      <ProductEditor
+        key={product.id}
+        initialSnapshot={initialSnapshot}
+        translationError={translationError}
         productType="b2b_system"
         initial={product}
         brands={brands}

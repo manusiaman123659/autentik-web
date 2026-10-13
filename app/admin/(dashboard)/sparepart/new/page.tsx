@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { listBrands } from "@/lib/admin-data";
 import { PageHeader } from "@/components/admin/ui";
-import ProductForm from "@/components/admin/ProductForm";
+import ProductEditor from "@/components/admin/ProductEditor";
 
 export const metadata: Metadata = {
   title: "Tambah Komponen | Autentik CMS",
@@ -12,7 +12,7 @@ export default async function AdminSparepartNewPage() {
   return (
     <div>
       <PageHeader title="Tambah Komponen" description="Lengkapi harga, stok, dan berat agar komponen siap dipesan." backHref="/admin/sparepart" />
-      <ProductForm productType="sparepart" brands={brands} />
+      <ProductEditor productType="sparepart" brands={brands} />
     </div>
   );
 }
