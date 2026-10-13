@@ -1,0 +1,9 @@
+{
+  "metadata": { "title": "经销商网络 | PT Autentik Karya Analitika", "description": "了解 PT Autentik Karya Analitika 产品的集团分销渠道、经销商及二级经销商信息，由 MIKA 协调。" },
+  "hero": { "eyebrow": "经销网络", "title": "了解 AKA 产品分销网络", "description": "AKA 负责产品制造。MIKA 协调采购咨询，并协助确定合适的经销商或二级经销商。" },
+  "types": { "group_distribution": "集团分销渠道", "distributor": "经销商", "sub_distributor": "二级经销商" },
+  "card": { "parent": "所属网络：{name}", "website": "网站" },
+  "group": { "eyebrow": "集团分销渠道", "title": "集团生态系统中的营销与分销", "description": "集团分销渠道依据 AKA 管理并核实的信息展示。" },
+  "directory": { "eyebrow": "官方经销商", "title": "经销商与二级经销商目录", "ungrouped": "其他分销网络" },
+  "cta": { "eyebrow": "分销协调", "title": "需要您所在地区的经销商？", "description": "请向 MIKA 提供需求及所在地区。MIKA 将协助确定适合的经销商或二级经销商渠道。", "contact": "联系 MIKA", "whatsapp": "您好 MIKA，我想了解符合所在地区及需求的 AKA 产品经销商或二级经销商信息。" }
+}

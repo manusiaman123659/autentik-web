@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RfqModal from "./RfqModal";
@@ -17,11 +18,13 @@ export default function RfqButton({
   productName,
   variant = "default",
 }: RfqButtonProps) {
+  const t = useTranslations("requests.rfq");
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
     <>
       <button
+        type="button"
         onClick={(e) => {
           e.stopPropagation();
           setModalOpen(true);
@@ -36,7 +39,7 @@ export default function RfqButton({
         )}
       >
         <ClipboardList size={16} />
-        {variant === "compact" ? "Minta RFQ" : "Minta Penawaran Resmi (RFQ)"}
+        {t(variant === "compact" ? "triggerCompact" : "title")}
       </button>
 
       <RfqModal

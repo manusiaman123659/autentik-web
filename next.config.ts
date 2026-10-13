@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 import { createSupabasePublicMediaPattern } from "./lib/supabase-public-media";
 
 const supabaseMediaPattern = createSupabasePublicMediaPattern(
@@ -7,6 +8,7 @@ const supabaseMediaPattern = createSupabasePublicMediaPattern(
 );
 
 const nextConfig: NextConfig = {
+  experimental: { globalNotFound: true },
   output: process.env.VERCEL ? undefined : "standalone",
   allowedDevOrigins: ["*.ngrok-free.dev", "*.ngrok-free.app"],
   images: {
@@ -23,4 +25,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default createNextIntlPlugin("./i18n/request.ts")(nextConfig);

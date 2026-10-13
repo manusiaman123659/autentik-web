@@ -1,6 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/middleware";
 import { getCareerRoutingResponse } from "@/lib/api/career-routing";
+import createLocaleRouting from "next-intl/middleware";
+import { routing } from "@/i18n/routing";
+import { getPublicRoute } from "@/i18n/locales";
+
+const routeLocale = createLocaleRouting(routing);
 
 async function refreshSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -41,10 +46,33 @@ async function refreshSession(request: NextRequest) {
 export async function proxy(request: NextRequest) {
   // Existing session-refresh logic runs first and is otherwise unchanged.
   const sessionResponse = await refreshSession(request);
+  if (/^\/zh-CN(?:\/|$)/.test(request.nextUrl.pathname)) {
+    const normalized = request.nextUrl.clone();
+    normalized.pathname = normalized.pathname.replace(/^\/zh-CN/, "/zh-cn");
+    if (getPublicRoute(normalized.pathname)) {
+      const response = NextResponse.redirect(normalized, 308);
+      for (const cookie of sessionResponse.cookies.getAll()) response.cookies.set(cookie);
+      return response;
+    }
+  }
+  const route = getPublicRoute(request.nextUrl.pathname);
+  if (!route) {
+    const careerResponse = await getCareerRoutingResponse(request);
+    if (!careerResponse) return sessionResponse;
+    for (const cookie of sessionResponse.cookies.getAll()) careerResponse.cookies.set(cookie);
+    return careerResponse;
+  }
+  // Overwrite incoming values; metadata must describe the actual public route.
+  request.headers.set("x-public-pathname", route.pathname);
+  const localeResponse = routeLocale(request);
+  if (localeResponse.headers.has("location")) {
+    for (const cookie of sessionResponse.cookies.getAll()) localeResponse.cookies.set(cookie);
+    return localeResponse;
+  }
   const careerResponse = await getCareerRoutingResponse(request);
-  if (!careerResponse) return sessionResponse;
-  for (const cookie of sessionResponse.cookies.getAll()) careerResponse.cookies.set(cookie);
-  return careerResponse;
+  const response = careerResponse ?? localeResponse;
+  for (const cookie of sessionResponse.cookies.getAll()) response.cookies.set(cookie);
+  return response;
 }
 
 export const config = {

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Search, X, Package } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/format";

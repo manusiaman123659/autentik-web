@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import Link from "@/i18n/navigation";
 import Image from "next/image";
 import { ArrowRight, ClipboardList, Factory, Sparkles } from "lucide-react";
 import type { HeroSlideResolved } from "@/lib/public-data";
 import RfqModal from "@/components/product/RfqModal";
 
 export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
+  const t = useTranslations("home.hero");
   const [currentSlide, setCurrentSlide] = useState(0);
   const [rfqOpen, setRfqOpen] = useState(false);
 
@@ -101,7 +103,7 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
                     className="inline-flex min-h-13 py-3 items-center justify-center gap-2 rounded-full border border-base dark:border-white/40 px-8 text-base font-bold text-heading transition-all hover:bg-white/50 dark:hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
                   >
                     <ClipboardList size={18} />
-                    Request Quotation
+                     {t("quotation")}
                   </button>
                 </div>
               </div>
@@ -129,7 +131,7 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
                   <div className="mt-4 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <span className="text-xs font-bold uppercase tracking-wider text-body">
-                        {slide.isCompanyFallback ? "Profil Perusahaan" : "Portofolio Produk AKA"}
+                        {t(slide.isCompanyFallback ? "companyLabel" : "portfolioLabel")}
                       </span>
                       <h4 className="text-lg font-bold text-heading leading-tight break-words">
                         {slide.productName}
@@ -158,7 +160,7 @@ export default function Hero({ slides }: { slides: HeroSlideResolved[] }) {
                   ? "w-8 h-2 bg-navy-900 dark:bg-white"
                   : "w-2.5 h-2.5 bg-slate-400 hover:bg-slate-600 dark:bg-white/40 dark:hover:bg-white/70"
               }`}
-              aria-label={`Tampilkan slide ${index + 1}`}
+              aria-label={t("slide", { number: index + 1 })}
               aria-current={index === currentSlide ? "true" : undefined}
             />
           ))}

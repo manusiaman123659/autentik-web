@@ -1,8 +1,10 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getTranslations } from "next-intl/server";
 import { ArrowRight, Wrench } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 
-export default function StoreTeaser() {
+export default async function StoreTeaser() {
+  const t = await getTranslations("home.store");
   return (
     <section className="px-4 py-14 sm:px-6 lg:px-8" style={{ backgroundColor: "var(--bg-primary)" }}>
       <AnimatedElement type="fade-up" className="mx-auto max-w-7xl">
@@ -12,12 +14,12 @@ export default function StoreTeaser() {
               <Wrench size={22} />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0EA5A0]">Butuh Komponen?</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0EA5A0]">{t("eyebrow")}</p>
               <h2 className="mt-2 text-xl font-bold sm:text-2xl" style={{ color: "var(--text-primary)" }}>
-                Marketplace Komponen
+                {t("title")}
               </h2>
               <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                Temukan pilihan komponen pendukung melalui kanal marketplace AKA.
+                {t("description")}
               </p>
             </div>
           </div>
@@ -27,7 +29,7 @@ export default function StoreTeaser() {
             className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border px-5 text-sm font-bold transition-colors hover:border-[#0EA5A0] hover:text-[#0EA5A0]"
             style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
           >
-            Lihat Marketplace Komponen
+            {t("view")}
             <ArrowRight size={16} />
           </Link>
         </div>

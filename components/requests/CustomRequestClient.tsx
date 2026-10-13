@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
 import { PackageSearch, ArrowLeft, MessageCircle, Sparkles } from "lucide-react";
 import {
-  customRequestSchema,
+  createCustomRequestSchema,
   type CustomRequestFormData,
 } from "@/lib/validations/contactSchema";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
@@ -21,6 +22,8 @@ export default function CustomRequestClient({
   productName: string | null;
   waNumber: string | null;
 }) {
+  const t = useTranslations("requests.custom");
+  const validation = { fullName: t("validation.fullName"), email: t("validation.email"), message: t("validation.message") };
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const {
@@ -29,7 +32,7 @@ export default function CustomRequestClient({
     reset,
     formState: { errors },
   } = useForm<CustomRequestFormData>({
-    resolver: zodResolver(customRequestSchema),
+    resolver: zodResolver(createCustomRequestSchema(validation)),
     defaultValues: {
       category: "custom_request",
       fullName: "",
@@ -76,14 +79,13 @@ export default function CustomRequestClient({
           <AnimatedElement type="fade-up" className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0EA5A0]/15 border border-[#0EA5A0]/30 text-[#14B8A6] text-xs font-semibold uppercase tracking-wider mb-6">
               <Sparkles size={14} />
-              Pesanan Kustom
+              {t("hero.badge")}
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold mb-5">
-              Ajukan Kebutuhan <span className="text-teal-700 dark:text-teal-300">Custom</span>
+              {t("hero.heading")} <span className="text-teal-700 dark:text-teal-300">{t("hero.highlight")}</span>
             </h1>
             <p className="text-body dark:text-slate-300 text-lg leading-relaxed max-w-2xl mx-auto">
-              Beri tahu kami spesifikasi yang Anda butuhkan — tim engineer akan membahas
-              kelayakan teknis, estimasi biaya, dan waktu pengerjaan.
+              {t("hero.description")}
             </p>
           </AnimatedElement>
         </div>
@@ -99,28 +101,28 @@ export default function CustomRequestClient({
               style={{ color: "var(--text-secondary)" }}
             >
               <ArrowLeft size={14} />
-              Kembali
+              {t("form.back")}
             </Link>
 
             <div className="rounded-2xl border shadow-sm p-5 sm:p-8" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}>
               <h2 className="text-xl font-bold mb-6" style={{ color: "var(--text-primary)" }}>
-                Formulir Permintaan Custom
+                {t("form.title")}
               </h2>
 
               {submitStatus === "success" ? (
-                <div className="p-6 rounded-xl text-center bg-[#0EA5A0]/10 border border-[#0EA5A0]/20">
+                <div role="status" className="p-6 rounded-xl text-center bg-[#0EA5A0]/10 border border-[#0EA5A0]/20">
                   <div className="text-4xl mb-3">✅</div>
                   <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-                    Permintaan Terkirim!
+                    {t("status.success")}
                   </h3>
                   <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                    Tim teknis kami akan menghubungi Anda dalam 1–2 hari kerja untuk membahas spesifikasi.
+                    {t("status.description")}
                   </p>
                   <button
                     onClick={() => setSubmitStatus("idle")}
                     className="mt-5 text-sm font-semibold text-[#0EA5A0] hover:underline"
                   >
-                    Ajukan kebutuhan lain
+                    {t("status.again")}
                   </button>
                 </div>
               ) : (
@@ -130,7 +132,7 @@ export default function CustomRequestClient({
                       <PackageSearch size={18} className="text-[#0EA5A0] flex-shrink-0" />
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                          Produk terkait
+                          {t("form.product")}
                         </p>
                         <p className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>
                           {productName}
@@ -141,58 +143,68 @@ export default function CustomRequestClient({
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text-primary)" }}>
-                        Nama Lengkap <span className="text-red-400">*</span>
+                      <label htmlFor="custom-fullname" className="block text-sm font-medium mb-1.5" style={{ color: "var(--text-primary)" }}>
+                        {t("form.fullName")} <span className="text-red-400">*</span>
                       </label>
                       <input
                         {...register("fullName")}
+                        id="custom-fullname"
                         type="text"
-                        placeholder="Jane Doe"
+                        placeholder={t("form.namePlaceholder")}
+                        aria-invalid={!!errors.fullName}
+                        aria-describedby={errors.fullName ? "custom-fullname-error" : undefined}
                         className={`${inputClass} ${errors.fullName ? "border-red-400 dark:border-red-500" : ""}`}
                       />
-                      {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName.message}</p>}
+                      {errors.fullName && <p id="custom-fullname-error" className="text-red-500 text-xs mt-1">{validation.fullName}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text-primary)" }}>
-                        Email Bisnis <span className="text-red-400">*</span>
+                      <label htmlFor="custom-email" className="block text-sm font-medium mb-1.5" style={{ color: "var(--text-primary)" }}>
+                        {t("form.email")} <span className="text-red-400">*</span>
                       </label>
                       <input
                         {...register("email")}
+                        id="custom-email"
                         type="email"
-                        placeholder="jane@company.com"
+                        placeholder={t("form.emailPlaceholder")}
+                        aria-invalid={!!errors.email}
+                        aria-describedby={errors.email ? "custom-email-error" : undefined}
                         className={`${inputClass} ${errors.email ? "border-red-400 dark:border-red-500" : ""}`}
                       />
-                      {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                      {errors.email && <p id="custom-email-error" className="text-red-500 text-xs mt-1">{validation.email}</p>}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text-primary)" }}>
-                      Nama Perusahaan <span className="text-slate-400">(opsional)</span>
+                    <label htmlFor="custom-company" className="block text-sm font-medium mb-1.5" style={{ color: "var(--text-primary)" }}>
+                      {t("form.company")} <span className="text-slate-400">{t("form.optional")}</span>
                     </label>
                     <input
                       {...register("company")}
+                      id="custom-company"
                       type="text"
-                      placeholder="Acme Corp"
+                      placeholder={t("form.companyPlaceholder")}
                       className={inputClass}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--text-primary)" }}>
-                      Kebutuhan & Spesifikasi <span className="text-red-400">*</span>
+                    <label htmlFor="custom-message" className="block text-sm font-medium mb-1.5" style={{ color: "var(--text-primary)" }}>
+                      {t("form.message")} <span className="text-red-400">*</span>
                     </label>
                     <textarea
                       {...register("message")}
+                      id="custom-message"
                       rows={6}
-                      placeholder="Jelaskan spesifikasi custom Anda — dimensi, material, jumlah, deadline, dll…"
+                      placeholder={t("form.messagePlaceholder")}
+                      aria-invalid={!!errors.message}
+                      aria-describedby={errors.message ? "custom-message-error" : undefined}
                       className={`${inputClass} resize-none ${errors.message ? "border-red-400 dark:border-red-500" : ""}`}
                     />
-                    {errors.message && <p className="text-red-500 text-xs mt-1">{errors.message.message}</p>}
+                    {errors.message && <p id="custom-message-error" className="text-red-500 text-xs mt-1">{validation.message}</p>}
                   </div>
 
                   {submitStatus === "error" && (
-                    <p className="text-red-500 text-sm">Terjadi kesalahan. Silakan coba lagi.</p>
+                    <p role="alert" className="text-red-500 text-sm">{t("status.error")}</p>
                   )}
 
                   <button
@@ -201,16 +213,16 @@ export default function CustomRequestClient({
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 hover:shadow-md disabled:opacity-50"
                     style={{ backgroundColor: "#0EA5A0" }}
                   >
-                    {submitStatus === "loading" ? "Mengirim…" : "Kirim Permintaan Custom →"}
+                    {t(submitStatus === "loading" ? "form.loading" : "form.submit")}
                   </button>
 
                   <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
                     <MessageCircle size={13} />
-                    Butuh lebih cepat? Hubungi kami via WhatsApp di{" "}
+                    {t("form.help")}{" "}
                     <WhatsAppButton
                       number={waNumber}
-                      label="Admin MIKA"
-                      message="Halo Admin MIKA, saya ingin berkonsultasi mengenai produk custom atau kebutuhan kustomisasi."
+                      label={t("form.contact")}
+                      message={t("form.whatsapp")}
                       variant="link"
                     />
                   </p>

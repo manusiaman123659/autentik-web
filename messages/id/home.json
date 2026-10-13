@@ -1,0 +1,30 @@
+{
+  "metadata": { "title": "Autentik | Manufaktur Produk Teknologi Industri Indonesia", "description": "PT Autentik Karya Analitika mengembangkan produk dan sistem teknologi untuk kebutuhan industri, laboratorium, pemantauan lingkungan, dan integrasi IoT." },
+  "hero": { "companyLabel": "Profil Perusahaan", "portfolioLabel": "Portofolio Produk AKA", "viewProduct": "Lihat Produk", "quotation": "Request Quotation", "slide": "Tampilkan slide {number}", "companyBadge": "Perusahaan Manufaktur", "companySubtitle": "Produsen produk teknologi industri Indonesia.", "productBadge": "Produk Unggulan" },
+  "aboutUs": {
+    "eyebrow": "IDENTITAS MANUFAKTUR",
+    "description": "AKA mengembangkan produk dan sistem teknologi untuk kebutuhan industri, laboratorium, dan pemantauan lingkungan. Proses pengembangan memadukan rekayasa perangkat, integrasi IoT, serta pengolahan data agar setiap solusi dapat diterapkan sesuai konteks operasional penggunanya.",
+    "process": "Dari kebutuhan ke implementasi",
+    "steps": {
+      "engineering": { "title": "Rekayasa Produk", "description": "Perancangan produk dan sistem berdasarkan kebutuhan penggunaan." },
+      "integration": { "title": "Integrasi Sistem", "description": "Penggabungan perangkat, kontrol, dan konektivitas dalam satu solusi." },
+      "implementation": { "title": "Implementasi", "description": "Penerapan produk untuk kebutuhan monitoring, laboratorium, dan lingkungan." }
+    }
+  },
+  "brands": { "eyebrow": "BRAND AKA", "title": "Brand Manufaktur Kami", "description": "Brand utama dalam portofolio produk yang dikembangkan untuk kebutuhan industri, laboratorium, dan lingkungan.", "view": "Lihat produk {name}" },
+  "featured": { "title": "Produk Manufaktur Unggulan", "description": "Pilihan produk AKA untuk kebutuhan monitoring, laboratorium, dan pengolahan air.", "viewAll": "Lihat Semua", "detail": "Lihat Detail", "viewAllProducts": "Lihat Semua Produk" },
+  "solutions": {
+    "title": "Kapabilitas Pengembangan Produk", "description": "Pendekatan rekayasa yang menghubungkan perangkat, sistem, dan data untuk kebutuhan operasional.", "learnMore": "Pelajari Lebih Lanjut",
+    "items": {
+      "iot": { "title": "Pengembangan IoT & Monitoring", "description": "Pengembangan perangkat dan sistem untuk pemantauan parameter operasional secara terhubung." },
+      "laboratory": { "title": "Produk & Sistem Laboratorium", "description": "Pengembangan produk pendukung aktivitas laboratorium dan kebutuhan ruang kerja teknis." },
+      "water": { "title": "Sistem Pengolahan Air", "description": "Pengembangan produk dan sistem terkait pemurnian serta pengolahan air." },
+      "platform": { "title": "Platform & Integrasi Data", "description": "Integrasi data perangkat ke dashboard dan platform untuk mendukung pemantauan terpusat." }
+    }
+  },
+  "product3d": { "eyebrow": "Interactive 3D Product", "title": "Jelajahi {name} dalam 3D", "descriptionFallback": "Lihat bentuk produk dan titik informasi interaktif melalui viewer 3D pada halaman detail produk.", "view": "Lihat Produk 3D", "previous": "Produk 3D sebelumnya", "next": "Produk 3D berikutnya", "choices": "Pilihan produk 3D", "show": "Tampilkan {name}" },
+  "distribution": { "eyebrow": "Jaringan Distribusi", "title": "Kanal pemasaran dan distribusi grup AKA", "description": "Informasi penentuan distributor atau sub-distributor sesuai kebutuhan customer dikoordinasikan melalui MIKA.", "view": "Lihat Jaringan Distributor", "contact": "Hubungi MIKA", "whatsapp": "Halo Admin MIKA, saya membutuhkan informasi distributor atau sub-distributor produk AKA.", "verified": "Informasi kanal distribusi grup ditampilkan berdasarkan data yang telah diverifikasi oleh AKA." },
+  "cta": { "title": "Diskusikan Kebutuhan Produk Anda", "description": "Sampaikan kebutuhan produk, integrasi sistem, atau pengadaan Anda melalui RFQ resmi AKA. Tim komersial MIKA dapat membantu komunikasi lanjutan.", "quotation": "Request Quotation", "contact": "Hubungi Sales MIKA", "whatsapp": "Halo Admin MIKA, saya ingin mendiskusikan kebutuhan produk atau sistem dari PT Autentik Karya Analitika." },
+  "store": { "eyebrow": "Butuh Komponen?", "title": "Marketplace Komponen", "description": "Temukan pilihan komponen pendukung melalui kanal marketplace AKA.", "view": "Lihat Marketplace Komponen" },
+  "careers": { "title": "Peluang untuk Bertumbuh Bersama", "description": "Temukan posisi yang tersedia melalui portal rekrutmen Mika Career.", "viewAll": "Lihat Semua Lowongan", "detail": "Lihat Detail", "empty": "Saat ini belum ada lowongan yang tersedia di PT Autentik Karya Analitika.", "unavailable": "Informasi lowongan sedang tidak tersedia. Silakan coba lagi beberapa saat.", "hint": "Pantau halaman karir untuk informasi lowongan terbaru." }
+}

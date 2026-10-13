@@ -1,0 +1,14 @@
+{
+  "metadata": { "title": "联系我们 | PT Autentik Karya Analitika", "description": "联系 PT Autentik Karya Analitika 技术团队，咨询 IoT Quality Monitoring Devices 及基于物联网的工业产品解决方案。" },
+  "ui": {
+    "hero": { "title": "联系专业团队", "description": "PT Autentik Karya Analitika 面向工业需求制造并销售 IoT Quality Monitoring Devices。欢迎联系技术专家，沟通工业产品解决方案的集成需求。" },
+    "form": { "title": "发送咨询", "fullName": "姓名", "email": "工作邮箱", "company": "公司名称", "industry": "行业", "message": "咨询内容", "namePlaceholder": "Jane Doe", "emailPlaceholder": "jane@company.com", "companyPlaceholder": "Acme Corp", "industryPlaceholder": "选择行业", "messagePlaceholder": "请描述您的技术需求……", "submit": "发送咨询 →", "loading": "正在发送……" },
+    "validation": { "fullName": "姓名至少需要 2 个字符", "email": "请输入有效的邮箱地址", "company": "公司名称至少需要 2 个字符", "industry": "请选择所在行业", "message": "咨询内容至少需要 10 个字符" },
+    "industries": { "pharmaceutical": "制药", "healthcare": "医疗与医院", "research": "科研", "education": "教育", "food": "食品与饮料", "environment": "环境", "mining": "矿业与能源", "manufacturing": "制造", "other": "其他" },
+    "status": { "success": "咨询已发送！", "description": "团队将在 1–2 个工作日内联系您。", "again": "发送其他咨询", "error": "发生错误，请重试。" },
+    "office": { "title": "总部", "mapHeading": "总部 — PT Autentik Karya Analitika" },
+    "support": { "title": "直接支持", "description": "请选择符合需求的渠道，以便由合适的团队处理您的咨询。", "components": "零部件与订单 - PPIC AKA", "sales": "产品、备件与定制 - MIKA", "componentsMessage": "您好 PPIC AKA，我需要零部件或零部件商城订单相关协助。", "salesMessage": "您好 MIKA，我想咨询产品、备件、定制或分销相关需求。" },
+    "map": { "title": "总部位置与服务范围", "description": "PT Autentik Karya Analitika 总部位于 Semarang，为印度尼西亚各地提供及时的技术响应与集成支持。", "accessibleTitle": "PT Autentik Karya Analitika 位置地图", "open": "在 Google Maps 中打开 ↗" },
+    "cta": { "title": "准备开展合作？", "description": "了解 PT Autentik Karya Analitika 如何通过围绕工业需求与物联网技术打造的工业产品解决方案，优化您的运营。", "schedule": "预约咨询", "catalogue": "查看产品目录" }
+  }
+}

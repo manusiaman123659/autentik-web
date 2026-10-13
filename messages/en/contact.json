@@ -1,0 +1,14 @@
+{
+  "metadata": { "title": "Contact | PT Autentik Karya Analitika", "description": "Contact the technical team at PT Autentik Karya Analitika for advice on IoT Quality Monitoring Devices and IoT-based industrial product solutions." },
+  "ui": {
+    "hero": { "title": "Contact Our Specialist Team", "description": "PT Autentik Karya Analitika manufactures and markets IoT Quality Monitoring Devices for industrial needs. Connect with our technical specialists to integrate your industrial product solutions." },
+    "form": { "title": "Send an enquiry", "fullName": "Full Name", "email": "Business Email", "company": "Company Name", "industry": "Industry", "message": "Message", "namePlaceholder": "Jane Doe", "emailPlaceholder": "jane@company.com", "companyPlaceholder": "Acme Corp", "industryPlaceholder": "Choose Industry", "messagePlaceholder": "Describe your technical requirements…", "submit": "Send Enquiry →", "loading": "Sending…" },
+    "validation": { "fullName": "Enter at least 2 characters for your full name", "email": "Enter a valid email address", "company": "Enter at least 2 characters for the company name", "industry": "Choose your industry", "message": "Enter a message of at least 10 characters" },
+    "industries": { "pharmaceutical": "Pharmaceuticals", "healthcare": "Healthcare & Hospitals", "research": "Research", "education": "Education", "food": "Food & Beverage", "environment": "Environment", "mining": "Mining & Energy", "manufacturing": "Manufacturing", "other": "Other" },
+    "status": { "success": "Enquiry Sent!", "description": "Our team will contact you within 1–2 business days.", "again": "Send another enquiry", "error": "Something went wrong. Please try again." },
+    "office": { "title": "Head Office", "mapHeading": "Head Office — PT Autentik Karya Analitika" },
+    "support": { "title": "Direct Support", "description": "Choose the channel that matches your needs so the right team can handle your enquiry.", "components": "Components & Orders - PPIC AKA", "sales": "Products, Spare Parts & Customization - MIKA", "componentsMessage": "Hello PPIC AKA, I need assistance with components or a Components Marketplace order.", "salesMessage": "Hello MIKA, I would like advice on products, spare parts, customization, or distribution." },
+    "map": { "title": "Head Office Location & Service Coverage", "description": "Based in Semarang, PT Autentik Karya Analitika provides prompt technical responses and integrated support throughout Indonesia.", "accessibleTitle": "Location map for PT Autentik Karya Analitika", "open": "Open in Google Maps ↗" },
+    "cta": { "title": "Ready to Collaborate?", "description": "Discover how PT Autentik Karya Analitika’s industrial product solutions, built around industrial needs and IoT technology, can optimize your operations.", "schedule": "Schedule a Consultation", "catalogue": "View Product Catalogue" }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "metadata": { "title": "Jaringan Distributor | PT Autentik Karya Analitika", "description": "Informasi kanal distribusi grup, distributor, dan sub-distributor produk PT Autentik Karya Analitika dengan koordinasi melalui MIKA." },
+  "hero": { "eyebrow": "Jaringan Distribusi", "title": "Akses informasi jaringan distribusi produk AKA", "description": "AKA berperan sebagai manufacturer. Informasi kebutuhan pembelian dan penentuan distributor atau sub-distributor yang sesuai dikoordinasikan melalui MIKA." },
+  "types": { "group_distribution": "Kanal Distribusi Grup", "distributor": "Distributor", "sub_distributor": "Sub-distributor" },
+  "card": { "parent": "Bagian dari jaringan: {name}", "website": "Website" },
+  "group": { "eyebrow": "Kanal Distribusi Grup", "title": "Marketing dan distribusi dalam ekosistem grup", "description": "Kanal distribusi grup ditampilkan berdasarkan informasi yang telah dikelola dan diverifikasi oleh AKA." },
+  "directory": { "eyebrow": "Distributor Resmi", "title": "Direktori distributor dan sub-distributor", "ungrouped": "Jaringan Distribusi Lainnya" },
+  "cta": { "eyebrow": "Koordinasi Distribusi", "title": "Butuh distributor di wilayah Anda?", "description": "Sampaikan kebutuhan dan wilayah Anda kepada Admin MIKA. MIKA akan membantu mengarahkan jalur distributor atau sub-distributor yang sesuai.", "contact": "Hubungi MIKA", "whatsapp": "Halo Admin MIKA, saya membutuhkan informasi distributor atau sub-distributor produk AKA sesuai wilayah dan kebutuhan saya." }
+}

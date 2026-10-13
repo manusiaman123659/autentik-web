@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Search, X, Package, Briefcase, FileText, ArrowRight } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { MikaJob } from "@/types/mika-career";
@@ -28,19 +29,22 @@ interface SearchJob {
 }
 
 const sitePages = [
-  { title: "Beranda", href: "/", category: "Halaman" },
-  { title: "Produk", href: "/products", category: "Halaman" },
-  { title: "Layanan", href: "/services", category: "Halaman" },
-  { title: "Profil Perusahaan", href: "/about", category: "Halaman" },
-  { title: "Jaringan Distributor", href: "/distributors", category: "Halaman" },
-  { title: "Riset & Kemitraan", href: "/research-partnership", category: "Halaman" },
-  { title: "Karier", href: "/careers", category: "Halaman" },
-  { title: "Kontak", href: "/contact", category: "Halaman" },
-  { title: "Marketplace Komponen", href: "/store", category: "Halaman" },
-  { title: "Permintaan Kustom", href: "/custom-request", category: "Halaman" },
+  { title: "home", href: "/" },
+  { title: "products", href: "/products" },
+  { title: "services", href: "/services" },
+  { title: "about", href: "/about" },
+  { title: "distributors", href: "/distributors" },
+  { title: "research", href: "/research-partnership" },
+  { title: "careers", href: "/careers" },
+  { title: "contact", href: "/contact" },
+  { title: "marketplace", href: "/store" },
+  { title: "customRequest", href: "/custom-request" },
 ];
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
+  const t = useTranslations("common");
+  const navigation = useTranslations("navigation");
+  const pages = sitePages.map(page => ({ ...page, title: navigation(page.title) }));
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<SearchProduct[]>([]);
   const [jobs, setJobs] = useState<SearchJob[]>([]);
@@ -109,8 +113,8 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const trimmed = query.trim().toLowerCase();
 
   const filteredPages = trimmed
-    ? sitePages.filter((p) => p.title.toLowerCase().includes(trimmed))
-    : sitePages.slice(0, 4);
+    ? pages.filter((p) => p.title.toLowerCase().includes(trimmed))
+    : pages.slice(0, 4);
 
   const filteredProducts = trimmed
     ? products.filter(
@@ -148,7 +152,8 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             type="text"
             value={query}
             onChange={(e) => { setJobs([]); setQuery(e.target.value); }}
-            placeholder="Cari produk, posisi karir, atau halaman... (contoh: Hardware Engineer, Talpha)"
+            placeholder={t("searchPlaceholder")}
+            aria-label={t("search")}
             className="flex-1 bg-transparent text-base focus:outline-none placeholder:text-slate-400 font-medium"
             style={{ color: "var(--text-primary)" }}
             autoFocus
@@ -156,6 +161,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           {query && (
             <button
               onClick={() => { setJobs([]); setQuery(""); }}
+              aria-label={t("close")}
               className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X size={16} />
@@ -163,6 +169,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           )}
           <button
             onClick={onClose}
+            aria-label={t("close")}
             className="p-1.5 rounded-lg border text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             style={{ borderColor: "var(--border-subtle)" }}
           >
@@ -177,7 +184,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             <div>
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0EA5A0] mb-2 px-2">
                 <Package size={14} />
-                <span>Katalog Produk ({filteredProducts.length})</span>
+                <span>{t("productResults", { count: filteredProducts.length })}</span>
               </div>
               <div className="space-y-1">
                 {filteredProducts.map((prod) => (
@@ -211,7 +218,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             <div>
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0EA5A0] mb-2 px-2">
                 <Briefcase size={14} />
-                <span>Lowongan Karir ({filteredJobs.length})</span>
+                <span>{t("careerResults", { count: filteredJobs.length })}</span>
               </div>
               <div className="space-y-1">
                 {filteredJobs.map((job) => (
@@ -240,7 +247,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             <div>
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 px-2">
                 <FileText size={14} />
-                <span>{trimmed ? "Halaman Situs" : "Navigasi Cepat"}</span>
+                <span>{t(trimmed ? "pages" : "quickNavigation")}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {filteredPages.map((page) => (
@@ -264,16 +271,16 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             filteredJobs.length === 0 &&
             filteredPages.length === 0 && (
               <div className="py-12 text-center text-slate-400">
-                <p className="text-sm font-medium">Tidak ada hasil yang cocok dengan &quot;{query}&quot;</p>
-                <p className="text-xs mt-1">Coba kata kunci lain seperti &quot;Engineer&quot;, &quot;Talpha&quot;, atau &quot;Karir&quot;</p>
+                <p className="text-sm font-medium">{t("noResults", { query })}</p>
+                <p className="text-xs mt-1">{t("searchHint")}</p>
               </div>
             )}
         </div>
 
         {/* Footer info */}
         <div className="px-4 py-3 border-t flex items-center justify-between text-xs text-slate-400" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
-          <span>Gunakan kata kunci untuk hasil yang lebih spesifik</span>
-          <span className="hidden sm:inline">Tekan Esc untuk menutup</span>
+          <span>{t("searchSpecific")}</span>
+          <span className="hidden sm:inline">{t("escapeClose")}</span>
         </div>
       </div>
     </div>

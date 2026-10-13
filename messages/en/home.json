@@ -1,0 +1,30 @@
+{
+  "metadata": { "title": "Autentik | Industrial Technology Manufacturing in Indonesia", "description": "PT Autentik Karya Analitika develops technology products and systems for industry, laboratories, environmental monitoring, and IoT integration." },
+  "hero": { "companyLabel": "Company Profile", "portfolioLabel": "AKA Product Portfolio", "viewProduct": "View Product", "quotation": "Request a Quotation", "slide": "Show slide {number}", "companyBadge": "Manufacturing Company", "companySubtitle": "Indonesian manufacturer of industrial technology products.", "productBadge": "Featured Product" },
+  "aboutUs": {
+    "eyebrow": "MANUFACTURING IDENTITY",
+    "description": "AKA develops technology products and systems for industry, laboratories, and environmental monitoring. Our development process combines hardware engineering, IoT integration, and data processing so that each solution fits its users’ operational needs.",
+    "process": "From requirements to implementation",
+    "steps": {
+      "engineering": { "title": "Product Engineering", "description": "Designing products and systems around their intended use." },
+      "integration": { "title": "System Integration", "description": "Bringing devices, controls, and connectivity together in one solution." },
+      "implementation": { "title": "Implementation", "description": "Deploying products for monitoring, laboratory, and environmental applications." }
+    }
+  },
+  "brands": { "eyebrow": "AKA BRANDS", "title": "Our Manufacturing Brands", "description": "Core brands in a product portfolio developed for industrial, laboratory, and environmental needs.", "view": "View {name} products" },
+  "featured": { "title": "Featured Manufactured Products", "description": "Selected AKA products for monitoring, laboratories, and water treatment.", "viewAll": "View All", "detail": "View Details", "viewAllProducts": "View All Products" },
+  "solutions": {
+    "title": "Product Development Capabilities", "description": "An engineering approach that connects devices, systems, and data to meet operational needs.", "learnMore": "Learn More",
+    "items": {
+      "iot": { "title": "IoT & Monitoring Development", "description": "Developing connected devices and systems to monitor operational parameters." },
+      "laboratory": { "title": "Laboratory Products & Systems", "description": "Developing products that support laboratory activities and technical workspaces." },
+      "water": { "title": "Water Treatment Systems", "description": "Developing products and systems for water purification and treatment." },
+      "platform": { "title": "Platforms & Data Integration", "description": "Integrating device data into dashboards and platforms for centralized monitoring." }
+    }
+  },
+  "product3d": { "eyebrow": "Interactive 3D Product", "title": "Explore {name} in 3D", "descriptionFallback": "Explore the product’s shape and interactive information points in the 3D viewer on its detail page.", "view": "View 3D Product", "previous": "Previous 3D product", "next": "Next 3D product", "choices": "3D product selection", "show": "Show {name}" },
+  "distribution": { "eyebrow": "Distribution Network", "title": "AKA group marketing and distribution channels", "description": "MIKA coordinates distributor and subdistributor enquiries according to customer needs.", "view": "View Distributor Network", "contact": "Contact MIKA", "whatsapp": "Hello MIKA, I would like information about distributors or subdistributors for AKA products.", "verified": "Group distribution information is presented using data verified by AKA." },
+  "cta": { "title": "Discuss Your Product Requirements", "description": "Submit your product, system integration, or procurement requirements through an official AKA RFQ. MIKA’s commercial team can assist with follow-up communication.", "quotation": "Request a Quotation", "contact": "Contact MIKA Sales", "whatsapp": "Hello MIKA, I would like to discuss product or system requirements with PT Autentik Karya Analitika." },
+  "store": { "eyebrow": "Need Components?", "title": "Components Marketplace", "description": "Find supporting components through AKA’s marketplace channel.", "view": "View Components Marketplace" },
+  "careers": { "title": "Opportunities to Grow Together", "description": "Find available positions through the Mika Career recruitment portal.", "viewAll": "View All Openings", "detail": "View Details", "empty": "There are currently no openings available at PT Autentik Karya Analitika.", "unavailable": "Job information is temporarily unavailable. Please try again shortly.", "hint": "Visit the careers page for the latest openings." }
+}

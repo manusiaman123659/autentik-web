@@ -1,4 +1,5 @@
 "use client";
+import { getPublicRoute, localizeHref } from "@/i18n/locales";
 
 import { useCallback, useState } from "react";
 import { Share2, Check } from "lucide-react";
@@ -12,7 +13,7 @@ export default function ShareProductButton({ slug, name }: ShareProductButtonPro
   const [copied, setCopied] = useState(false);
 
   const handleShare = useCallback(async () => {
-    const url = `${window.location.origin}/store/${slug}`;
+    const url = `${window.location.origin}${localizeHref(`/store/${slug}`, getPublicRoute(window.location.pathname)?.locale ?? "id")}`;
 
     if (navigator.share) {
       try {

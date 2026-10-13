@@ -1,4 +1,5 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { ArrowUpRight, Boxes } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -6,8 +7,9 @@ import AnimatedElement from "./ScrollAnimations";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import type { ProductRow } from "@/lib/public-data";
 
-export default function FeaturedProducts({ products }: { products: ProductRow[] }) {
+export default async function FeaturedProducts({ products }: { products: ProductRow[] }) {
   if (products.length === 0) return null;
+  const t = await getTranslations("home.featured");
 
   return (
     <section className="py-20" style={{ backgroundColor: "var(--bg-primary)" }}>
@@ -16,15 +18,15 @@ export default function FeaturedProducts({ products }: { products: ProductRow[] 
         <AnimatedElement type="fade-up">
           <div className="flex items-end justify-between gap-6 mb-12">
             <SectionHeading
-              title="Produk Manufaktur Unggulan"
-              subtitle="Pilihan produk AKA untuk kebutuhan monitoring, laboratorium, dan pengolahan air."
+              title={t("title")}
+              subtitle={t("description")}
               align="left"
             />
             <Link
               href="/products"
               className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#14B8A6] hover:text-[#0D9E98] transition-colors whitespace-nowrap mb-1"
             >
-              Lihat Semua
+              {t("viewAll")}
               <ArrowUpRight size={16} />
             </Link>
           </div>
@@ -79,7 +81,7 @@ export default function FeaturedProducts({ products }: { products: ProductRow[] 
                   href={`/products/${product.slug}`}
                   className="inline-flex items-center gap-1 text-sm font-semibold text-[#14B8A6] hover:text-[#0D9E98] transition-colors group/link"
                 >
-                  Lihat Detail
+                  {t("detail")}
                   <ArrowUpRight
                     size={13}
                     className="transition-transform group-hover/link:translate-x-1"
@@ -97,7 +99,7 @@ export default function FeaturedProducts({ products }: { products: ProductRow[] 
             className="inline-flex items-center gap-2 px-6 py-3 rounded-md text-sm font-semibold text-white"
             style={{ backgroundColor: "#0B1F3A" }}
           >
-            Lihat Semua Produk
+            {t("viewAllProducts")}
             <ArrowUpRight size={16} />
           </Link>
         </div>

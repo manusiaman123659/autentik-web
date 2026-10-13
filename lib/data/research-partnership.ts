@@ -1,4 +1,5 @@
 export interface DevelopmentCapability {
+  id: "productDevelopment" | "embedded" | "design";
   title: string;
   description: string;
 }
@@ -26,16 +27,19 @@ export interface TrademarkDocument {
 
 export const developmentCapabilities: DevelopmentCapability[] = [
   {
+    id: "productDevelopment",
     title: "Pengembangan Produk",
     description:
       "Struktur organisasi perusahaan mencantumkan fungsi R&D sebagai bagian dari pengembangan produk AKA.",
   },
   {
+    id: "embedded",
     title: "Embedded Engineering",
     description:
       "Fungsi Embedded Engineer tercantum untuk mendukung pengembangan perangkat dan integrasi sistem tertanam.",
   },
   {
+    id: "design",
     title: "Design Engineering",
     description:
       "Fungsi Design Engineer tercantum untuk mendukung proses perancangan dalam pengembangan produk.",

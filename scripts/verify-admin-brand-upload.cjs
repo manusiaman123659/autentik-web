@@ -225,8 +225,16 @@ async function main() {
       await navigate();await evaluate("document.getElementById('brand-logo-light-browse').focus()");const before=choosers;
       await cdp('Input.dispatchKeyEvent',{type:'rawKeyDown',key,code,windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk});if(key==='Enter')await cdp('Input.dispatchKeyEvent',{type:'char',key,code,text:'\r',windowsVirtualKeyCode:vk});await cdp('Input.dispatchKeyEvent',{type:'keyUp',key,code,windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk});await sleep(120);assert.ok(choosers>before);checks++;
     }
-    const protectedDiff=execFileSync('git',['diff','--name-only','HEAD','--','supabase','lib/actions','lib/validations','utils/supabase','components/home/Brands.tsx','lib/public-data.ts','components/admin/PortfolioForm.tsx','components/admin/GroupTab.tsx','components/admin/PartnerTab.tsx','components/admin/DistributionTab.tsx','package.json','package-lock.json'],{cwd:root,encoding:'utf8'});
-    assert.equal(protectedDiff.trim(),'','Domain/storage/public files unchanged');checks++;
+    const protectedDiff=execFileSync('git',['diff','--name-only','HEAD','--','supabase','lib/actions','lib/validations','utils/supabase','lib/public-data.ts','components/admin/PortfolioForm.tsx','components/admin/GroupTab.tsx','components/admin/PartnerTab.tsx','components/admin/DistributionTab.tsx'],{cwd:root,encoding:'utf8'});
+    assert.equal(require('./product-translation-scope.cjs')(protectedDiff),'','No unrelated protected changes outside approved i18n/Product foundation scope');checks++;
+    const oldBrands=execFileSync('git',['show','HEAD:components/home/Brands.tsx'],{cwd:root,encoding:'utf8'})
+      .replace('from "next/link"','from "@/i18n/navigation"')
+      .replace('"use client";','"use client";\nimport { useTranslations } from "next-intl";')
+      .replace('  const { theme } = useTheme();','  const t = useTranslations("home.brands");\n  const { theme } = useTheme();')
+      .replace('BRAND AKA','{t("eyebrow")}').replace('Brand Manufaktur Kami','{t("title")}')
+      .replace(/Brand utama dalam portofolio produk yang dikembangkan untuk kebutuhan\s+industri, laboratorium, dan lingkungan\./,'{t("description")}')
+      .replace('aria-label={`Lihat produk ${brand.name}`}','aria-label={t("view", { name: brand.name })}');
+    assert.equal(fs.readFileSync(path.join(root,'components/home/Brands.tsx'),'utf8').replace(/\s/g,''),oldBrands.replace(/\s/g,''),'Brand identity/filter/logo logic unchanged; only approved presentation extraction allowed');checks++;
     console.log(`PASS: ${checks} actual Brand browser checks; dual uploads, independent failures, SVG/PNG/GIF, contrast/default previews, busy/session safety, save retry/reset, keyboard and responsive light/dark. Transport mocked; no live writes.`);
   } finally {if(socket)socket.close();browser.kill();await new Promise(resolve=>server.close(resolve));}
 }

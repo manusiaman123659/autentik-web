@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "title": "关于我们 | PT Autentik Karya Analitika",
+    "description": "PT Autentik Karya Analitika — Smart Technology is Yours。应用智能技术，助力更美好的生活。",
+    "defaultDescription": "依托物联网技术提供工业产品。PT Autentik Karya Analitika 面向工业需求制造并销售 IoT Quality Monitoring Devices。",
+    "defaultOgDescription": "PT Autentik Karya Analitika — 依托物联网技术提供工业产品解决方案，支持印度尼西亚本土制造产品的发展。"
+  },
+  "about": {
+    "heading": "打造智能解决方案", "highlight": "与可持续自动化",
+    "introduction": "PT Autentik Karya Analitika 是一家智能技术企业，致力于为印度尼西亚各地的实验室、制造企业及工作场所提供集成式工业自动化与物联网解决方案。",
+    "visionTitle": "愿景", "vision": "成为应用智能技术、助力更美好生活的领先企业。", "missionTitle": "使命",
+    "mission": {
+      "opportunities": "为员工创造提升专业能力与实现自我价值的机会",
+      "management": "建立有效、高效的人力资源管理体系",
+      "innovation": "以可持续发展为重点，开发创新智能技术",
+      "service": "以用户满意度为核心，提供优质客户服务",
+      "partnership": "建立战略合作关系，强化技术生态系统"
+    },
+    "valuesTitle": "核心价值观",
+    "values": {
+      "F": { "title": "信仰上帝", "description": "我们相信上帝的存在与力量" },
+      "I": { "title": "创新", "description": "持续创新，并采取行动实现持续改进" },
+      "R": { "title": "坚韧", "description": "以信心面对变化" },
+      "S": { "title": "服务", "description": "以专业态度为客户提供优质服务" },
+      "T": { "title": "全力以赴", "description": "自觉、诚信地履行职责，提供完整的解决方案" }
+    },
+    "quality": {
+      "title": "质量方针", "introduction": "<company>PT. Autentik Karya Analitika</company> 是一家智能技术企业，始终致力于通过以下方式实现并提升客户满意度：",
+      "products": "提供<strong>优质的产品与服务</strong>",
+      "improvement": "定期评审质量目标与质量方针，实现<strong>持续改进</strong>",
+      "management": "持续贯彻<strong>ISO 9001:2015</strong> 质量管理体系",
+      "quote": "“公司董事与全体员工决心持续协作，共同落实本质量方针。”"
+    }
+  },
+  "profile": { "badge": "公司简介", "title": "公司简介与官方文档", "description": "浏览公司简介，进一步了解我们的愿景、使命、产品与服务。", "format": "交互式文档", "pdfAvailable": "提供 PDF 文档", "pages": "{count} 页", "research": "研发与合作" },
+  "team": { "title": "我们的团队", "description": "推动 PT Autentik Karya Analitika 创新与服务的专业团队。", "previous": "上一项", "next": "下一项" },
+  "groups": { "title": "我们的集团", "description": "构成 Autentik 生态系统重要组成部分的关联企业。" },
+  "partners": { "title": "我们的合作伙伴", "description": "与技术领域领先企业及教育机构开展战略合作。" },
+  "industryCta": { "title": "工业合作与采购", "description": "与我们的专业团队沟通实验室仪器、家具、校准及集成技术解决方案需求。", "sales": "联系销售团队", "products": "产品目录" },
+  "careerCta": { "title": "招聘与实习", "description": "加入我们的团队，共同开发物联网技术与工业自动化。", "view": "查看现有职位" },
+  "footer": { "description": "通过智能物联网集成提供工业技术解决方案。", "location": "Semarang，印度尼西亚中爪哇省", "rights": "版权所有。", "email": "电子邮箱" }
+}

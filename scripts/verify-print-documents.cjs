@@ -53,6 +53,7 @@ function fixture(role = 'staff', options = {}) {
     'next/headers': { cookies: async () => ({}) },
     'next/navigation': { redirect: href => { throw new Error(`REDIRECT:${href}`); }, notFound: () => { throw new Error('NOT_FOUND'); } },
     'next/link': { __esModule: true, default: props => React.createElement('a', props) },
+    '@/components/layout/DocumentRoot': { __esModule: true, default: ({ children }) => React.createElement(React.Fragment, null, children) },
     'next/image': { __esModule: true, default: ({ src, alt, width, height, className }) => React.createElement('img', { src, alt, width, height, className }) },
     '@/utils/supabase/server': { createClient: () => client },
     '@/utils/supabase/admin': { createAdminClient: () => {
@@ -85,7 +86,7 @@ function fixture(role = 'staff', options = {}) {
 const routes = {
   invoice: '@/app/(print)/admin/orders/[id]/invoice/page',
   delivery: '@/app/(print)/admin/orders/[id]/surat-jalan/page',
-  proof: '@/app/(print)/store/orders/[code]/print/page',
+  proof: '@/app/(public)/[locale]/(customer-print)/store/orders/[code]/print/page',
 };
 const params = kind => ({ params: Promise.resolve(kind === 'proof' ? { code } : { id }) });
 

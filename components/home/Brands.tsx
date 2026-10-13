@@ -1,7 +1,8 @@
 "use client";
+import { useTranslations } from "next-intl";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import type { PublicBrandItem } from "@/lib/public-data";
@@ -15,6 +16,7 @@ const brandGridColumns: Record<number, string> = {
 };
 
 export default function Brands({ items }: { items: PublicBrandItem[] }) {
+  const t = useTranslations("home.brands");
   const { theme } = useTheme();
 
   if (items.length === 0) return null;
@@ -30,21 +32,20 @@ export default function Brands({ items }: { items: PublicBrandItem[] }) {
                 className="text-[11px] font-bold tracking-widest uppercase"
                 style={{ color: "var(--text-secondary)" }}
               >
-                BRAND AKA
+                {t("eyebrow")}
               </h4>
             </div>
             <h2
               className="text-4xl md:text-5xl font-bold tracking-tight leading-[1.15]"
               style={{ color: "var(--text-primary)" }}
             >
-              Brand Manufaktur Kami
+               {t("title")}
             </h2>
             <p
               className="text-sm leading-relaxed mt-4 max-w-lg"
               style={{ color: "var(--text-secondary)" }}
             >
-              Brand utama dalam portofolio produk yang dikembangkan untuk kebutuhan
-              industri, laboratorium, dan lingkungan.
+               {t("description")}
             </p>
           </div>
         </AnimatedElement>
@@ -60,7 +61,7 @@ export default function Brands({ items }: { items: PublicBrandItem[] }) {
             <Link
               key={brand.id}
               href={`/products?brand=${encodeURIComponent(brand.brandFilter)}`}
-              aria-label={`Lihat produk ${brand.name}`}
+              aria-label={t("view", { name: brand.name })}
               className="flex min-w-0 h-28 items-center justify-center border-b border-r px-5 opacity-75 transition-all duration-300 hover:bg-[#0EA5A0]/5 hover:opacity-100 md:h-32"
               style={{ borderColor: "var(--border-subtle)" }}
             >

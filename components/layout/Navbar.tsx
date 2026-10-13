@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import { useState, useEffect, useRef, useCallback } from "react";
+import Link, { usePathname } from "@/i18n/navigation";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import LanguageSwitcher from "./LanguageSwitcher";
 import { ChevronDown, Menu, X, Search, Sun, Moon, ShoppingCart } from "lucide-react";
 import MobileMenu, { type NavItem } from "./MobileMenu";
 import SearchModal from "./SearchModal";
@@ -12,21 +13,22 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useCart } from "@/components/cart/CartProvider";
 
 const navLinks: NavItem[] = [
-  { href: "/", label: "Beranda" },
-  { href: "/products", label: "Produk" },
-  { href: "/services", label: "Layanan" },
+  { href: "/", label: "home" },
+  { href: "/products", label: "products" },
+  { href: "/services", label: "services" },
   {
-    label: "Perusahaan",
+    label: "company",
     children: [
-      { href: "/about", label: "Profil Perusahaan" },
-      { href: "/distributors", label: "Jaringan Distributor" },
-      { href: "/research-partnership", label: "Riset & Kemitraan" },
+      { href: "/about", label: "about" },
+      { href: "/distributors", label: "distributors" },
+      { href: "/research-partnership", label: "research" },
     ],
   },
-  { href: "/careers", label: "Karier" },
-  { href: "/contact", label: "Kontak" },
+  { href: "/careers", label: "careers" },
+  { href: "/contact", label: "contact" },
 ];
 const companyItemCount = navLinks.find((item) => item.children)?.children?.length ?? 0;
+const utilityClass = "h-11 w-11 shrink-0 items-center justify-center rounded-sm transition-colors hover:bg-[var(--bg-card-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0EA5A0]";
 
 function isPathActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -64,8 +66,13 @@ function useScrolled(threshold = 20) {
 }
 
 export default function Navbar() {
+  const t = useTranslations("navigation");
+  const common = useTranslations("common");
+  const links = navLinks.map(item => ({ ...item, label: t(item.label),
+    children: item.children?.map(child => ({ ...child, label: t(child.label) })) }));
   const scrolled = useScrolled(20);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const closeMobileMenu = useCallback(() => setMobileOpen(false), [setMobileOpen]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const companyRef = useRef<HTMLDivElement>(null);
@@ -163,14 +170,14 @@ export default function Navbar() {
           boxShadow: scrolled ? "var(--navbar-shadow)" : "none",
         }}
       >
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+        <nav aria-label={common("menu")} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between gap-3">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
+            <Link href="/" aria-label={t("home")} className="flex min-h-11 shrink-0 items-center gap-2.5 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0EA5A0]">
               <div className="w-9 h-9 relative flex items-center justify-center rounded-full overflow-hidden bg-white p-1.5">
                 <Image
                   src="/images/logo_aka/LOGO_AKA.jpg"
-                  alt="Logo Autentik"
+                  alt={common("logo")}
                   width={36}
                   height={36}
                   className="object-contain w-full h-full"
@@ -185,8 +192,8 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop Nav Links */}
-            <div className="hidden lg:flex items-center gap-1">
-              {navLinks.map((link) => {
+            <div className="hidden xl:flex items-center gap-1">
+              {links.map((link) => {
                 const isActive = isNavItemActive(pathname, link);
                 if (link.children) {
                   return (
@@ -203,7 +210,7 @@ export default function Navbar() {
                         aria-expanded={companyOpen}
                         aria-controls="company-navigation-menu"
                         onClick={() => setCompanyOpen((open) => !open)}
-                        className={`relative flex items-center gap-1 rounded-sm px-3 py-2 text-sm font-medium transition-colors ${
+                        className={`relative flex min-h-11 items-center gap-1 rounded-sm px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0EA5A0] ${
                           isActive ? "text-[#0EA5A0]" : "hover:text-[#0EA5A0]"
                         }`}
                         style={!isActive ? { color: "var(--text-secondary)" } : {}}
@@ -240,7 +247,7 @@ export default function Navbar() {
                                 href={child.href}
                                 aria-current={childActive ? "page" : undefined}
                                 onClick={() => setCompanyOpen(false)}
-                                className={`block px-4 py-2.5 text-sm font-medium transition-colors hover:text-[#0EA5A0] ${
+                                className={`block min-h-11 px-4 py-2.5 text-sm font-medium transition-colors hover:text-[#0EA5A0] focus-visible:outline-2 focus-visible:outline-[#0EA5A0] ${
                                   childActive ? "text-[#0EA5A0]" : ""
                                 }`}
                                 style={{
@@ -264,7 +271,7 @@ export default function Navbar() {
                     key={link.href}
                     href={link.href!}
                     aria-current={isActive ? "page" : undefined}
-                    className={`relative rounded-sm px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`relative inline-flex min-h-11 items-center rounded-sm px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0EA5A0] ${
                       isActive
                         ? "text-[#0EA5A0]"
                         : "hover:text-[#0EA5A0]"
@@ -283,21 +290,15 @@ export default function Navbar() {
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2">
-              {/* Globe */}
-              {/* <button
-                aria-label="Ganti Bahasa"
-                className="hidden sm:flex items-center justify-center w-9 h-9 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <Globe size={18} />
-              </button> */}
+            <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+              <LanguageSwitcher />
 
               {/* Search */}
               <button
-                aria-label="Cari"
+                type="button"
+                aria-label={common("search")}
                 onClick={() => setSearchOpen(true)}
-                className="hidden sm:flex items-center justify-center w-9 h-9 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                className={`inline-flex ${utilityClass}`}
                 style={{ color: "var(--text-secondary)" }}
               >
                 <Search size={18} />
@@ -305,10 +306,11 @@ export default function Navbar() {
 
               {/* Dark Mode Toggle */}
               <button
+                type="button"
                 id="theme-toggle"
-                aria-label={theme === "dark" ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
+                aria-label={common(theme === "dark" ? "lightTheme" : "darkTheme")}
                 onClick={toggleTheme}
-                className="flex items-center justify-center w-9 h-9 rounded-md transition-all duration-300 hover:bg-slate-100 dark:hover:bg-slate-800 relative overflow-hidden"
+                className={`hidden relative overflow-hidden xl:inline-flex ${utilityClass}`}
                 style={{ color: "var(--text-secondary)" }}
               >
                 <span
@@ -332,13 +334,13 @@ export default function Navbar() {
               </button>
 
               {/* Customer Auth */}
-              <CustomerAuthButton variant="desktop" />
+              <div className="hidden xl:block"><CustomerAuthButton variant="desktop" /></div>
 
               {/* Cart */}
               <Link
                 href="/store/cart"
-                aria-label="Keranjang belanja"
-                className="relative flex items-center justify-center w-9 h-9 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label={common("cartAccessible")}
+                className={`relative inline-flex ${utilityClass}`}
                 style={{ color: "var(--text-secondary)" }}
               >
                 <ShoppingCart size={18} />
@@ -353,21 +355,21 @@ export default function Navbar() {
               <Link
                 href="/store"
                 id="navbar-store-btn"
-                aria-label="Marketplace Komponen"
-                className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white rounded-sm transition-[opacity,box-shadow] duration-200 hover:opacity-90 hover:shadow-md"
+                aria-label={t("marketplace")}
+                className="ml-2 hidden min-h-11 items-center gap-1.5 whitespace-nowrap rounded-sm px-4 py-2 text-sm font-semibold text-white transition-[opacity,box-shadow] duration-200 hover:opacity-90 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0EA5A0] xl:flex"
                 style={{ backgroundColor: "#0B1F3A" }}
               >
-                Komponen
+                {t("store")}
               </Link>
 
               {/* Mobile Hamburger */}
               <button
                 type="button"
-                aria-label="Menu"
+                aria-label={common("menu")}
                 aria-expanded={mobileOpen}
                 aria-controls="mobile-navigation-drawer"
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="lg:hidden flex items-center justify-center w-9 h-9 transition-colors"
+                className={`inline-flex xl:hidden ${utilityClass}`}
                 style={{ color: "var(--text-secondary)" }}
               >
                 {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -381,8 +383,8 @@ export default function Navbar() {
       {mobileOpen && (
         <MobileMenu
           isOpen={mobileOpen}
-          onClose={() => setMobileOpen(false)}
-          navLinks={navLinks}
+          onClose={closeMobileMenu}
+          navLinks={links}
           pathname={pathname}
         />
       )}

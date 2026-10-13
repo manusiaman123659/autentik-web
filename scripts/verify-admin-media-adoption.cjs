@@ -229,8 +229,8 @@ async function main() {
     const deleted = serverHarness();
     assert.equal((await deleted.actions.deleteDistributionEntity(parentId)).success, true);
     assert.equal(deleted.writes[0].record.is_active, false); assert.ok(deleted.writes[0].record.deleted_at); checks += 3;
-    const changed = execFileSync('git', ['diff', '--name-only', 'HEAD', '--', 'supabase', 'lib/actions', 'lib/validations', 'utils/supabase', 'components/admin/PortfolioForm.tsx', 'package.json', 'package-lock.json'], { cwd: root, encoding: 'utf8' });
-    assert.equal(changed.trim(), '', 'Protected domain/authorization/Portfolio files unchanged'); checks++;
+    const changed = execFileSync('git', ['diff', '--name-only', 'HEAD', '--', 'supabase', 'lib/actions', 'lib/validations', 'utils/supabase', 'components/admin/PortfolioForm.tsx'], { cwd: root, encoding: 'utf8' });
+    assert.equal(require('./product-translation-scope.cjs')(changed), '', 'No unrelated protected changes outside approved i18n/Product foundation scope'); checks++;
     console.log(`PASS: ${checks} actual adapter + Grup/Partner/Distribution browser checks; image/* including SVG/GIF, unchanged paths, state/busy/session safety and responsive light/dark. Transport mocked; no live writes.`);
   } finally { if (socket) socket.close(); browser.kill(); await new Promise(resolve => server.close(resolve)); }
 }

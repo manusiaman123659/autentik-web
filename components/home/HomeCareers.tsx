@@ -1,9 +1,11 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getTranslations } from "next-intl/server";
 import { ArrowRight, Briefcase, Building2, MapPin } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import type { MikaJob } from "@/types/mika-career";
 
-export default function HomeCareers({ items, available }: { items: MikaJob[]; available: boolean }) {
+export default async function HomeCareers({ items, available }: { items: MikaJob[]; available: boolean }) {
+  const t = await getTranslations("home.careers");
   const featured = items.slice(0, 3);
 
   return (
@@ -16,14 +18,14 @@ export default function HomeCareers({ items, available }: { items: MikaJob[]; av
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#0EA5A0]">Mika Career</p>
             </div>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: "var(--text-primary)" }}>
-              Peluang untuk Bertumbuh Bersama
+              {t("title")}
             </h2>
             <p className="mt-4 max-w-2xl leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-              Temukan posisi yang tersedia melalui portal rekrutmen Mika Career.
+              {t("description")}
             </p>
           </div>
           <Link href="/careers" className="inline-flex items-center gap-2 text-sm font-bold text-[#0EA5A0] hover:underline">
-            Lihat Semua Lowongan
+            {t("viewAll")}
             <ArrowRight size={16} />
           </Link>
         </AnimatedElement>
@@ -59,7 +61,7 @@ export default function HomeCareers({ items, available }: { items: MikaJob[]; av
                   href={`/careers/${job.id}`}
                   className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#0EA5A0] hover:underline"
                 >
-                  Lihat Detail
+                  {t("detail")}
                   <ArrowRight size={15} />
                 </Link>
               </article>
@@ -68,8 +70,8 @@ export default function HomeCareers({ items, available }: { items: MikaJob[]; av
         ) : (
           <AnimatedElement type="fade-up">
             <div className="border py-12 text-center" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-              <p className="font-semibold" style={{ color: "var(--text-primary)" }}>{available ? "Saat ini belum ada lowongan yang tersedia di PT Autentik Karya Analitika." : "Informasi lowongan sedang tidak tersedia. Silakan coba lagi beberapa saat."}</p>
-              <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>Pantau halaman karir untuk informasi lowongan terbaru.</p>
+              <p className="font-semibold" style={{ color: "var(--text-primary)" }}>{t(available ? "empty" : "unavailable")}</p>
+              <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>{t("hint")}</p>
             </div>
           </AnimatedElement>
         )}

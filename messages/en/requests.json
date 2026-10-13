@@ -1,0 +1,17 @@
+{
+  "metadata": { "title": "Custom Requests | PT Autentik Karya Analitika", "description": "Submit custom product requirements for manufacturing and industry. Our engineers will discuss specifications and provide a quotation." },
+  "custom": {
+    "hero": { "badge": "Custom Orders", "heading": "Submit Your", "highlight": "Custom Requirements", "description": "Tell us the specifications you need. Our engineers will discuss technical feasibility, estimated costs, and lead times." },
+    "form": { "back": "Back", "title": "Custom Request Form", "product": "Related product", "fullName": "Full Name", "email": "Business Email", "company": "Company Name", "message": "Requirements & Specifications", "optional": "(optional)", "namePlaceholder": "Jane Doe", "emailPlaceholder": "jane@company.com", "companyPlaceholder": "Acme Corp", "messagePlaceholder": "Describe your custom specifications: dimensions, materials, quantity, deadline, and other requirements…", "submit": "Send Custom Request →", "loading": "Sending…", "help": "Need a faster response? Contact us on WhatsApp through", "contact": "MIKA", "whatsapp": "Hello MIKA, I would like advice on custom products or customization requirements." },
+    "validation": { "fullName": "Enter at least 2 characters for your full name", "email": "Enter a valid email address", "message": "Describe your custom requirements in at least 10 characters" },
+    "status": { "success": "Request Sent!", "description": "Our technical team will contact you within 1–2 business days to discuss the specifications.", "again": "Submit another request", "error": "Something went wrong. Please try again." }
+  },
+  "rfq": {
+    "title": "Request an Official Quotation (RFQ)", "triggerCompact": "Request RFQ", "close": "Close RFQ form", "product": "Product:", "optional": "(optional)",
+    "fields": { "productId": "Product", "productName": "Product Name", "companyName": "Company Name", "picName": "Contact Person (PIC)", "email": "Email", "phoneNumber": "Phone Number", "estimatedQuantity": "Estimated Quantity (units)", "targetDate": "Target Date", "notes": "Notes" },
+    "placeholders": { "companyName": "Example Company", "picName": "Budi Santoso", "email": "budi@company.com", "phoneNumber": "08123456789", "notes": "Special specifications, batch quantity, and other requirements." },
+    "submit": "Send Quotation Request", "loading": "Sending...", "checkField": "Please check {field}.", "dismissError": "Dismiss error message",
+    "errors": { "INVALID_REQUEST": "Please check your quotation request details and try again.", "RATE_LIMITED": "Too many requests. Please wait before trying again.", "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later.", "UNKNOWN": "Unable to send your quotation request. Please try again.", "NETWORK": "A network error occurred. Please try again." },
+    "success": { "title": "Quotation Request Sent!", "code": "Your RFQ code:", "description": "Your RFQ has been recorded in the PT Autentik Karya Analitika system. For commercial follow-up, you can continue the conversation with MIKA on WhatsApp.", "followUp": "Continue to MIKA", "close": "Close" }
+  }
+}

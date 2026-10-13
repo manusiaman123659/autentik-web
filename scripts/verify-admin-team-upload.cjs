@@ -199,7 +199,7 @@ async function main() {
       await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk }); await sleep(120);
       assert.ok(choosers > before, `${code} opens picker`); checks++;
     }
-    const changed=execFileSync('git',['diff','--name-only','HEAD','--','supabase','lib/actions','lib/validations','lib/media/cropImage.ts','utils/supabase','components/admin/ImageUploadField.tsx','components/admin/MediaUploadField.tsx','components/admin/BrandForm.tsx','components/admin/PortfolioForm.tsx','package.json','package-lock.json'],{cwd:root,encoding:'utf8'});assert.equal(changed.trim(),'','Protected files unchanged');checks++;
+    const changed=execFileSync('git',['diff','--name-only','HEAD','--','supabase','lib/actions','lib/validations','lib/media/cropImage.ts','utils/supabase','components/admin/ImageUploadField.tsx','components/admin/MediaUploadField.tsx','components/admin/BrandForm.tsx','components/admin/PortfolioForm.tsx'],{cwd:root,encoding:'utf8'});assert.equal(require('./product-translation-scope.cjs')(changed),'','No unrelated protected changes outside approved i18n/Product foundation scope');checks++;
     console.log(`PASS: ${checks} actual Team/cropper/canvas browser checks; critical Cancel race, mandatory crop, encoding, upload/Save/session safety, cleanup, dialog and responsive behavior. Transport mocked; no live writes.`);
   } finally {if(socket)socket.close();browser.kill();await new Promise(resolve=>server.close(resolve));}
 }

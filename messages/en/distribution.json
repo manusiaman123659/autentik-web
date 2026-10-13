@@ -1,0 +1,9 @@
+{
+  "metadata": { "title": "Distributor Network | PT Autentik Karya Analitika", "description": "Information on group distribution channels, distributors, and subdistributors for PT Autentik Karya Analitika products, coordinated through MIKA." },
+  "hero": { "eyebrow": "Distribution Network", "title": "Find information about AKA product distribution", "description": "AKA acts as the manufacturer. MIKA coordinates purchasing enquiries and helps identify suitable distributors or subdistributors." },
+  "types": { "group_distribution": "Group Distribution Channel", "distributor": "Distributor", "sub_distributor": "Subdistributor" },
+  "card": { "parent": "Part of the network: {name}", "website": "Website" },
+  "group": { "eyebrow": "Group Distribution Channels", "title": "Marketing and distribution within the group ecosystem", "description": "Group distribution channels are presented using information managed and verified by AKA." },
+  "directory": { "eyebrow": "Official Distributors", "title": "Distributor and subdistributor directory", "ungrouped": "Other Distribution Networks" },
+  "cta": { "eyebrow": "Distribution Coordination", "title": "Need a distributor in your region?", "description": "Tell MIKA about your requirements and region. MIKA will help identify the appropriate distributor or subdistributor channel.", "contact": "Contact MIKA", "whatsapp": "Hello MIKA, I would like information about AKA product distributors or subdistributors for my region and requirements." }
+}

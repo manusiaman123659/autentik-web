@@ -5,6 +5,7 @@ import { requireCapability } from "@/lib/admin";
 import { getOrder, getAdminBankAccount, type OrderItemRow } from "@/lib/admin-data";
 import { createClient } from "@/utils/supabase/server";
 import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
+import { getPublicRoute, localizeHref } from "@/i18n/locales";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/validations/storeSchema";
 import type { CustomerProofData, DeliveryNoteData, DocumentItem, InvoiceData, PricedDocumentItem } from "./document-types";
 
@@ -73,12 +74,12 @@ type OwnedOrder = {
   order_items: OrderItemRow[];
 };
 
-export async function getCustomerProofDocument(code: string): Promise<CustomerProofData> {
+export async function getCustomerProofDocument(code: string, returnPath?: string): Promise<CustomerProofData> {
   const supabase = createClient(await cookies());
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
-    const next = getSafeCustomerRedirect(`/store/orders/${encodeURIComponent(code)}/print`);
-    redirect(`/auth/login?next=${encodeURIComponent(next)}`);
+    const next = getSafeCustomerRedirect(returnPath ?? `/store/orders/${encodeURIComponent(code)}/print`);
+    redirect(localizeHref(`/auth/login?next=${encodeURIComponent(next)}`, getPublicRoute(next.split("?")[0])?.locale ?? "id"));
   }
   const { data, error } = await supabase.from("orders")
     .select("order_code,created_at,customer_name,shipping_address,status,payment_status,subtotal,shipping_cost,total,order_items(id,product_name,sku,variant_label,quantity,unit_price)")

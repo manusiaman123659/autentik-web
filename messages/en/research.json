@@ -1,0 +1,16 @@
+{
+  "metadata": { "title": "Research & Partnership | PT Autentik Karya Analitika", "description": "Information on PT Autentik Karya Analitika’s product development capabilities, documented collaborations, and registered trademarks." },
+  "hero": { "eyebrow": "Research & Partnership", "title": "Product development through engineering and collaboration", "description": "AKA develops products as a manufacturer, supported by internal engineering functions and documented collaboration with relevant institutions." },
+  "development": { "eyebrow": "Product Development", "title": "Development capabilities connecting ideas to products", "description": "AKA’s organizational structure places R&D, embedded engineering, and design engineering within product development. This information describes internal capabilities, not a list of specific projects or research outcomes." },
+  "capabilities": {
+    "productDevelopment": { "title": "Product Development", "description": "The company’s organizational structure includes an R&D function within AKA product development." },
+    "embedded": { "title": "Embedded Engineering", "description": "The Embedded Engineer function supports device development and embedded-system integration." },
+    "design": { "title": "Design Engineering", "description": "The Design Engineer function supports design activities within product development." }
+  },
+  "states": { "unavailable": "Portfolio information could not be loaded. Please try again later.", "empty": "No portfolio entries have been published yet." },
+  "portfolio": { "title": "Development Portfolio" },
+  "collaboration": { "eyebrow": "Documented Collaborations", "title": "Scope of collaboration in technology development and application", "description": "The following information reflects the verified scope without extending the status, period, or outcomes of any collaboration.", "fallbackCategory": "Collaboration" },
+  "trademark": { "eyebrow": "Intellectual Property", "title": "Registered Trademarks", "description": "AKA holds the following trademark certificates, with PT Autentik Karya Analitika as the trademark holder.", "fallbackCategory": "Trademark / Trademark Certificate" },
+  "disclosure": "Read More", "imageUnavailable": "Image unavailable.",
+  "cta": { "eyebrow": "Collaboration Opportunities", "title": "Have development requirements you would like to discuss?", "description": "Share the context and initial scope through AKA’s official contact channel.", "contact": "Discuss Collaboration" }
+}

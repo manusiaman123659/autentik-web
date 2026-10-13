@@ -1,0 +1,10 @@
+{
+  "viewer": {
+    "fallbackTitle": "Company Profile AKA 2026", "title": "Company Profile | Autentik",
+    "loading": "Loading document…", "loadError": "Unable to load the PDF file.", "downloadDirect": "Download PDF Directly", "downloadPdf": "Download PDF", "download": "Download",
+    "fullscreen": "Fullscreen", "exitFullscreen": "Exit fullscreen", "exitEscape": "Exit fullscreen (Esc)",
+    "previous": "Previous page", "next": "Next page", "zoomIn": "Zoom in", "zoomOut": "Zoom out", "thumbnails": "Thumbnail grid (G)",
+    "page": "Page {page} of {total}", "pageCounter": "Page <current>{page}</current> of <pages>{total}</pages>",
+    "navigation": "Use the ◀ ▶ arrows or swipe to navigate", "slideAlt": "Company profile slide {page}", "thumbnailAlt": "Slide {page}", "goToPage": "Go to page {page}"
+  }
+}

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
+import { useLocale } from "next-intl";
+import { getPublicRoute, localizeHref, type PublicLocale } from "@/i18n/locales";
 
 interface GoogleAuthButtonProps {
   mode?: "login" | "register";
@@ -16,6 +18,7 @@ export default function GoogleAuthButton({
   redirect,
   disabled = false,
 }: GoogleAuthButtonProps) {
+  const locale = useLocale() as PublicLocale;
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const supabase = createClient();
@@ -24,7 +27,8 @@ export default function GoogleAuthButton({
     setErrorMsg(null);
     setLoading(true);
     try {
-      const safeRedirect = getSafeCustomerRedirect(redirect, "/store");
+      const target = getSafeCustomerRedirect(redirect, localizeHref("/store", locale));
+      const safeRedirect = getPublicRoute(target.split(/[?#]/)[0])?.prefixed ? target : localizeHref(target, locale);
       const callbackUrl = new URL("/auth/callback", window.location.origin);
       callbackUrl.searchParams.set("next", safeRedirect);
 

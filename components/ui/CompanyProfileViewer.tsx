@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import type { PDFDocumentProxy } from "pdfjs-dist";
@@ -36,6 +37,7 @@ export default function CompanyProfileViewer({
 }: {
   manifest?: ComproManifestProp | null;
 }) {
+  const t = useTranslations("documents.viewer");
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
@@ -53,11 +55,11 @@ export default function CompanyProfileViewer({
   const hasPdf = Boolean(manifest?.pdfUrl && manifest.pdfUrl.trim());
   const pdfUrl = manifest?.pdfUrl || PDF_DOWNLOAD_URL;
   const pdfFilename = manifest?.pdfFilename || "COMPRO-AKA-2026.pdf";
-  const title = manifest?.title || "Company Profile AKA 2026";
+  const title = manifest?.title || t("fallbackTitle");
 
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = useState(0);
-  const [pdfError, setPdfError] = useState("");
+  const [pdfError, setPdfError] = useState<"load-error" | null>(null);
   const [pdfReady, setPdfReady] = useState(-1);
   const [stageWidth, setStageWidth] = useState(0);
   const [stageHeight, setStageHeight] = useState(0);
@@ -90,7 +92,7 @@ export default function CompanyProfileViewer({
         }
         pdfCacheRef.current.clear();
         setNumPages(0);
-        setPdfError("");
+        setPdfError(null);
         setPdfReady(-1);
         setCurrentSlide(0);
         setIsFlipping(false);
@@ -107,7 +109,7 @@ export default function CompanyProfileViewer({
         setPdfDoc(doc);
         setNumPages(doc.numPages);
       } catch {
-        if (!cancelled) setPdfError("Gagal memuat file PDF.");
+        if (!cancelled) setPdfError("load-error");
       }
     })();
     return () => {
@@ -514,7 +516,7 @@ export default function CompanyProfileViewer({
             ? "opacity-20 cursor-not-allowed"
             : "hover:scale-110"
         }`}
-        aria-label="Halaman sebelumnya"
+        aria-label={t("previous")}
       >
         <ChevronLeft size={isFullscreen ? 28 : 22} />
       </button>
@@ -530,7 +532,7 @@ export default function CompanyProfileViewer({
             ? "opacity-20 cursor-not-allowed"
             : "hover:scale-110"
         }`}
-        aria-label="Halaman berikutnya"
+        aria-label={t("next")}
       >
         <ChevronRight size={isFullscreen ? 28 : 22} />
       </button>
@@ -632,19 +634,19 @@ export default function CompanyProfileViewer({
       ) : hasPdf && !pdfError ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <div className="w-10 h-10 border-3 border-[#0EA5A0]/30 border-t-[#0EA5A0] rounded-full animate-spin" />
-          <p className="text-white/50 text-sm">Memuat dokumen…</p>
+          <p role="status" className="text-white/50 text-sm">{t("loading")}</p>
         </div>
       ) : pdfError ? (
         <div className="text-center px-6 py-16">
           <AlertCircle size={36} className="mx-auto text-white/30 mb-4" />
-          <p className="text-white/60 text-sm mb-5">{pdfError}</p>
+          <p role="status" className="text-white/60 text-sm mb-5">{t("loadError")}</p>
           <a
             href={pdfUrl}
             download={pdfFilename}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white bg-[#0EA5A0] hover:bg-[#0d9490] transition-colors shadow-lg"
           >
             <Download size={16} />
-            Download PDF Langsung
+            {t("downloadDirect")}
           </a>
         </div>
       ) : (
@@ -661,7 +663,7 @@ export default function CompanyProfileViewer({
           )}
           <Image
             src={getSlideUrl(currentSlide)}
-            alt={`Company Profile Slide ${currentSlide + 1}`}
+            alt={t("slideAlt", { page: currentSlide + 1 })}
             fill
             className={`${
               isFullscreen
@@ -686,7 +688,7 @@ export default function CompanyProfileViewer({
       {/* ─── Embed Mode: Top Controls Bar ─── */}
       <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-[#050d1a] to-[#0B1F3A] rounded-t-2xl">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="text-white/60 text-xs sm:text-sm font-mono tracking-wide shrink-0">
+          <span aria-label={t("page", { page: currentSlide + 1, total: slideTotal || "--" })} className="text-white/60 text-xs sm:text-sm font-mono tracking-wide shrink-0">
             <span className="text-[#0EA5A0] font-bold">
               {String(currentSlide + 1).padStart(2, "0")}
             </span>
@@ -709,15 +711,17 @@ export default function CompanyProfileViewer({
             href={pdfUrl}
             download={pdfFilename}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium border border-white/10 backdrop-blur transition-all"
-            title="Download PDF"
+            title={t("downloadPdf")}
+            aria-label={t("downloadPdf")}
           >
             <Download size={14} />
-            <span className="hidden sm:inline">Download</span>
+            <span className="hidden sm:inline">{t("download")}</span>
           </a>
           <button
             onClick={() => setIsFullscreen(true)}
             className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200"
-            title="Fullscreen"
+            title={t("fullscreen")}
+            aria-label={t("fullscreen")}
           >
             <Maximize2 size={18} />
           </button>
@@ -749,7 +753,7 @@ export default function CompanyProfileViewer({
       {/* ─── Embed Mode: Bottom Bar ─── */}
       <div className="flex items-center justify-center px-4 sm:px-6 py-2.5 bg-gradient-to-r from-[#050d1a] to-[#0B1F3A] rounded-b-2xl">
         <p className="text-slate-300 dark:text-slate-400 text-xs font-light">
-          Gunakan panah ◀ ▶ atau geser untuk navigasi
+          {t("navigation")}
         </p>
       </div>
 
@@ -763,15 +767,12 @@ export default function CompanyProfileViewer({
             <div className="w-full bg-neutral-900/90 backdrop-blur border-b border-neutral-800 py-2.5 sm:py-3 px-3 sm:px-6 flex items-center gap-2 text-white z-20 shrink-0">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 text-xs sm:text-sm">
                 <span className="text-white/50 font-medium shrink-0">
-                  Company Profile | Autentik
+                  {t("title")}
                 </span>
                 <span className="text-white/20 hidden sm:inline">|</span>
                 <span className="text-white/70 font-mono truncate">
-                  Halaman{" "}
-                  <span className="text-[#0EA5A0] font-bold">
-                    {currentSlide + 1}
-                  </span>{" "}
-                  dari <span>{slideTotal || "--"}</span>
+                  {t.rich("pageCounter", { page: currentSlide + 1, total: slideTotal || "--",
+                    current: chunks => <span className="text-[#0EA5A0] font-bold">{chunks}</span>, pages: chunks => <span>{chunks}</span> })}
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -779,14 +780,16 @@ export default function CompanyProfileViewer({
                   href={pdfUrl}
                   download={pdfFilename}
                   className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                  title="Download PDF"
+                  title={t("downloadPdf")}
+                  aria-label={t("downloadPdf")}
                 >
                   <Download size={18} />
                 </a>
                 <button
                   onClick={() => setIsFullscreen(false)}
                   className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                  title="Exit Fullscreen (Esc)"
+                  title={t("exitEscape")}
+                  aria-label={t("exitEscape")}
                 >
                   <X size={18} />
                 </button>
@@ -813,7 +816,7 @@ export default function CompanyProfileViewer({
             </div>
 
             {/* Bottom floating pill toolbar */}
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-neutral-900/90 backdrop-blur border border-neutral-700/60 rounded-full px-5 py-2 flex items-center gap-4 text-white shadow-2xl z-20 shrink-0">
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-max max-w-[calc(100vw-2rem)] bg-neutral-900/90 backdrop-blur border border-neutral-700/60 rounded-full px-3 py-2 flex flex-wrap items-center justify-center gap-2 sm:px-5 sm:gap-4 text-white shadow-2xl z-20 shrink-0">
               <button
                 onClick={() => setShowThumbnails((p) => !p)}
                 className={`p-2 rounded-lg transition-all ${
@@ -821,7 +824,8 @@ export default function CompanyProfileViewer({
                     ? "text-[#0EA5A0] bg-[#0EA5A0]/10"
                     : "text-white/60 hover:text-white hover:bg-white/10"
                 }`}
-                title="Thumbnail Grid (G)"
+                title={t("thumbnails")}
+                aria-label={t("thumbnails")}
               >
                 <LayoutGrid size={18} />
               </button>
@@ -831,6 +835,7 @@ export default function CompanyProfileViewer({
               <button
                 onClick={handlePrev}
                 disabled={currentSlide === 0 || isFlipping}
+                aria-label={t("previous")}
                 className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 <ChevronLeft size={18} />
@@ -843,6 +848,7 @@ export default function CompanyProfileViewer({
               <button
                 onClick={handleNext}
                 disabled={currentSlide >= slideLimit || isFlipping}
+                aria-label={t("next")}
                 className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 <ChevronRight size={18} />
@@ -853,6 +859,7 @@ export default function CompanyProfileViewer({
               <button
                 onClick={handleZoomOut}
                 disabled={zoom <= 0.5}
+                aria-label={t("zoomOut")}
                 className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 <ZoomOut size={18} />
@@ -863,6 +870,7 @@ export default function CompanyProfileViewer({
               <button
                 onClick={handleZoomIn}
                 disabled={zoom >= 2}
+                aria-label={t("zoomIn")}
                 className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 <ZoomIn size={18} />
@@ -873,7 +881,8 @@ export default function CompanyProfileViewer({
               <button
                 onClick={() => setIsFullscreen(false)}
                 className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                title="Exit Fullscreen"
+                title={t("exitFullscreen")}
+                aria-label={t("exitFullscreen")}
               >
                 <Minimize2 size={18} />
               </button>
@@ -891,6 +900,7 @@ export default function CompanyProfileViewer({
                   {Array.from({ length: slideTotal }, (_, i) => (
                     <button
                       key={i}
+                      aria-label={t("goToPage", { page: i + 1 })}
                       onClick={() => {
                         goToSlide(i);
                         setShowThumbnails(false);
@@ -910,7 +920,7 @@ export default function CompanyProfileViewer({
                       ) : (
                         <Image
                           src={getSlideUrl(i)}
-                          alt={`Slide ${i + 1}`}
+                          alt={t("thumbnailAlt", { page: i + 1 })}
                           fill
                           className="object-cover"
                           sizes="160px"

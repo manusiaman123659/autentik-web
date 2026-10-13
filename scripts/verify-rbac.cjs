@@ -95,6 +95,7 @@ function harness(role, options = {}) {
     },
   };
   function load(specifier, parent = root) {
+    if (specifier === '@/app/(site)/auth/callback/route') specifier = '@/app/auth/callback/route';
     if (Object.hasOwn(stubs, specifier)) return stubs[specifier];
     if (!specifier.startsWith('@/') && !specifier.startsWith('.')) return require(specifier);
     const base = specifier.startsWith('@/') ? path.join(root, specifier.slice(2)) : path.resolve(path.dirname(parent), specifier);
@@ -385,10 +386,10 @@ async function main() {
       nextUrl: { origin },
       headers: new Headers({ 'x-forwarded-host': 'attacker.example', 'x-forwarded-proto': 'https' }),
     });
-    for (const next of ['/store/orders/ORD-FIXTURE?payment=return', 'https://attacker.example', '//attacker.example', '/admin', '/store\\evil']) {
+    for (const next of ['/store/orders/ORD-FIXTURE?payment=return', '/en/store/checkout?mode=direct', '/zh-cn/store/orders/ORD-FIXTURE?payment=return', 'https://attacker.example', '//attacker.example', '/admin', '/store\\evil']) {
       const isolated = harness('customer', { oauth: true, env });
       const response = await isolated.load('@/app/(site)/auth/callback/route').GET(callbackRequest(`code=mock-code&next=${encodeURIComponent(next)}`));
-      assert.equal(response.location, `${expectedOrigin}${next.startsWith('/store/orders/') ? next : '/store'}`, `${runtime}/${origin}/${next}`);
+      assert.equal(response.location, `${expectedOrigin}${/^\/(?:en\/|zh-cn\/)?store\//.test(next) ? next : '/store'}`, `${runtime}/${origin}/${next}`);
       checks++;
     }
     const providerFailure = harness('customer', { oauth: true, env });

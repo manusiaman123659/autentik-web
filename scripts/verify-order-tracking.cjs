@@ -44,6 +44,7 @@ function fixture(role = 'staff', options = {}) {
     'next/cache': { revalidatePath: () => {} },
     'next/navigation': { useRouter: () => ({ refresh: () => {} }), redirect: () => { throw new Error('REDIRECT'); }, notFound: () => { throw new Error('NOT_FOUND'); } },
     'next/link': { __esModule: true, default: props => require('react').createElement('a', props) },
+    '@/i18n/navigation': { __esModule: true, default: props => require('react').createElement('a', props), useRouter: () => ({ refresh: () => {} }) },
     '@/utils/supabase/server': { createClient: () => client },
     'server-only': {},
     '@/utils/supabase/admin': { createAdminClient: () => { effects.push({ privateReader: true }); return client; } },
@@ -178,11 +179,11 @@ async function main() {
   check(readerSource.includes('import "server-only"') && !/\bfetch\s*\(/.test(readerSource), 'Privileged reader server-only, no tracking URL fetch');
   for (const name of ['Unknown', 'JNE<script>', 'https://evil.test', null]) check(urls.getTrackingDestination(name) === null, 'Unknown destination fails closed');
   const owned = fixture('customer');
-  const rendered = await owned.load('@/app/(site)/store/orders/[code]/page').default({ params: Promise.resolve({ code: 'ORD-FIXTURE' }), searchParams: Promise.resolve({}) });
+  const rendered = await owned.load('@/app/(public)/[locale]/(site)/store/orders/[code]/page').default({ params: Promise.resolve({ code: 'ORD-FIXTURE', locale: 'id' }), searchParams: Promise.resolve({}) });
   check(owned.filters.some(f => f[0] === 'orders' && f[1] === 'user_id' && f[2] === id), 'Customer page owner filter');
   check(rendered.props.dbOrder.tracking_number === 'AWB123', 'Safe DTO includes tracking');
   const confirmation = fixture('customer', { fullConfirmation: true, trackingNumber: 'TEST123456789' });
-  const confirmationPage = await confirmation.load('@/app/(site)/store/orders/[code]/page').default({ params: Promise.resolve({ code: 'ORD-FIXTURE' }), searchParams: Promise.resolve({ payment: 'return' }) });
+  const confirmationPage = await confirmation.load('@/app/(public)/[locale]/(site)/store/orders/[code]/page').default({ params: Promise.resolve({ code: 'ORD-FIXTURE', locale: 'id' }), searchParams: Promise.resolve({ payment: 'return' }) });
   const confirmationHtml = require('react-dom/server').renderToStaticMarkup(confirmationPage);
   check(confirmation.selections.some(([table, columns]) => table === 'orders' && columns.includes('tracking_courier') && columns.includes('tracking_number')), 'Real confirmation route selects both tracking columns');
   check(confirmationHtml.includes('Pembayaran Berhasil') && confirmationHtml.includes('Informasi Pengiriman'), 'Payment-success page mounts shipping card through actual component tree');
@@ -194,7 +195,7 @@ async function main() {
     && confirmationHtml.indexOf('Informasi Pengiriman') < confirmationHtml.indexOf('Detail Pesanan'), 'Shipping card ordered between status and products');
   for (const options of [{ foreign: true }, { signedOut: true }]) {
     const f = fixture('customer', options);
-    await assert.rejects(() => f.load('@/app/(site)/store/orders/[code]/page').default({ params: Promise.resolve({ code: 'ORD-FIXTURE' }), searchParams: Promise.resolve({}) }), options.foreign ? /NOT_FOUND/ : /REDIRECT/);
+    await assert.rejects(() => f.load('@/app/(public)/[locale]/(site)/store/orders/[code]/page').default({ params: Promise.resolve({ code: 'ORD-FIXTURE', locale: 'id' }), searchParams: Promise.resolve({}) }), options.foreign ? /NOT_FOUND/ : /REDIRECT/);
     checks++;
   }
   const sql = fs.readFileSync(path.join(root, 'supabase/migrations/0063_order_tracking_hardening.sql'), 'utf8');

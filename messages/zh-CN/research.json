@@ -1,0 +1,16 @@
+{
+  "metadata": { "title": "研发与合作 | PT Autentik Karya Analitika", "description": "了解 PT Autentik Karya Analitika 的产品开发能力、已记录的合作及注册商标。" },
+  "hero": { "eyebrow": "研发与合作", "title": "通过工程与合作开发产品", "description": "AKA 作为制造企业，通过内部工程职能及与相关机构开展的已记录合作开发产品。" },
+  "development": { "eyebrow": "产品开发", "title": "从创意到产品的开发能力", "description": "AKA 的组织架构将研发、嵌入式工程及工程设计纳入产品开发流程。此处信息说明内部能力，并非具体项目或科研成果清单。" },
+  "capabilities": {
+    "productDevelopment": { "title": "产品开发", "description": "公司组织架构将研发职能列为 AKA 产品开发的一部分。" },
+    "embedded": { "title": "嵌入式工程", "description": "嵌入式工程师职能支持设备开发及嵌入式系统集成。" },
+    "design": { "title": "工程设计", "description": "设计工程师职能支持产品开发中的设计工作。" }
+  },
+  "states": { "unavailable": "暂时无法加载项目资料，请稍后重试。", "empty": "目前尚未发布项目条目。" },
+  "portfolio": { "title": "开发项目" },
+  "collaboration": { "eyebrow": "已记录的合作", "title": "技术开发与应用合作范围", "description": "以下信息依据已核实的范围展示，不扩大合作状态、期间或成果。", "fallbackCategory": "合作" },
+  "trademark": { "eyebrow": "知识产权", "title": "注册商标", "description": "AKA 持有以下商标证书，商标权人为 PT Autentik Karya Analitika。", "fallbackCategory": "商标／商标证书" },
+  "disclosure": "了解更多", "imageUnavailable": "图片暂不可用。",
+  "cta": { "eyebrow": "合作机会", "title": "有希望沟通的开发需求？", "description": "请通过 AKA 官方联系渠道提供背景及初步范围。", "contact": "沟通合作" }
+}

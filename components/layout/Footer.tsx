@@ -1,4 +1,5 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
+import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { Mail } from "lucide-react";
 
@@ -43,23 +44,26 @@ function YoutubeIcon({ size = 16 }: { size?: number }) {
 
 const footerLinks = {
   quickLinks: [
-    { label: "Privacy Policy", href: "/privacy-policy" },
-    { label: "Terms of Service", href: "/terms-of-service" },
-    { label: "Company Profile", href: "/about" },
-    { label: "Research & Partnership", href: "/research-partnership" },
-    { label: "Jaringan Distributor", href: "/distributors" },
-    { label: "Careers", href: "/careers" },
-    { label: "Customer Support", href: "/contact" },
+    { label: "footerPrivacy", href: "/privacy-policy" },
+    { label: "footerTerms", href: "/terms-of-service" },
+    { label: "footerAbout", href: "/about" },
+    { label: "footerResearch", href: "/research-partnership" },
+    { label: "distributors", href: "/distributors" },
+    { label: "footerCareers", href: "/careers" },
+    { label: "footerContact", href: "/contact" },
   ],
   services: [
-    { label: "IoT Telemetry & Monitoring", href: "/services#iot-monitoring" },
-    { label: "Lab Furniture & Engineering", href: "/services#lab-engineering" },
-    { label: "Calibration & Maintenance", href: "/services#calibration" },
-    { label: "Water Treatment Systems", href: "/services#water-treatment" },
+    { label: "iot", href: "/services#iot-monitoring" },
+    { label: "lab", href: "/services#lab-engineering" },
+    { label: "calibration", href: "/services#calibration" },
+    { label: "water", href: "/services#water-treatment" },
   ],
 };
 
-export default function Footer() {
+export default async function Footer() {
+  const t = await getTranslations("navigation");
+  const company = await getTranslations("company.footer");
+  const common = await getTranslations("common");
   return (
     <footer style={{ backgroundColor: "#0B1F3A" }} className="text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
@@ -70,7 +74,7 @@ export default function Footer() {
               <div className="w-9 h-9 relative flex items-center justify-center rounded-full overflow-hidden bg-white p-1.5">
                 <Image
                   src="/images/logo_aka/LOGO_AKA.jpg"
-                  alt="Autentik Logo"
+                  alt={common("logo")}
                   width={36}
                   height={36}
                   className="object-contain w-full h-full"
@@ -79,15 +83,15 @@ export default function Footer() {
               <h3 className="text-xl font-bold text-white tracking-tight">Autentik</h3>
             </Link>
             <p className="text-slate-300 text-sm leading-relaxed">
-              PT Autentik Karya Analitika. Industrial technology provider powered by smart IoT integration. Smart Technology is Yours.
+              PT Autentik Karya Analitika. {company("description")} Smart Technology is Yours.
             </p>
-            <p className="text-slate-400 text-sm">Semarang, Central Java, Indonesia</p>
+            <p className="text-slate-400 text-sm">{company("location")}</p>
           </div>
 
           {/* Column 2: Quick Links */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
-              Quick Links
+              {t("quickLinks")}
             </h4>
             <ul className="space-y-2.5">
               {footerLinks.quickLinks.map((link) => (
@@ -96,7 +100,7 @@ export default function Footer() {
                     href={link.href}
                     className="text-slate-400 text-sm hover:text-[#14B8A6] transition-colors"
                   >
-                    {link.label}
+                    {t(link.label)}
                   </Link>
                 </li>
               ))}
@@ -106,7 +110,7 @@ export default function Footer() {
           {/* Column 3: Services */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
-              Services
+              {t("footerServices")}
             </h4>
             <ul className="space-y-2.5">
               {footerLinks.services.map((link) => (
@@ -115,7 +119,7 @@ export default function Footer() {
                     href={link.href}
                     className="text-slate-400 text-sm hover:text-[#14B8A6] transition-colors"
                   >
-                    {link.label}
+                    {t(link.label)}
                   </Link>
                 </li>
               ))}
@@ -125,7 +129,7 @@ export default function Footer() {
           {/* Column 4: Connect */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
-              Connect
+              {t("connect")}
             </h4>
             <div className="flex items-center gap-3">
               <a
@@ -157,7 +161,7 @@ export default function Footer() {
               </a>
               <a
                 href="mailto:autentik.info@gmail.com"
-                aria-label="Email"
+                aria-label={company("email")}
                 className="w-9 h-9 rounded-md bg-white/10 hover:bg-[#0EA5A0] flex items-center justify-center transition-colors"
               >
                 <Mail size={16} />
@@ -170,7 +174,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 pt-6 border-t border-white/10 text-center">
           <p className="text-slate-400 text-sm">
-            © 2026 PT Autentik Karya Analitika. All rights reserved.
+            © 2026 PT Autentik Karya Analitika. {company("rights")}
           </p>
         </div>
       </div>

@@ -1,0 +1,10 @@
+{
+  "viewer": {
+    "fallbackTitle": "Profil Perusahaan AKA 2026", "title": "Profil Perusahaan | Autentik",
+    "loading": "Memuat dokumen…", "loadError": "Gagal memuat file PDF.", "downloadDirect": "Unduh PDF Langsung", "downloadPdf": "Unduh PDF", "download": "Unduh",
+    "fullscreen": "Layar penuh", "exitFullscreen": "Keluar dari layar penuh", "exitEscape": "Keluar dari layar penuh (Esc)",
+    "previous": "Halaman sebelumnya", "next": "Halaman berikutnya", "zoomIn": "Perbesar", "zoomOut": "Perkecil", "thumbnails": "Kisi thumbnail (G)",
+    "page": "Halaman {page} dari {total}", "pageCounter": "Halaman <current>{page}</current> dari <pages>{total}</pages>",
+    "navigation": "Gunakan panah ◀ ▶ atau geser untuk navigasi", "slideAlt": "Slide profil perusahaan {page}", "thumbnailAlt": "Slide {page}", "goToPage": "Buka halaman {page}"
+  }
+}

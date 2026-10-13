@@ -1,0 +1,16 @@
+{
+  "metadata": { "title": "Research & Partnership | PT Autentik Karya Analitika", "description": "Informasi kapabilitas pengembangan produk, kolaborasi yang terdokumentasi, dan merek terdaftar PT Autentik Karya Analitika." },
+  "hero": { "eyebrow": "Research & Partnership", "title": "Pengembangan produk melalui engineering dan kolaborasi", "description": "AKA mengembangkan produk sebagai manufacturer dengan dukungan fungsi engineering internal dan kolaborasi yang terdokumentasi bersama institusi terkait." },
+  "development": { "eyebrow": "Product Development", "title": "Kapabilitas pengembangan yang terhubung dari ide ke produk", "description": "Struktur organisasi AKA menempatkan fungsi R&D, embedded engineering, dan design engineering dalam jalur pengembangan produk. Informasi ini menunjukkan kapabilitas internal, bukan daftar proyek atau hasil riset tertentu." },
+  "capabilities": {
+    "productDevelopment": { "title": "Pengembangan Produk", "description": "Struktur organisasi perusahaan mencantumkan fungsi R&D sebagai bagian dari pengembangan produk AKA." },
+    "embedded": { "title": "Embedded Engineering", "description": "Fungsi Embedded Engineer tercantum untuk mendukung pengembangan perangkat dan integrasi sistem tertanam." },
+    "design": { "title": "Design Engineering", "description": "Fungsi Design Engineer tercantum untuk mendukung proses perancangan dalam pengembangan produk." }
+  },
+  "states": { "unavailable": "Informasi portofolio belum dapat dimuat. Silakan coba kembali nanti.", "empty": "Belum ada entri portofolio yang dipublikasikan." },
+  "portfolio": { "title": "Portofolio Pengembangan" },
+  "collaboration": { "eyebrow": "Kolaborasi Terdokumentasi", "title": "Ruang lingkup kolaborasi pengembangan dan penerapan teknologi", "description": "Informasi berikut disajikan sesuai ruang lingkup yang telah diverifikasi, tanpa memperluas status, periode, atau hasil kolaborasi.", "fallbackCategory": "Kolaborasi" },
+  "trademark": { "eyebrow": "Kekayaan Intelektual", "title": "Merek Terdaftar", "description": "AKA memiliki Sertifikat Merek berikut dengan pemegang merek PT Autentik Karya Analitika.", "fallbackCategory": "Trademark / Sertifikat Merek" },
+  "disclosure": "Selengkapnya", "imageUnavailable": "Gambar tidak tersedia.",
+  "cta": { "eyebrow": "Peluang Kolaborasi", "title": "Punya kebutuhan pengembangan yang ingin didiskusikan?", "description": "Sampaikan konteks dan ruang lingkup awal melalui kanal kontak resmi AKA.", "contact": "Diskusikan Kolaborasi" }
+}

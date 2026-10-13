@@ -1,0 +1,45 @@
+{
+  "metadata": { "title": "工业与物联网解决方案 | PT Autentik Karya Analitika", "description": "提供物联网质量监测与遥测、实验室家具工程、仪器设备校准与维护、工业水处理、云平台与数据分析集成，以及标准化审核技术咨询。" },
+  "ui": {
+    "hero": { "badge": "集成服务与工程", "heading": "技术服务解决方案", "highlight": "面向实验室与工业", "description": "PT Autentik Karya Analitika 提供完整的服务体系，涵盖物联网遥测集成、实验室布局工程、工业水净化及高标准仪器校准。", "contact": "联系服务团队", "catalogue": "查看服务目录" },
+    "badges": {
+      "standards": { "title": "ISO 17025 标准", "description": "支持测试精度与法规合规要求。" },
+      "iot": { "title": "智能物联网系统", "description": "全天候云端传感器实时遥测。" },
+      "technicians": { "title": "经验丰富的技术人员", "description": "由认证专业人员支持精密安装。" },
+      "support": { "title": "售后支持", "description": "及时响应并提供持续维护。" }
+    },
+    "catalogue": { "title": "专业服务系列", "description": "选择符合企业运营及实验室设施需求的服务类别。", "features": "主要功能与优势：", "consult": "咨询此项服务" },
+    "categories": { "all": "全部服务", "iot": "物联网与监测", "lab": "实验室工程与设计", "maintenance": "校准与维护", "water": "水处理" },
+    "items": {
+      "iot-monitoring": { "title": "物联网质量监测与遥测", "description": "实施并安装基于物联网（IoT）的实时监测系统，高效监管水质、排放气体及工业环境参数。", "highlights": { "one": "高精度水质与排放传感器", "two": "遥测连接（LoRaWAN / 4G / RS485）", "three": "自动通知与危险报警（SMS/WA/Email）", "four": "云端与本地服务器加密数据存储" }, "target": "工业工厂、废水处理设施、环境检测实验室" },
+      "lab-engineering": { "title": "实验室工程与家具", "description": "布局设计、耐化学腐蚀工作台及通风柜排风系统", "highlights": { "one": "实验室布局设计（3D 布局与人体工学）", "two": "实验台制造（酚醛树脂与不锈钢）", "three": "精密高流量通风柜与层流系统", "four": "安全认证与耐腐蚀风管" }, "target": "制药、化学、教育及工业研发实验室" },
+      "calibration": { "title": "仪器设备校准与维护", "description": "主动维护、精度验证及实验室设备维修服务", "highlights": { "one": "依据 ISO/IEC 17025 标准定期校准", "two": "预防性维护", "three": "电气与机械部件维修及故障排查", "four": "正式校准证书与记录日志" }, "target": "检测实验室、制造企业、QC/QA 部门" },
+      "water-treatment": { "title": "工业水处理与净化", "description": "超纯水解决方案（RO/EDI）及自动废水过滤系统", "highlights": { "one": "反渗透（RO）与去离子（EDI）系统安装", "two": "自动加药泵与废水在线监测", "three": "干燥器与湿度控制柜", "four": "依据 SNI 标准开展过滤后水质检测" }, "target": "食品饮料、制药、发电及纺织行业" },
+      "platform-integration": { "title": "云平台与数据分析集成", "description": "定制传感器数据可视化仪表盘与分析报告", "highlights": { "one": "Web 仪表盘与多租户门户开发", "two": "趋势分析与设备故障预测（Predictive AI）", "three": "自动导出监管审核报告", "four": "通过 REST API 集成企业 ERP（SAP、Oracle、Odoo）" }, "target": "工厂管理层、运营负责人、合规团队" },
+      "consulting": { "title": "技术咨询与标准化审核", "description": "协助编制技术规格、开展效率审核及准备认可申请", "highlights": { "one": "实验室采购可行性研究与预算规划", "two": "实验室认可支持（ISO/IEC 17025）", "three": "工作场所安全与废物管理审核", "four": "操作人员运行及故障排查培训" }, "target": "新建企业（Greenfield Project）、实验室升级及认可申请" }
+    },
+    "fulfillment": {
+      "title": "三种产品供应方式", "description": "根据产品需求选择合适方式：直接购买、定制订单，或带技术支持的第三方采购。",
+      "items": {
+        "ready": { "title": "现货——直接购买", "description": "仓库现有零部件可通过零部件商城直接购买，并提供价格、库存及配送信息。", "points": { "one": "价格与库存透明", "two": "快捷在线结算", "three": "常规配送" }, "cta": "访问零部件商城" },
+        "custom": { "title": "定制订单——先行咨询", "description": "根据尺寸、材料、容量及特殊集成等具体需求制造产品。工程团队会在生产前评估可行性并沟通报价。", "points": { "one": "按需求制定规格", "two": "费用与交期预估", "three": "工程师提供技术说明" }, "cta": "提交定制需求" },
+        "thirdParty": { "title": "第三方产品——采购协助", "description": "我们管理第三方供应商或品牌方产品的采购，并提供技术咨询，使产品适合您的应用。", "points": { "one": "由团队管理采购", "two": "专项技术支持", "three": "已核实的技术规格" }, "cta": "联系 MIKA" }
+      },
+      "whatsapp": "您好 MIKA，我需要技术支持及第三方产品采购协助。"
+    },
+    "process": { "title": "服务实施流程", "description": "采用结构化方法，确保实施与安装项目按时完成并符合技术规格。", "steps": {
+      "01": { "title": "咨询与现场勘察", "description": "技术团队深入评估具体需求及现场实际条件。" },
+      "02": { "title": "方案设计与工程", "description": "编制技术工程文档、仪器规格及合理预算。" },
+      "03": { "title": "安装与集成", "description": "由经验丰富的技术人员完成实体安装、布线及物联网设备或仪器集成。" },
+      "04": { "title": "测试与调试", "description": "进行全面功能测试、初始校准及运行试验（Dry & Wet Run）。" },
+      "05": { "title": "培训与交付", "description": "为操作人员提供全面培训，并交付保修证书及正式文档。" }
+    } },
+    "faq": { "title": "常见问题（FAQ）", "description": "快速了解质量承诺、保修保障及服务流程。", "items": {
+      "calibration": { "question": "Autentik 的校准服务是否提供正式认证？", "answer": "是的。我们的仪器校准与验证依据 ISO/IEC 17025 国际标准方法进行，并由具备专业认证的技术人员执行。" },
+      "system": { "question": "物联网系统能否适应我们工厂的需求？", "answer": "可以。物联网硬件与云端监测仪表盘采用模块化自主开发方式，可适应工厂现有协议与传感器。" },
+      "warranty": { "question": "服务与硬件的保修期有多长？", "answer": "根据服务方案，我们提供最长 12–24 个月的零部件及技术服务正式保修，并配套售后技术团队支持。" },
+      "survey": { "question": "如何申请现场勘察或初步咨询？", "answer": "可通过下方“联系服务团队”按钮或 WhatsApp／电子邮件联系技术团队。我们可在一个工作日内响应。" }
+    } },
+    "cta": { "title": "需要服务咨询与定制解决方案？", "description": "工程团队可为实验室与工业项目提供技术建议、现场勘察及具有竞争力的报价。", "contact": "立即联系我们", "products": "查看产品目录" }
+  }
+}

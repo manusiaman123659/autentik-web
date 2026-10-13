@@ -1,11 +1,13 @@
 import Image from "next/image";
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import Link from "@/i18n/navigation";
 import { ArrowRight, Building2 } from "lucide-react";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import type { DistributionEntity } from "@/types";
 
-export default function DistributionNetworkTeaser({ entities, number }: { entities: DistributionEntity[]; number: string | null }) {
+export default async function DistributionNetworkTeaser({ entities, number }: { entities: DistributionEntity[]; number: string | null }) {
+  const t = await getTranslations("home.distribution");
   const distributionGroups = entities
     .filter((entity) => entity.distributionType === "group_distribution")
     .slice(0, 2);
@@ -15,13 +17,13 @@ export default function DistributionNetworkTeaser({ entities, number }: { entiti
         <AnimatedElement type="fade-up" className="mb-10 max-w-2xl">
           <div className="mb-4 flex items-center gap-3">
             <div className="h-0.5 w-6 bg-[#0EA5A0]" />
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#0EA5A0]">Jaringan Distribusi</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#0EA5A0]">{t("eyebrow")}</p>
           </div>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: "var(--text-primary)" }}>
-            Kanal pemasaran dan distribusi grup AKA
+            {t("title")}
           </h2>
           <p className="mt-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-            Informasi penentuan distributor atau sub-distributor sesuai kebutuhan customer dikoordinasikan melalui MIKA.
+            {t("description")}
           </p>
         </AnimatedElement>
 
@@ -51,14 +53,14 @@ export default function DistributionNetworkTeaser({ entities, number }: { entiti
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/distributors" className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#0B1F3A] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#0E2A4D]">
-            Lihat Jaringan Distributor <ArrowRight size={16} />
+            {t("view")} <ArrowRight size={16} />
           </Link>
-          <WhatsAppButton number={number} label="Hubungi MIKA" message="Halo Admin MIKA, saya membutuhkan informasi distributor atau sub-distributor produk AKA." id="distribution-contact-mika" className="h-11 px-5" />
+          <WhatsAppButton number={number} label={t("contact")} message={t("whatsapp")} id="distribution-contact-mika" className="min-h-11 px-5" />
         </div>
 
         <div className="mt-6 flex items-start gap-3 text-sm" style={{ color: "var(--text-muted)" }}>
           <Building2 size={17} className="mt-0.5 shrink-0 text-[#0EA5A0]" />
-          <p>Informasi kanal distribusi grup ditampilkan berdasarkan data yang telah diverifikasi oleh AKA.</p>
+          <p>{t("verified")}</p>
         </div>
       </div>
     </section>

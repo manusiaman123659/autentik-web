@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getCanonicalOrigin } from "@/lib/public-url";
 import { getAllPublicMikaJobs } from "@/lib/api/mika-career";
+import { localeAlternates } from "@/i18n/locales";
 
 const STATIC_ROUTES: { path: string; priority: number }[] = [
   { path: "/", priority: 1 },
@@ -66,10 +67,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     toEntry(`/careers/${c.id}`, c.created_at ?? null)
   );
 
-  return [
+  const entries = [
     ...staticEntries,
     ...catalogEntries,
     ...storeEntries,
     ...careerEntries,
   ];
+  return entries.flatMap(entry => {
+    const pathname = new URL(entry.url).pathname;
+    const languages = Object.fromEntries(Object.entries(localeAlternates(pathname)).map(([locale, path]) => [locale, `${baseUrl}${path}`]));
+    return ["id", "en", "zh-CN"].map(locale => ({ ...entry, url: languages[locale], alternates: { languages } }));
+  });
 }

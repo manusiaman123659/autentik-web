@@ -39,6 +39,7 @@ import { useToast } from "@/components/admin/Toast";
 interface FeatureInput {
   label: string;
   value: string;
+  value_kind?: "technical" | "text";
 }
 
 export interface HotspotItem {
@@ -113,7 +114,7 @@ function toFormValues(product: ProductRow | undefined, productType: ProductType)
       ? product.features.map((f) => String(f ?? "")).filter(Boolean)
       : [],
     specs: Array.isArray(product?.specs)
-      ? product.specs.map((s) => ({ label: s?.label ?? "", value: s?.value ?? "" }))
+      ? product.specs.map((s) => ({ label: s?.label ?? "", value: s?.value ?? "", ...(s?.value_kind ? { value_kind: s.value_kind } : {}) }))
       : [],
     fulfillmentType: (product?.fulfillment_type as FulfillmentType | null) ?? "ready_stock",
     isActive: product?.is_active ?? true,

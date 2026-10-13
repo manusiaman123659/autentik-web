@@ -14,25 +14,30 @@ async function main(){
   const attackDescription='</script><script>window.__aka_xss=1</script><p onclick="window.__aka_xss=1">Klik</p><img src=x onerror="window.__aka_xss=1"><a href="javascript:window.__aka_xss=1" target="_blank">Lamar</a><iframe src="https://evil.example/"></iframe><svg onload="window.__aka_xss=1"></svg>';
   const attackHarness=harness({jobs:[{...jobs[0],description:attackDescription}],realPresentation:true});
   const attackHtml=ReactDOMServer.renderToStaticMarkup(await attackHarness.load('@/app/(site)/careers/[slug]/page').default({params:Promise.resolve({slug:'42'})}));
+  const homePresentation=harness({realPresentation:true}).load('@/components/home/HomeCareers').default;
+  const homeEmptyHtml=ReactDOMServer.renderToStaticMarkup(await homePresentation({items:[],available:true}));
+  const homeUnavailableHtml=ReactDOMServer.renderToStaticMarkup(await homePresentation({items:[],available:false}));
   const apiHarness=harness({jobs:[foreign(5,1),jobs[0],foreign(3,3)],ignoreScope:true});
   const route=apiHarness.load('@/app/api/careers/jobs/route');
   const unavailableRoute=harness({unavailable:true}).load('@/app/api/careers/jobs/route');
   const bundle=await esbuild.build({stdin:{resolveDir:root,loader:'jsx',contents:`
     import React from 'react';import {createRoot} from 'react-dom/client';
-    import CareersClient from './app/(site)/careers/CareersClient';
-    import HomeCareers from './components/home/HomeCareers';import SearchModal from './components/layout/SearchModal';
+     import CareersClient from './app/(public)/[locale]/(site)/careers/CareersClient';
+     import {NextIntlClientProvider} from 'next-intl';
+     import common from './messages/id/common.json';import navigation from './messages/id/navigation.json';
+     import SearchModal from './components/layout/SearchModal';
     const root=createRoot(document.getElementById('app'));const jobs=${JSON.stringify(jobs)};let key=0;
     window.renderCase=(mode)=>{const data=mode==='multiple'?jobs:mode==='one'?[jobs[0]]:[];const available=mode!=='unavailable';
       const meta={current_page:1,per_page:10,total_items:data.length,total_pages:1,has_next:false,has_prev:false};
       if(mode==='detail')root.render(<div key={++key} dangerouslySetInnerHTML={{__html:${JSON.stringify(detailHtml)}}}/>);
       else if(mode==='html-attack')root.render(<div key={++key} dangerouslySetInnerHTML={{__html:${JSON.stringify(attackHtml)}}}/>);
-      else if(mode==='home-empty'||mode==='home-unavailable')root.render(<HomeCareers key={++key} items={[]} available={mode==='home-empty'}/>);
-      else if(mode==='search')root.render(<SearchModal key={++key} isOpen={true} onClose={()=>{}}/>);
+       else if(mode==='home-empty'||mode==='home-unavailable')root.render(<div key={++key} dangerouslySetInnerHTML={{__html:mode==='home-empty'?${JSON.stringify(homeEmptyHtml)}:${JSON.stringify(homeUnavailableHtml)}}}/>);
+       else if(mode==='search')root.render(<NextIntlClientProvider locale='id' messages={{common,navigation}}><SearchModal key={++key} isOpen={true} onClose={()=>{}}/></NextIntlClientProvider>);
       else root.render(<CareersClient key={++key} initialJobs={data} initialMeta={meta} departments={[jobs[0].department]} available={available} recruitmentUrl='https://recruitment.tekna.id/'/>);
     };window.renderCase('one');
   `},bundle:true,write:false,platform:'browser',jsx:'automatic',alias:{'@':root},plugins:[{name:'boundaries',setup(build){
-    build.onResolve({filter:/^(next\/link|next\/navigation|@\/components\/ui\/ScrollAnimations|@\/utils\/supabase\/client)$/},args=>({path:args.path,namespace:'fixture'}));
-    build.onLoad({filter:/.*/,namespace:'fixture'},args=>({resolveDir:root,loader:'jsx',contents:args.path==='next/link'?"import React from 'react';export default function Link(props){return <a {...props}/>}":
+     build.onResolve({filter:/^(next\/link|next\/navigation|@\/i18n\/navigation|@\/components\/ui\/ScrollAnimations|@\/utils\/supabase\/client)$/},args=>({path:args.path,namespace:'fixture'}));
+     build.onLoad({filter:/.*/,namespace:'fixture'},args=>({resolveDir:root,loader:'jsx',contents:(args.path==='next/link'||args.path==='@/i18n/navigation')?"import React from 'react';export default function Link(props){return <a {...props}/>}export const useRouter=()=>({push:()=>{}})":
       args.path==='next/navigation'?"export const useRouter=()=>({push:()=>{}})":
       args.path==='@/utils/supabase/client'?"export const createClient=()=>({from:table=>{if(table!=='products')throw new Error('LEGACY_CAREERS_READ');const q={select:()=>q,eq:()=>q,is:()=>q,order:async()=>({data:[],error:null})};return q}})":
       "import React from 'react';export default function Animated({children,className}){return <div className={className}>{children}</div>}"}));

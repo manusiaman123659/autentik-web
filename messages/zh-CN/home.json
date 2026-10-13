@@ -1,0 +1,30 @@
+{
+  "metadata": { "title": "Autentik | 印度尼西亚工业技术产品制造", "description": "PT Autentik Karya Analitika 为工业、实验室、环境监测及物联网集成开发技术产品与系统。" },
+  "hero": { "companyLabel": "公司简介", "portfolioLabel": "AKA 产品系列", "viewProduct": "查看产品", "quotation": "申请报价", "slide": "显示第 {number} 张幻灯片", "companyBadge": "制造企业", "companySubtitle": "印度尼西亚工业技术产品制造商。", "productBadge": "精选产品" },
+  "aboutUs": {
+    "eyebrow": "制造企业介绍",
+    "description": "AKA 为工业、实验室及环境监测开发技术产品与系统。我们的开发流程融合硬件工程、物联网集成与数据处理，使每项解决方案都能适应用户的实际运营需求。",
+    "process": "从需求到实施",
+    "steps": {
+      "engineering": { "title": "产品工程", "description": "围绕实际使用需求设计产品与系统。" },
+      "integration": { "title": "系统集成", "description": "将设备、控制与连接功能整合为统一的解决方案。" },
+      "implementation": { "title": "实施应用", "description": "将产品应用于监测、实验室及环境相关场景。" }
+    }
+  },
+  "brands": { "eyebrow": "AKA 品牌", "title": "我们的制造品牌", "description": "面向工业、实验室及环境需求开发的产品系列核心品牌。", "view": "查看 {name} 的产品" },
+  "featured": { "title": "精选制造产品", "description": "适用于监测、实验室及水处理需求的 AKA 精选产品。", "viewAll": "查看全部", "detail": "查看详情", "viewAllProducts": "查看全部产品" },
+  "solutions": {
+    "title": "产品开发能力", "description": "通过工程方法连接设备、系统与数据，满足实际运营需求。", "learnMore": "了解更多",
+    "items": {
+      "iot": { "title": "物联网与监测开发", "description": "开发互联设备与系统，监测运营参数。" },
+      "laboratory": { "title": "实验室产品与系统", "description": "开发支持实验室活动及技术工作空间的产品。" },
+      "water": { "title": "水处理系统", "description": "开发用于水净化与处理的产品及系统。" },
+      "platform": { "title": "平台与数据集成", "description": "将设备数据集成至仪表盘与平台，实现集中监测。" }
+    }
+  },
+  "product3d": { "eyebrow": "交互式 3D 产品展示", "title": "以 3D 方式探索 {name}", "descriptionFallback": "通过产品详情页的 3D 查看器，了解产品外形及交互式信息点。", "view": "查看 3D 产品", "previous": "上一个 3D 产品", "next": "下一个 3D 产品", "choices": "3D 产品选择", "show": "显示 {name}" },
+  "distribution": { "eyebrow": "经销网络", "title": "AKA 集团的营销与分销渠道", "description": "MIKA 根据客户需求协调经销商及二级经销商相关咨询。", "view": "查看经销商网络", "contact": "联系 MIKA", "whatsapp": "您好 MIKA，我想了解 AKA 产品的经销商或二级经销商信息。", "verified": "集团分销渠道信息依据 AKA 已核实的数据展示。" },
+  "cta": { "title": "沟通您的产品需求", "description": "通过 AKA 官方询价（RFQ）提交产品、系统集成或采购需求。MIKA 商务团队可协助后续沟通。", "quotation": "申请报价", "contact": "联系 MIKA 销售团队", "whatsapp": "您好 MIKA，我想与 PT Autentik Karya Analitika 沟通产品或系统需求。" },
+  "store": { "eyebrow": "需要零部件？", "title": "零部件商城", "description": "通过 AKA 商城渠道寻找配套零部件。", "view": "查看零部件商城" },
+  "careers": { "title": "共同成长的机会", "description": "通过 Mika Career 招聘平台查看现有职位。", "viewAll": "查看全部职位", "detail": "查看详情", "empty": "PT Autentik Karya Analitika 目前暂无招聘职位。", "unavailable": "招聘信息暂时无法获取，请稍后重试。", "hint": "请关注招聘页面，了解最新职位。" }
+}

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/i18n/navigation";
 import type { ProductRow } from "@/lib/admin-data";
 import StoreProductCard from "@/components/store/StoreProductCard";
 

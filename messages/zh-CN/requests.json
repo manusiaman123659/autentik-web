@@ -1,0 +1,17 @@
+{
+  "metadata": { "title": "定制需求 | PT Autentik Karya Analitika", "description": "提交制造业与工业定制产品需求。工程团队将沟通技术规格并提供报价。" },
+  "custom": {
+    "hero": { "badge": "定制订单", "heading": "提交您的", "highlight": "定制需求", "description": "请告知所需规格。工程团队将沟通技术可行性、费用预估及交期。" },
+    "form": { "back": "返回", "title": "定制需求表", "product": "相关产品", "fullName": "姓名", "email": "工作邮箱", "company": "公司名称", "message": "需求与规格", "optional": "（选填）", "namePlaceholder": "Jane Doe", "emailPlaceholder": "jane@company.com", "companyPlaceholder": "Acme Corp", "messagePlaceholder": "请描述定制规格，例如尺寸、材料、数量、截止日期及其他要求……", "submit": "发送定制需求 →", "loading": "正在发送……", "help": "需要更快响应？请通过 WhatsApp 联系", "contact": "MIKA", "whatsapp": "您好 MIKA，我想咨询定制产品或定制需求。" },
+    "validation": { "fullName": "姓名至少需要 2 个字符", "email": "请输入有效的邮箱地址", "message": "定制需求说明至少需要 10 个字符" },
+    "status": { "success": "需求已发送！", "description": "技术团队将在 1–2 个工作日内联系您，沟通技术规格。", "again": "提交其他需求", "error": "发生错误，请重试。" }
+  },
+  "rfq": {
+    "title": "申请正式报价（RFQ）", "triggerCompact": "申请询价", "close": "关闭询价表", "product": "产品：", "optional": "（选填）",
+    "fields": { "productId": "产品", "productName": "产品名称", "companyName": "公司名称", "picName": "联系人（PIC）", "email": "电子邮箱", "phoneNumber": "联系电话", "estimatedQuantity": "预估数量（件）", "targetDate": "目标日期", "notes": "备注" },
+    "placeholders": { "companyName": "示例公司", "picName": "Budi Santoso", "email": "budi@company.com", "phoneNumber": "08123456789", "notes": "特殊规格、批次数量及其他要求。" },
+    "submit": "发送询价申请", "loading": "正在发送……", "checkField": "请检查{field}。", "dismissError": "关闭错误提示",
+    "errors": { "INVALID_REQUEST": "请检查询价申请信息后重试。", "RATE_LIMITED": "请求过多，请稍候再试。", "SERVICE_UNAVAILABLE": "服务暂不可用，请稍后重试。", "UNKNOWN": "无法发送询价申请，请重试。", "NETWORK": "发生网络错误，请重试。" },
+    "success": { "title": "询价申请已发送！", "code": "您的 RFQ 编号：", "description": "您的询价（RFQ）已记录在 PT Autentik Karya Analitika 系统中。如需商务跟进，可通过 WhatsApp 与 MIKA 继续沟通。", "followUp": "继续联系 MIKA", "close": "关闭" }
+  }
+}

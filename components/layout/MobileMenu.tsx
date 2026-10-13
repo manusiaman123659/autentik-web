@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { ChevronDown, X, Sun, Moon, ShoppingCart, Heart } from "lucide-react";
+import Link from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { ChevronDown, X, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
-import { useCart } from "@/components/cart/CartProvider";
-import { useWishlist } from "@/components/store/useWishlist";
 import CustomerAuthButton from "@/components/auth/CustomerAuthButton";
 
 export interface NavItem {
@@ -31,10 +31,11 @@ export default function MobileMenu({
   navLinks,
   pathname,
 }: MobileMenuProps) {
+  const t = useTranslations("navigation");
+  const common = useTranslations("common");
   const menuRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const { theme, toggleTheme } = useTheme();
-  const { totalItems, hydrated } = useCart();
-  const { items: wishlistItems, hydrated: wishlistHydrated } = useWishlist();
   const companyItem = navLinks.find((item) => item.children);
   const companyActive =
     companyItem?.children?.some((child) => isPathActive(pathname, child.href)) ?? false;
@@ -44,22 +45,39 @@ export default function MobileMenu({
   useEffect(() => {
     if (!isOpen) return;
 
+    const previous = document.querySelector<HTMLButtonElement>('button[aria-controls="mobile-navigation-drawer"]')
+      ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    const desktop = window.matchMedia("(min-width: 1280px)");
+    const handleBreakpoint = () => { if (desktop.matches) onClose(); };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") { event.preventDefault(); onClose(); }
+      if (event.key !== "Tab") return;
+      const controls = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), select') ?? [])
+        .filter(element => element.getClientRects().length > 0);
+      const first = controls[0]; const last = controls[controls.length - 1];
+      if (!first) return;
+      if (!menuRef.current?.contains(document.activeElement) || (event.shiftKey && document.activeElement === first)) {
+        event.preventDefault(); (event.shiftKey ? last : first).focus();
+      } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     document.addEventListener("keydown", handleKeyDown);
+    desktop.addEventListener("change", handleBreakpoint);
 
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
+      desktop.removeEventListener("change", handleBreakpoint);
+      if (previous?.isConnected) previous.focus();
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] lg:hidden">
+    <div className="fixed inset-0 z-[60] xl:hidden">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50"
@@ -73,11 +91,11 @@ export default function MobileMenu({
         role="dialog"
         aria-modal="true"
         aria-labelledby="mobile-navigation-title"
-        className="absolute top-0 right-0 bottom-0 w-72 shadow-xl flex flex-col"
+        className="absolute top-0 right-0 bottom-0 w-72 shadow-xl flex flex-col overflow-y-auto"
         style={{ backgroundColor: "var(--bg-card)" }}
       >
         <div
-          className="flex items-center justify-between p-4 border-b"
+          className="flex shrink-0 items-center justify-between p-4 border-b"
           style={{ borderColor: "var(--border-subtle)" }}
         >
           <span
@@ -85,20 +103,21 @@ export default function MobileMenu({
             className="text-lg font-bold"
             style={{ color: "var(--text-primary)" }}
           >
-            Menu
+            {common("menu")}
           </span>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup menu"
-            className="w-9 h-9 flex items-center justify-center rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
+            ref={closeRef}
+            aria-label={common("closeMenu")}
+            className="h-11 w-11 shrink-0 flex items-center justify-center rounded-sm transition-colors hover:bg-[var(--bg-card-hover)] focus-visible:outline-2 focus-visible:outline-[#0EA5A0]"
             style={{ color: "var(--text-secondary)" }}
           >
             <X size={20} />
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4">
+        <nav className="shrink-0 py-3">
           {navLinks.map((link) => {
             const isActive = link.href
               ? isPathActive(pathname, link.href)
@@ -112,7 +131,7 @@ export default function MobileMenu({
                     aria-expanded={companyExpanded}
                     aria-controls="mobile-company-navigation"
                     onClick={() => setCompanyOpen((open) => !open)}
-                    className={`flex w-full items-center justify-between px-6 py-3 text-base font-medium transition-colors ${
+                    className={`flex min-h-11 w-full items-center justify-between px-6 py-3 text-base font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0EA5A0] ${
                       isActive
                         ? "text-[#0EA5A0] bg-teal-50 dark:bg-teal-950/20"
                         : "hover:text-[#0EA5A0] hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -142,7 +161,7 @@ export default function MobileMenu({
                             href={child.href}
                             aria-current={childActive ? "page" : undefined}
                             onClick={onClose}
-                            className={`block py-2.5 pl-10 pr-6 text-sm font-medium transition-colors ${
+                            className={`block min-h-11 py-2.5 pl-10 pr-6 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0EA5A0] ${
                               childActive
                                 ? "text-[#0EA5A0]"
                                 : "hover:text-[#0EA5A0]"
@@ -167,7 +186,7 @@ export default function MobileMenu({
                 href={link.href!}
                 aria-current={isActive ? "page" : undefined}
                 onClick={onClose}
-                className={`block px-6 py-3 text-base font-medium transition-colors ${
+                className={`block min-h-11 px-6 py-3 text-base font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[#0EA5A0] ${
                   isActive
                     ? "text-[#0EA5A0] bg-teal-50 dark:bg-teal-950/20"
                     : "hover:text-[#0EA5A0] hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -181,73 +200,45 @@ export default function MobileMenu({
         </nav>
 
         <div
-          className="p-4 border-t space-y-3"
+          className="shrink-0 border-t p-4 space-y-2"
           style={{ borderColor: "var(--border-subtle)" }}
         >
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{common("language")}</p>
+          <LanguageSwitcher mobile />
+        </div>
+        <div className="shrink-0 border-t p-4 space-y-3" style={{ borderColor: "var(--border-subtle)" }}>
           {/* Dark mode toggle inside mobile menu */}
           <button
+            type="button"
             onClick={toggleTheme}
-            className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
+            className="flex min-h-11 items-center gap-3 w-full px-4 py-2.5 rounded-sm text-sm font-medium transition-colors hover:bg-[var(--bg-card-hover)] focus-visible:outline-2 focus-visible:outline-[#0EA5A0]"
             style={{ color: "var(--text-secondary)" }}
           >
             {theme === "dark" ? (
               <>
                 <Sun size={16} className="text-amber-400" />
-                Mode Terang
+                {common("lightMode")}
               </>
             ) : (
               <>
                 <Moon size={16} />
-                Mode Gelap
+                {common("darkMode")}
               </>
             )}
           </button>
 
-          <Link
-            href="/store/cart"
-            onClick={onClose}
-            className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            <span className="flex items-center gap-3">
-              <ShoppingCart size={16} className="text-[#0EA5A0]" />
-              Keranjang Belanja
-            </span>
-            {hydrated && totalItems > 0 && (
-              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#0EA5A0] text-white text-[10px] font-bold flex items-center justify-center">
-                {totalItems > 99 ? "99+" : totalItems}
-              </span>
-            )}
-          </Link>
+          <CustomerAuthButton variant="mobile" onNavigate={onClose} />
 
           <Link
             href="/store"
+            id="mobile-store-btn"
             onClick={onClose}
-            className="flex items-center justify-between w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            <span className="flex items-center gap-3">
-              <Heart size={16} className="text-red-500" />
-              Wishlist
-            </span>
-            {wishlistHydrated && wishlistItems.length > 0 && (
-              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                {wishlistItems.length > 99 ? "99+" : wishlistItems.length}
-              </span>
-            )}
-          </Link>
-
-          <Link
-            href="/store"
-            onClick={onClose}
-            aria-label="Marketplace Komponen"
-            className="flex items-center justify-center w-full py-3 text-sm font-semibold text-white rounded-sm"
+            aria-label={t("marketplace")}
+            className="flex min-h-11 items-center justify-center w-full py-3 text-sm font-semibold text-white rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0EA5A0]"
             style={{ backgroundColor: "#0B1F3A" }}
           >
-            Marketplace Komponen
+            {t("marketplace")}
           </Link>
-
-          <CustomerAuthButton variant="mobile" onNavigate={onClose} />
         </div>
       </div>
     </div>

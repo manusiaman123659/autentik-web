@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
+const { NextRequest } = require('next/server');
 const root = path.resolve(__dirname,'..');
 const base = 'https://recruitment.tekna.id/api/v1';
 const aka = (id=2) => ({id,title:`IoT Engineer ${id}`,status:'Open',employment_type:'Contract',location:'Semarang',
@@ -39,6 +40,9 @@ function harness(options={}) {
     return q;
   };
   const stubs={
+    'next-intl/server':{getLocale:async()=> 'id',getTranslations:async input=>require('use-intl/core').createTranslator({locale:'id',messages:{home:require('../messages/id/home.json'),company:require('../messages/id/company.json'),common:require('../messages/id/common.json'),navigation:require('../messages/id/navigation.json')},namespace:typeof input==='string'?input:input?.namespace})},
+    'next-intl/middleware':require('./i18n-middleware-fixture.cjs'),
+    '@/i18n/navigation':{__esModule:true,default:props=>require('react').createElement('a',props)},
     'next/headers':{cookies:async()=>({})},'next/navigation':{notFound:()=>{throw new Error('NOT_FOUND')}},
     '@/utils/supabase/server':{createClient:()=>({from:query})},
     '@/utils/supabase/admin':{createAdminClient:()=>{throw new Error('UNEXPECTED_SERVICE_ROLE')}},
@@ -51,6 +55,7 @@ function harness(options={}) {
   if(options.realPresentation)stubs['next/link']={__esModule:true,default:props=>require('react').createElement('a',props)};
   const components=new Map();
   function load(name,parent=path.join(root,'index.ts')) {
+    if(name.startsWith('@/app/(site)/'))name=name.replace('@/app/(site)/','@/app/(public)/[locale]/(site)/');
     if(stubs[name])return stubs[name];
     if((name.startsWith('@/components/')&&!options.realPresentation)||name==='./CareersClient'||name==='@/components/ui/ScrollAnimations') {
       if(!components.has(name)){const Component=props=>options.realPresentation?require('react').createElement('div',{className:props.className},props.children):null;Component.fixtureName=name;components.set(name,{__esModule:true,default:Component});}
@@ -60,6 +65,7 @@ function harness(options={}) {
     const filenameBase=name.startsWith('@/')?path.join(root,name.slice(2)):path.resolve(path.dirname(parent),name);
     const filename=[filenameBase,filenameBase+'.ts',filenameBase+'.tsx'].find(file=>fs.existsSync(file)&&fs.statSync(file).isFile());
     assert.ok(filename,`Missing source ${name}`);
+    if(filename.endsWith('.json'))return JSON.parse(fs.readFileSync(filename,'utf8'));
     if(modules.has(filename))return modules.get(filename).exports;
     const loadedModule={exports:{}};modules.set(filename,loadedModule);
     const output=ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;
@@ -209,7 +215,7 @@ async function main() {
     assert.ok(!/on(?:error|load|click)\s*=/.test(html),'No event attribute can be created from a description');
     assert.ok(!html.includes('<iframe')&&!html.includes('javascript:'),'No iframe or javascript: URL can be created from a description');checks++;
   }
-  const pageSource=fs.readFileSync(path.join(root,'app/(site)/careers/[slug]/page.tsx'),'utf8');
+  const pageSource=fs.readFileSync(path.join(root,'app/(public)/[locale]/(site)/careers/[slug]/page.tsx'),'utf8');
   assert.doesNotMatch(pageSource,/dangerouslySetInnerHTML/,'No HTML injection sink remains in job detail');checks++;
   const snapshotCase=(kind)=>harness({fetch:async parsed=>{
     const page=Number(parsed.searchParams.get('page'));const per=Number(parsed.searchParams.get('per_page'));
@@ -250,7 +256,8 @@ async function main() {
     const sitemapHarness=harness({jobs:[aka(42),foreign(3,3)],ignoreScope:true,unavailable});
     const entries=await sitemapHarness.load('@/app/sitemap').default();
     const dynamic=entries.filter(entry=>entry.url.includes('/careers/'));
-    assert.deepEqual(Array.from(dynamic,entry=>entry.url),unavailable?[]:['https://aka.example.com/careers/42']);
+    assert.deepEqual(Array.from(dynamic,entry=>entry.url),unavailable?[]:['https://aka.example.com/careers/42','https://aka.example.com/en/careers/42','https://aka.example.com/zh-cn/careers/42']);
+    for(const entry of dynamic)assert.equal(entry.alternates.languages['x-default'],'https://aka.example.com/careers/42');
     assert.ok(!sitemapHarness.dbReads.includes('careers'));checks++;
   }
   const brokenSnapshot=harness({fetch:async parsed=>{
@@ -264,22 +271,23 @@ async function main() {
   const homeNodes=elements(await homepage.load('@/app/(site)/page').default());
   const homeCareers=homeNodes.find(node=>node.type.fixtureName==='@/components/home/HomeCareers');
   assert.deepEqual(Array.from(homeCareers.props.items,job=>job.id),[42]);assert.equal(homeCareers.props.available,true);checks++;
-  for(const slug of ['42','3','5','legacy-job','%34%32']){
+  for(const prefix of ['', '/en', '/zh-cn'])for(const slug of ['42','3','5','legacy-job','%34%32','missing.json','missing.pdf']){
     const routing=harness({jobs:[aka(42),foreign(3,3),foreign(5,1)],withSession:true});
-    const response=await routing.load('@/proxy').proxy({method:'GET',nextUrl:new URL(`https://aka.example.com/careers/${slug}`),headers:new Headers()});
+    const response=await routing.load('@/proxy').proxy(new NextRequest(`https://aka.example.com${prefix}/careers/${slug}`));
     const allowed=['42','%34%32'].includes(slug);
     assert.equal(response.status,allowed?200:404);assert.equal(response.cookies.get('fixture-refresh').value,'preserved');
     assert.deepEqual(routing.authCalls,['createClient','getUser'],'Existing auth refresh must run before routing');
     if(!allowed){assert.equal(response.headers.get('x-robots-tag'),'noindex');assert.doesNotMatch(await response.text(),/JobPosting|Mitra|Sapujagat/);}checks++;
   }
   for(const pathname of ['/api/careers/jobs','/careers','/store/checkout','/auth/callback','/admin/orders','/products/test']){
-    const routing=harness({withSession:true});const response=await routing.load('@/proxy').proxy({method:'GET',nextUrl:new URL('https://aka.example.com'+pathname),headers:new Headers()});
-    assert.equal(response.headers.get('x-middleware-next'),'1');assert.equal(routing.requests.length,0);
+    const routing=harness({withSession:true});const response=await routing.load('@/proxy').proxy(new NextRequest('https://aka.example.com'+pathname));
+    if(['/careers','/store/checkout','/products/test'].includes(pathname))assert.ok(response.headers.get('x-middleware-rewrite'));
+    else assert.equal(response.headers.get('x-middleware-next'),'1');assert.equal(routing.requests.length,0);
     assert.deepEqual(routing.authCalls,['createClient','getUser']);checks++;
   }
   const outageRouting=harness({unavailable:true,withSession:true});
-  const outageResponse=await outageRouting.load('@/proxy').proxy({method:'GET',nextUrl:new URL('https://aka.example.com/careers/42'),headers:new Headers()});
-  assert.equal(outageResponse.headers.get('x-middleware-next'),'1','Outage must reach the existing unavailable page');checks++;
+  const outageResponse=await outageRouting.load('@/proxy').proxy(new NextRequest('https://aka.example.com/careers/42'));
+  assert.ok(outageResponse.headers.get('x-middleware-rewrite'),'Outage must reach the locale-aware unavailable page');checks++;
   console.log(`PASS: ${checks} AKA careers scenarios using actual API/server/proxy/page/metadata/sitemap modules. Transport only is mocked; no backend or database mutations.`);
 }
 module.exports={harness,aka,foreign,elements};

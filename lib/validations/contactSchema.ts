@@ -1,24 +1,39 @@
 import { z } from "zod";
 
-export const contactSchema = z.object({
-  fullName: z.string().min(2, "Nama lengkap minimal 2 karakter"),
-  email: z.string().email("Format email tidak valid"),
-  company: z.string().min(2, "Nama perusahaan minimal 2 karakter"),
-  industry: z.string().min(1, "Pilih industri Anda"),
-  message: z.string().min(10, "Pesan minimal 10 karakter"),
-});
+const contactMessages = {
+  fullName: "Nama lengkap minimal 2 karakter", email: "Format email tidak valid",
+  company: "Nama perusahaan minimal 2 karakter", industry: "Pilih industri Anda", message: "Pesan minimal 10 karakter",
+};
+
+export function createContactSchema(messages: typeof contactMessages = contactMessages) {
+  return z.object({
+    fullName: z.string().min(2, messages.fullName),
+    email: z.string().email(messages.email),
+    company: z.string().min(2, messages.company),
+    industry: z.string().min(1, messages.industry),
+    message: z.string().min(10, messages.message),
+  });
+}
+
+export const contactSchema = createContactSchema();
 
 export type ContactFormData = z.infer<typeof contactSchema>;
 
-export const customRequestSchema = z.object({
-  category: z.literal("custom_request"),
-  fullName: z.string().min(2, "Nama lengkap minimal 2 karakter"),
-  email: z.string().email("Format email tidak valid"),
-  company: z.string().optional(),
-  message: z.string().min(10, "Jelaskan kebutuhan custom minimal 10 karakter"),
-  productSlug: z.string().optional(),
-  productName: z.string().optional(),
-});
+const customMessages = { fullName: contactMessages.fullName, email: contactMessages.email, message: "Jelaskan kebutuhan custom minimal 10 karakter" };
+
+export function createCustomRequestSchema(messages: typeof customMessages = customMessages) {
+  return z.object({
+    category: z.literal("custom_request"),
+    fullName: z.string().min(2, messages.fullName),
+    email: z.string().email(messages.email),
+    company: z.string().optional(),
+    message: z.string().min(10, messages.message),
+    productSlug: z.string().optional(),
+    productName: z.string().optional(),
+  });
+}
+
+export const customRequestSchema = createCustomRequestSchema();
 
 export type CustomRequestFormData = z.infer<typeof customRequestSchema>;
 

@@ -1,6 +1,7 @@
 "use client";
+import { useTranslations } from "next-intl";
 
-import Link from "next/link";
+import Link from "@/i18n/navigation";
 import { Cpu, FlaskConical, BarChart2, Droplets, ArrowRight } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
 import AnimatedElement from "./ScrollAnimations";
@@ -15,38 +16,35 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
 const coreSolutions = [
   {
     icon: "Cpu",
-    title: "Pengembangan IoT & Monitoring",
-    description: "Pengembangan perangkat dan sistem untuk pemantauan parameter operasional secara terhubung.",
+    key: "iot",
     href: "/services#iot-monitoring",
   },
   {
     icon: "FlaskConical",
-    title: "Produk & Sistem Laboratorium",
-    description: "Pengembangan produk pendukung aktivitas laboratorium dan kebutuhan ruang kerja teknis.",
+    key: "laboratory",
     href: "/services#lab-engineering",
   },
   {
     icon: "Droplets",
-    title: "Sistem Pengolahan Air",
-    description: "Pengembangan produk dan sistem terkait pemurnian serta pengolahan air.",
+    key: "water",
     href: "/services#water-treatment",
   },
   {
     icon: "BarChart2",
-    title: "Platform & Integrasi Data",
-    description: "Integrasi data perangkat ke dashboard dan platform untuk mendukung pemantauan terpusat.",
+    key: "platform",
     href: "/services#platform-integration",
   },
 ];
 
 export default function CoreSolutions() {
+  const t = useTranslations("home.solutions");
   return (
     <section className="py-20" style={{ backgroundColor: "var(--bg-secondary)" }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <AnimatedElement type="fade-up">
           <SectionHeading
-            title="Kapabilitas Pengembangan Produk"
-            subtitle="Pendekatan rekayasa yang menghubungkan perangkat, sistem, dan data untuk kebutuhan operasional."
+            title={t("title")}
+            subtitle={t("description")}
             align="center"
           />
         </AnimatedElement>
@@ -56,7 +54,7 @@ export default function CoreSolutions() {
             const Icon = iconMap[solution.icon];
             return (
               <div
-                key={solution.title}
+                 key={solution.key}
                 className="rounded-xl p-6 border shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group hover:border-[#14B8A6]/40"
                 style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
               >
@@ -66,17 +64,17 @@ export default function CoreSolutions() {
                 </div>
 
                 <h3 className="text-base font-bold mb-2 group-hover:text-[#14B8A6] transition-colors" style={{ color: "var(--text-primary)" }}>
-                  {solution.title}
+                   {t(`items.${solution.key}.title`)}
                 </h3>
                 <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>
-                  {solution.description}
+                   {t(`items.${solution.key}.description`)}
                 </p>
 
                 <Link
                   href={solution.href}
                   className="inline-flex items-center gap-1 text-sm font-semibold text-[#14B8A6] hover:text-[#0D9E98] hover:gap-2 transition-all duration-200"
                 >
-                  Pelajari Lebih Lanjut
+                   {t("learnMore")}
                   <ArrowRight size={14} />
                 </Link>
               </div>

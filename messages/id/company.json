@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "title": "Tentang Kami | PT Autentik Karya Analitika",
+    "description": "PT Autentik Karya Analitika — Smart Technology is Yours. Menjadi perusahaan yang unggul di bidang penerapan teknologi pintar untuk akses kehidupan yang lebih baik.",
+    "defaultDescription": "Solusi penyedia produk industri dengan teknologi IoT. PT Autentik Karya Analitika memproduksi dan memasarkan IoT Quality Monitoring Devices berbasis kebutuhan industri dan teknologi IoT.",
+    "defaultOgDescription": "PT Autentik Karya Analitika — Solusi penyedia produk industri dengan teknologi IoT. Mempercayakan produksi lokal berjaya di negeri sendiri."
+  },
+  "about": {
+    "heading": "Membangun Solusi Cerdas", "highlight": "& Otomasi Berkelanjutan",
+    "introduction": "PT Autentik Karya Analitika adalah perusahaan teknologi pintar yang berkomitmen memberikan solusi otomasi dan IoT industri terintegrasi untuk laboratorium, manufaktur, dan lingkungan kerja di seluruh Indonesia.",
+    "visionTitle": "Visi", "vision": "Menjadi perusahaan yang unggul di bidang penerapan teknologi pintar untuk akses kehidupan yang lebih baik.", "missionTitle": "Misi",
+    "mission": {
+      "opportunities": "Menciptakan peluang bagi insan perusahaan untuk meningkatkan kompetensi dan aktualisasi diri",
+      "management": "Membangun manajemen sumber daya manusia yang efektif dan efisien",
+      "innovation": "Mengembangkan teknologi pintar inovatif dengan fokus pada keberlanjutan",
+      "service": "Memberikan layanan pelanggan terbaik dengan fokus pada kepuasan pengguna",
+      "partnership": "Menjalin kemitraan strategis untuk memperkuat ekosistem teknologi"
+    },
+    "valuesTitle": "Nilai Inti",
+    "values": {
+      "F": { "title": "Iman kepada Tuhan", "description": "Kami percaya akan keberadaan dan kuasa Tuhan" },
+      "I": { "title": "Inovatif", "description": "Selalu berinovasi dan melakukan tindakan perbaikan yang berkelanjutan" },
+      "R": { "title": "Ketangguhan", "description": "Menghadapi perubahan dengan percaya diri" },
+      "S": { "title": "Melayani", "description": "Memberikan layanan terbaik kepada pelanggan secara profesional" },
+      "T": { "title": "Totalitas", "description": "Secara sadar dan penuh integritas melaksanakan tugas dan tanggung jawab dengan memberi solusi yang tuntas" }
+    },
+    "quality": {
+      "title": "Kebijakan Mutu", "introduction": "<company>PT. Autentik Karya Analitika</company> adalah perusahaan teknologi pintar yang senantiasa berkomitmen untuk memberikan dan meningkatkan kepuasan pelanggan dengan cara:",
+      "products": "Memberikan <strong>produk dan layanan yang berkualitas prima</strong>",
+      "improvement": "Meninjau sasaran mutu dan kebijakan mutu secara berkala demi terlaksananya <strong>peningkatan berkelanjutan</strong>",
+      "management": "Menerapkan Sistem Manajemen Mutu <strong>ISO 9001:2015</strong> secara konsisten",
+      "quote": "“Direktur beserta seluruh staf bertekad untuk terus bekerjasama dalam mewujudkan kebijakan mutu ini.”"
+    }
+  },
+  "profile": { "badge": "Profil Perusahaan", "title": "Profil Perusahaan & Dokumen Resmi", "description": "Jelajahi profil perusahaan kami untuk mengetahui lebih dalam tentang visi, misi, produk, dan layanan yang kami tawarkan.", "format": "Format Dokumen Interaktif", "pdfAvailable": "Tersedia dalam PDF", "pages": "{count} Halaman", "research": "Riset & Kemitraan" },
+  "team": { "title": "Tim Kami", "description": "Para profesional yang berdedikasi di balik inovasi dan pelayanan PT Autentik Karya Analitika.", "previous": "Sebelumnya", "next": "Selanjutnya" },
+  "groups": { "title": "Grup Kami", "description": "Perusahaan afiliasi yang menjadi bagian integral dari ekosistem Autentik." },
+  "partners": { "title": "Partner Kami", "description": "Kolaborasi strategis dengan berbagai pimpinan teknologi & institusi pendidikan." },
+  "industryCta": { "title": "Kolaborasi Industri & Pengadaan", "description": "Diskusikan kebutuhan instrumen laboratorium, furnitur, kalibrasi, dan solusi teknis terintegrasi dengan tim ahli kami.", "sales": "Hubungi Tim Sales", "products": "Katalog Produk" },
+  "careerCta": { "title": "Program Karir & Magang", "description": "Bergabung bersama tim kami dalam mengembangkan teknologi IoT dan otomasi industri.", "view": "Lihat Posisi Tersedia" },
+  "footer": { "description": "Penyedia teknologi industri dengan dukungan integrasi IoT pintar.", "location": "Semarang, Jawa Tengah, Indonesia", "rights": "Seluruh hak dilindungi.", "email": "Email" }
+}

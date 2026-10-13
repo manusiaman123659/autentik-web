@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 
 import { Blocks, DraftingCompass, MonitorCog } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
@@ -7,24 +8,22 @@ const developmentSteps = [
   {
     icon: DraftingCompass,
     number: "01",
-    title: "Rekayasa Produk",
-    description: "Perancangan produk dan sistem berdasarkan kebutuhan penggunaan.",
+    key: "engineering",
   },
   {
     icon: Blocks,
     number: "02",
-    title: "Integrasi Sistem",
-    description: "Penggabungan perangkat, kontrol, dan konektivitas dalam satu solusi.",
+    key: "integration",
   },
   {
     icon: MonitorCog,
     number: "03",
-    title: "Implementasi",
-    description: "Penerapan produk untuk kebutuhan monitoring, laboratorium, dan lingkungan.",
+    key: "implementation",
   },
 ];
 
 export default function AboutUs() {
+  const t = useTranslations("home.aboutUs");
   return (
     <section className="py-24 px-8 lg:px-16" id="about" style={{ backgroundColor: "var(--bg-primary)" }}>
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
@@ -36,7 +35,7 @@ export default function AboutUs() {
                 className="text-xs font-bold tracking-widest uppercase"
                 style={{ color: "var(--text-secondary)" }}
               >
-                IDENTITAS MANUFAKTUR
+                {t("eyebrow")}
               </h4>
             </div>
             <h2
@@ -52,10 +51,7 @@ export default function AboutUs() {
             className="text-lg mb-12 leading-relaxed font-light"
             style={{ color: "var(--text-secondary)" }}
           >
-            AKA mengembangkan produk dan sistem teknologi untuk kebutuhan industri,
-            laboratorium, dan pemantauan lingkungan. Proses pengembangan memadukan
-            rekayasa perangkat, integrasi IoT, serta pengolahan data agar setiap solusi
-            dapat diterapkan sesuai konteks operasional penggunanya.
+            {t("description")}
           </p>
         </AnimatedElement>
 
@@ -66,7 +62,7 @@ export default function AboutUs() {
           >
             <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#0EA5A0]/10 blur-3xl" />
             <p className="relative text-xs font-bold uppercase tracking-[0.2em] text-[#0EA5A0]">
-              Dari kebutuhan ke implementasi
+              {t("process")}
             </p>
             <div className="relative mt-7 space-y-4">
               {developmentSteps.map((step) => {
@@ -82,10 +78,10 @@ export default function AboutUs() {
                     </div>
                     <div>
                       <h3 className="font-bold" style={{ color: "var(--text-primary)" }}>
-                        {step.title}
+                         {t(`steps.${step.key}.title`)}
                       </h3>
                       <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                        {step.description}
+                         {t(`steps.${step.key}.description`)}
                       </p>
                     </div>
                     <span className="self-start font-mono text-xs font-bold text-[#0EA5A0]/60">

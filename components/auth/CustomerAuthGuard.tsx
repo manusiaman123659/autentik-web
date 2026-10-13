@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import Link from "@/i18n/navigation";
 import { Loader2, Lock, LogIn } from "lucide-react";
 import { getSafeCustomerRedirect } from "@/lib/auth-redirect";
 import { createClient } from "@/utils/supabase/client";
@@ -15,6 +15,7 @@ export default function CustomerAuthGuard({
   const [loading, setLoading] = useState(true);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const pathname = usePathname();
+  const search = useSearchParams();
   const supabase = createClient();
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function CustomerAuthGuard({
   }
 
   if (!isSignedIn) {
-    const currentPath = getSafeCustomerRedirect(pathname);
+    const currentPath = getSafeCustomerRedirect(`${pathname}${search.size ? `?${search}` : ""}`);
 
     return (
       <div className="min-h-[60vh] flex items-center justify-center" style={{ backgroundColor: "var(--bg-primary)" }}>

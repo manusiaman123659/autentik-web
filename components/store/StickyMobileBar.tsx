@@ -1,4 +1,5 @@
 "use client";
+import { getPublicRoute, localizeHref } from "@/i18n/locales";
 
 import { ShoppingCart, MessageCircle, Share2, Check } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
@@ -49,7 +50,7 @@ export default function StickyMobileBar({
   }, [canAdd, onAddToCart]);
 
   const handleShare = useCallback(async () => {
-    const url = `${window.location.origin}/store/${product.slug}`;
+    const url = `${window.location.origin}${localizeHref(`/store/${product.slug}`, getPublicRoute(window.location.pathname)?.locale ?? "id")}`;
     if (navigator.share) {
       try {
         await navigator.share({ title: `${product.name} — Autentik`, url });

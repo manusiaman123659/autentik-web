@@ -5,7 +5,9 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, User } from "lucide-react";
 import type { TeamMember } from "@/types";
 
-export default function TeamCarousel({ members }: { members: TeamMember[] }) {
+export default function TeamCarousel({ members, labels = { previous: "Sebelumnya", next: "Selanjutnya" } }: {
+  members: TeamMember[]; labels?: { previous: string; next: string };
+}) {
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -87,14 +89,14 @@ export default function TeamCarousel({ members }: { members: TeamMember[] }) {
         <button
           onClick={() => scroll("left")}
           className="w-10 h-10 rounded-full bg-[#0B1F3A] hover:bg-[#0e2a4d] text-white flex items-center justify-center transition-colors"
-          aria-label="Sebelumnya"
+          aria-label={labels.previous}
         >
           <ChevronLeft size={20} />
         </button>
         <button
           onClick={() => scroll("right")}
           className="w-10 h-10 rounded-full bg-[#0B1F3A] hover:bg-[#0e2a4d] text-white flex items-center justify-center transition-colors"
-          aria-label="Selanjutnya"
+          aria-label={labels.next}
         >
           <ChevronRight size={20} />
         </button>

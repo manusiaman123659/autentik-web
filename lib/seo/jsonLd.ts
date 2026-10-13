@@ -1,6 +1,7 @@
 import type { ProductRow } from "@/lib/admin-data";
 import type { CareerPosition } from "@/lib/data/careers";
 import { getCanonicalOrigin } from "@/lib/public-url";
+import { localizeHref, type PublicLocale } from "@/i18n/locales";
 
 const baseUrl = getCanonicalOrigin();
 
@@ -33,7 +34,7 @@ export function organizationSchema() {
   };
 }
 
-export function productSchema(product: ProductRow) {
+export function productSchema(product: ProductRow, locale: PublicLocale = "id") {
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -46,11 +47,11 @@ export function productSchema(product: ProductRow) {
     },
     sku: product.sku || undefined,
     category: product.category,
-    url: `${baseUrl}/products/${product.slug}`,
+    url: `${baseUrl}${localizeHref(`/products/${product.slug}`, locale)}`,
   };
 }
 
-export function productOfferSchema(product: ProductRow) {
+export function productOfferSchema(product: ProductRow, locale: PublicLocale = "id") {
   const availability =
     product.stock != null && product.stock > 0
       ? "https://schema.org/InStock"
@@ -68,10 +69,10 @@ export function productOfferSchema(product: ProductRow) {
     },
     sku: product.sku || undefined,
     category: product.category,
-    url: `${baseUrl}/store/${product.slug}`,
+    url: `${baseUrl}${localizeHref(`/store/${product.slug}`, locale)}`,
     offers: {
       "@type": "Offer",
-      url: `${baseUrl}/store/${product.slug}`,
+      url: `${baseUrl}${localizeHref(`/store/${product.slug}`, locale)}`,
       priceCurrency: "IDR",
       price: product.price ?? undefined,
       availability,

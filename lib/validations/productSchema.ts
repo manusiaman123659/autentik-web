@@ -36,7 +36,7 @@ const baseProduct = z.object({
   imageUrl: z.string().default(""),
   gallery: z.array(z.string()).default([]),
   features: z.array(z.string()).default([]),
-  specs: z.array(z.object({ label: z.string(), value: z.string() })).default([]),
+  specs: z.array(z.object({ label: z.string(), value: z.string(), value_kind: z.enum(["technical", "text"]).optional() })).default([]),
   fulfillmentType: z.enum(FULFILLMENT_TYPES).default("ready_stock"),
   isActive: z.boolean().default(true),
   seoTitle: z.string().default(""),

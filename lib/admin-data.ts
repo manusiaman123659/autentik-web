@@ -26,7 +26,8 @@ export interface ProductRow {
   fulfillment_type?: "ready_stock" | "custom_request" | "third_party" | null;
   description: string;
   features?: unknown[];
-  specs?: { label: string; value: string }[];
+  specs?: { label: string; value: string; value_kind?: "technical" | "text" }[];
+  translation_source_revision?: number;
   image_url?: string | null;
   gallery?: string[] | null;
   brochure_url?: string | null;

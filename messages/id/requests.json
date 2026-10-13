@@ -1,0 +1,17 @@
+{
+  "metadata": { "title": "Ajukan Kebutuhan Custom | PT Autentik Karya Analitika", "description": "Ajukan permintaan produk custom untuk kebutuhan manufaktur dan industri Anda. Tim engineer kami akan membahas spesifikasi dan memberikan penawaran." },
+  "custom": {
+    "hero": { "badge": "Pesanan Kustom", "heading": "Ajukan Kebutuhan", "highlight": "Custom", "description": "Beri tahu kami spesifikasi yang Anda butuhkan — tim engineer akan membahas kelayakan teknis, estimasi biaya, dan waktu pengerjaan." },
+    "form": { "back": "Kembali", "title": "Formulir Permintaan Custom", "product": "Produk terkait", "fullName": "Nama Lengkap", "email": "Email Bisnis", "company": "Nama Perusahaan", "message": "Kebutuhan & Spesifikasi", "optional": "(opsional)", "namePlaceholder": "Jane Doe", "emailPlaceholder": "jane@company.com", "companyPlaceholder": "Acme Corp", "messagePlaceholder": "Jelaskan spesifikasi custom Anda — dimensi, material, jumlah, deadline, dll…", "submit": "Kirim Permintaan Custom →", "loading": "Mengirim…", "help": "Butuh lebih cepat? Hubungi kami via WhatsApp di", "contact": "Admin MIKA", "whatsapp": "Halo Admin MIKA, saya ingin berkonsultasi mengenai produk custom atau kebutuhan kustomisasi." },
+    "validation": { "fullName": "Nama lengkap minimal 2 karakter", "email": "Format email tidak valid", "message": "Jelaskan kebutuhan custom minimal 10 karakter" },
+    "status": { "success": "Permintaan Terkirim!", "description": "Tim teknis kami akan menghubungi Anda dalam 1–2 hari kerja untuk membahas spesifikasi.", "again": "Ajukan kebutuhan lain", "error": "Terjadi kesalahan. Silakan coba lagi." }
+  },
+  "rfq": {
+    "title": "Minta Penawaran Resmi (RFQ)", "triggerCompact": "Minta RFQ", "close": "Tutup formulir RFQ", "product": "Produk:", "optional": "(opsional)",
+    "fields": { "productId": "Produk", "productName": "Nama Produk", "companyName": "Nama Perusahaan", "picName": "Nama PIC (Person In Charge)", "email": "Email", "phoneNumber": "Nomor Telepon", "estimatedQuantity": "Jumlah Estimasi (unit)", "targetDate": "Target Tanggal", "notes": "Catatan" },
+    "placeholders": { "companyName": "PT Contoh Industry", "picName": "Budi Santoso", "email": "budi@perusahaan.com", "phoneNumber": "08123456789", "notes": "Spesifikasi khusus, jumlah partai, dll." },
+    "submit": "Kirim Permintaan Penawaran", "loading": "Mengirim...", "checkField": "Periksa kembali {field}.", "dismissError": "Tutup pesan kesalahan",
+    "errors": { "INVALID_REQUEST": "Periksa isian permintaan penawaran Anda lalu coba lagi.", "RATE_LIMITED": "Terlalu banyak permintaan. Silakan tunggu sebelum mencoba lagi.", "SERVICE_UNAVAILABLE": "Layanan sementara tidak tersedia. Silakan coba lagi nanti.", "UNKNOWN": "Gagal mengirim permintaan penawaran. Silakan coba lagi.", "NETWORK": "Terjadi kesalahan jaringan. Silakan coba lagi." },
+    "success": { "title": "Permintaan Penawaran Terkirim!", "code": "Kode RFQ Anda:", "description": "RFQ Anda telah tercatat di sistem PT Autentik Karya Analitika. Untuk tindak lanjut komersial, Anda dapat melanjutkan komunikasi dengan Admin MIKA via WhatsApp.", "followUp": "Lanjutkan ke Admin MIKA", "close": "Tutup" }
+  }
+}

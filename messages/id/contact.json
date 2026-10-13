@@ -1,0 +1,14 @@
+{
+  "metadata": { "title": "Kontak | PT Autentik Karya Analitika", "description": "Hubungi tim teknis PT Autentik Karya Analitika untuk konsultasi perangkat IoT Quality Monitoring Devices dan solusi produk industri berbasis teknologi IoT." },
+  "ui": {
+    "hero": { "title": "Hubungi Tim Ahli Kami", "description": "PT Autentik Karya Analitika memproduksi dan memasarkan IoT Quality Monitoring Devices berbasis kebutuhan industri dan teknologi IoT. Terhubunglah dengan spesialis teknis kami untuk mengintegrasikan solusi produk industri Anda." },
+    "form": { "title": "Kirim Pertanyaan", "fullName": "Nama Lengkap", "email": "Email Bisnis", "company": "Nama Perusahaan", "industry": "Industri", "message": "Pesan", "namePlaceholder": "Jane Doe", "emailPlaceholder": "jane@company.com", "companyPlaceholder": "Acme Corp", "industryPlaceholder": "Pilih Industri", "messagePlaceholder": "Jelaskan kebutuhan teknis Anda…", "submit": "Kirim Pertanyaan →", "loading": "Mengirim…" },
+    "validation": { "fullName": "Nama lengkap minimal 2 karakter", "email": "Format email tidak valid", "company": "Nama perusahaan minimal 2 karakter", "industry": "Pilih industri Anda", "message": "Pesan minimal 10 karakter" },
+    "industries": { "pharmaceutical": "Farmasi", "healthcare": "Kesehatan & Rumah Sakit", "research": "Riset", "education": "Pendidikan", "food": "Makanan & Minuman", "environment": "Lingkungan", "mining": "Pertambangan & Energi", "manufacturing": "Manufaktur", "other": "Lainnya" },
+    "status": { "success": "Pertanyaan Terkirim!", "description": "Tim kami akan menghubungi Anda dalam 1–2 hari kerja.", "again": "Kirim pertanyaan lain", "error": "Terjadi kesalahan. Silakan coba lagi." },
+    "office": { "title": "Kantor Pusat", "mapHeading": "Kantor Pusat — PT Autentik Karya Analitika" },
+    "support": { "title": "Dukungan Langsung", "description": "Pilih kanal sesuai kebutuhan agar pertanyaan Anda ditangani oleh tim yang tepat.", "components": "Komponen & Pesanan - PPIC AKA", "sales": "Produk, Sparepart & Custom - MIKA", "componentsMessage": "Halo PPIC AKA, saya membutuhkan bantuan terkait komponen atau pesanan Marketplace Komponen.", "salesMessage": "Halo Admin MIKA, saya ingin berkonsultasi mengenai produk, sparepart, custom, atau distribusi." },
+    "map": { "title": "Lokasi Kantor Pusat & Cakupan Layanan", "description": "Berkantor pusat secara strategis di Semarang, PT Autentik Karya Analitika memberikan respons teknis cepat dan dukungan terintegrasi ke seluruh wilayah Indonesia.", "accessibleTitle": "Peta Lokasi PT Autentik Karya Analitika", "open": "Buka di Google Maps ↗" },
+    "cta": { "title": "Siap Berkolaborasi?", "description": "Temukan bagaimana solusi penyedia produk industri berbasis kebutuhan industri dan teknologi IoT dari PT Autentik Karya Analitika dapat mengoptimalkan operasional Anda.", "schedule": "Jadwalkan Konsultasi", "catalogue": "Lihat Katalog Produk" }
+  }
+}

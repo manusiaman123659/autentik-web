@@ -60,6 +60,7 @@ function harness(options = {}) {
   }
   const client = { from: query, auth: { getUser: async () => ({ data: { user: options.signedOut ? null : { id, email: 'fixture@example.com' } } }) } };
   const stubs = {
+    'next-intl/server': { getLocale: async () => 'id', getTranslations: async input => require('use-intl/core').createTranslator({locale:'id',messages:{research:require('../messages/id/research.json')},namespace:typeof input==='string'?input:input?.namespace}) },
     'server-only': {}, react: { ...React, cache: fn => fn },
     'next/headers': { cookies: async () => ({}) },
     'next/cache': { revalidatePath: url => effects.push({ revalidate: url }) },
@@ -68,20 +69,22 @@ function harness(options = {}) {
     '@/utils/supabase/admin': { createAdminClient: () => { throw new Error('SERVICE_ROLE_FORBIDDEN'); } },
     '@/lib/audit': { recordAudit: async (...args) => effects.push({ audit: args }) },
     'next/link': { __esModule: true, default: ({ children, ...props }) => React.createElement('a', props, children) },
+    '@/i18n/navigation': { __esModule: true, default: ({ children, ...props }) => React.createElement('a', props, children) },
     '@/components/ui/ScrollAnimations': { __esModule: true, default: ({ children, className, style }) => React.createElement('div', { className, style }, children) },
     '@/components/ui/PortfolioImage': { __esModule: true, default: ({ src, alt, caption }) => React.createElement('figure', {}, React.createElement('img', { src, alt }), caption) },
   };
-  function load(specifier) {
+  function load(specifier, parent = path.join(root, 'index.ts')) {
     if (Object.hasOwn(stubs, specifier)) return stubs[specifier];
-    if (!specifier.startsWith('@/')) return require(specifier);
-    const filename = ['.ts', '.tsx'].map(ext => path.join(root, specifier.slice(2) + ext)).find(file => fs.existsSync(file));
+    if (!specifier.startsWith('@/') && !specifier.startsWith('.')) return require(specifier);
+    const base = specifier.startsWith('@/') ? path.join(root, specifier.slice(2)) : path.resolve(path.dirname(parent), specifier);
+    const filename = [base, base + '.ts', base + '.tsx'].find(file => fs.existsSync(file) && fs.statSync(file).isFile());
     if (!filename) throw new Error(`Missing ${specifier}`);
     if (modules.has(filename)) return modules.get(filename).exports;
     const loadedModule = { exports: {} }; modules.set(filename, loadedModule);
     const code = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
     }).outputText;
-    vm.runInNewContext(code, { module: loadedModule, exports: loadedModule.exports, require: load, console, URL,
+    vm.runInNewContext(code, { module: loadedModule, exports: loadedModule.exports, require: name => load(name, filename), console, URL,
       process: { env: { NEXT_PUBLIC_SUPABASE_URL: origin } }, Set, Map, Promise }, { filename });
     return loadedModule.exports;
   }
@@ -193,7 +196,7 @@ async function main() {
   }
   for (const objectPath of ['portfolio/file.png', `portfolio/${id}/file.svg`, `portfolio/${id}/nested/file.jpg`, `portfolio/${id}/file.pdf`]) check(!portfolioPathPattern.test(objectPath), 'Portfolio media declaration rejects malformed paths');
   for (const namespace of ['products', 'brochures', 'models', 'documents', 'brands', 'team', 'grup_kami', 'partners', 'distribution', 'compro']) check(mediaBody.includes(`'${namespace}'`), `Preserve media namespace ${namespace}`);
-  const route = '@/app/(site)/research-partnership/page';
+  const route = '@/app/(public)/[locale]/(site)/research-partnership/page';
   const rendered = renderToStaticMarkup(await harness({ rows: [fixture({ title: '<script>alert(1)</script>', description: '<img src=x onerror=alert(1)>', summary: 'New summary' }), fixture({ id: secondId, status: 'draft', title: 'SECRET-DRAFT' })] }).load(route).default());
   check(rendered.includes('&lt;script&gt;alert(1)&lt;/script&gt;') && rendered.includes('&lt;img src=x onerror=alert(1)&gt;'), 'Editorial text escaped by React');
   check(!rendered.includes('SECRET-DRAFT') && !rendered.includes('INTERNAL-PROVENANCE'), 'No Draft/provenance in HTML');
@@ -207,7 +210,7 @@ async function main() {
     fixture({ id: secondId, entry_kind: 'trademark', title: 'ePal', image_url: '/images/compro/slide-10.jpg', image_alt: 'Cert' })];
   const trademarkHtml = renderToStaticMarkup(await harness({ rows: trademarks }).load(route).default());
   check(trademarkHtml.includes('TALPHA') && trademarkHtml.includes('ePal') && (trademarkHtml.match(/<figure/g) ?? []).length === 1, 'Shared figure dedup does not dedup trademark entries');
-  const pageSource = fs.readFileSync(path.join(root, 'app/(site)/research-partnership/page.tsx'), 'utf8');
+  const pageSource = fs.readFileSync(path.join(root, 'app/(public)/[locale]/(site)/research-partnership/page.tsx'), 'utf8');
   check(pageSource.includes('force-dynamic') && !/dangerouslySetInnerHTML|source_reference|href=.*research-partnership\//.test(pageSource), 'Dynamic listing, no public provenance/HTML/detail routes');
   check(fs.readFileSync(path.join(root, 'components/ui/PortfolioImage.tsx'), 'utf8').includes('onError='), 'Image failure has graceful fallback');
   console.log(`PASS: ${checks} research portfolio checks (real schemas/actions/readers/page with mocked transport, SQL declarations/bootstrap/media regressions). Migration NOT APPLIED; no live DB/RLS/upload execution.`);

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/i18n/navigation";
 import { ArrowUpRight, Box, ChevronLeft, ChevronRight } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import type { ProductRow } from "@/lib/public-data";
 
 export default function Product3DTeaser({ products }: { products: ProductRow[] }) {
+  const t = useTranslations("home.product3d");
   const [activeIndex, setActiveIndex] = useState(0);
   const product = products[activeIndex] ?? products[0];
 
@@ -50,7 +52,7 @@ export default function Product3DTeaser({ products }: { products: ProductRow[] }
                 <button
                   type="button"
                   onClick={showPrevious}
-                  aria-label="Produk 3D sebelumnya"
+                  aria-label={t("previous")}
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#0B1F3A]/80 text-white backdrop-blur transition-colors hover:bg-[#0EA5A0]"
                 >
                   <ChevronLeft size={20} />
@@ -58,7 +60,7 @@ export default function Product3DTeaser({ products }: { products: ProductRow[] }
                 <button
                   type="button"
                   onClick={showNext}
-                  aria-label="Produk 3D berikutnya"
+                  aria-label={t("next")}
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-[#0B1F3A]/80 text-white backdrop-blur transition-colors hover:bg-[#0EA5A0]"
                 >
                   <ChevronRight size={20} />
@@ -72,33 +74,33 @@ export default function Product3DTeaser({ products }: { products: ProductRow[] }
               <Box size={24} />
             </div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#0EA5A0]">
-              Interactive 3D Product
+              {t("eyebrow")}
             </p>
             <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em]" style={{ color: "var(--text-muted)" }}>
               {product.brand}
             </p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl break-words" style={{ color: "var(--text-primary)" }}>
-              Jelajahi {product.name} dalam 3D
+              {t("title", { name: product.name })}
             </h2>
             <p className="mt-5 line-clamp-3 max-w-lg leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-              {product.description || "Lihat bentuk produk dan titik informasi interaktif melalui viewer 3D pada halaman detail produk."}
+              {product.description || t("descriptionFallback")}
             </p>
             <Link
               href={`/products/${product.slug}`}
               className="mt-8 inline-flex w-fit items-center gap-2 rounded-lg bg-[#0B1F3A] px-6 py-3 font-bold text-white transition-colors hover:bg-[#12345f]"
             >
-              Lihat Produk 3D
+              {t("view")}
               <ArrowUpRight size={18} />
             </Link>
 
             {hasMultipleProducts && (
-              <div className="mt-8 flex flex-wrap items-center gap-2" aria-label="Pilihan produk 3D">
+              <div className="mt-8 flex flex-wrap items-center gap-2" aria-label={t("choices")}>
                 {products.map((item, index) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setActiveIndex(index)}
-                    aria-label={`Tampilkan ${item.name}`}
+                    aria-label={t("show", { name: item.name })}
                     aria-current={index === activeIndex ? "true" : undefined}
                     className={`h-2 rounded-full transition-all ${
                       index === activeIndex ? "w-8 bg-[#0EA5A0]" : "w-2 bg-slate-300 dark:bg-slate-600"

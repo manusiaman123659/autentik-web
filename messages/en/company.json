@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "title": "About Us | PT Autentik Karya Analitika",
+    "description": "PT Autentik Karya Analitika — Smart Technology is Yours. Applying smart technology to improve access to a better life.",
+    "defaultDescription": "Industrial products powered by IoT technology. PT Autentik Karya Analitika manufactures and markets IoT Quality Monitoring Devices for industrial needs.",
+    "defaultOgDescription": "PT Autentik Karya Analitika — Industrial product solutions powered by IoT technology, supporting the success of locally manufactured products in Indonesia."
+  },
+  "about": {
+    "heading": "Building Smart Solutions", "highlight": "& Sustainable Automation",
+    "introduction": "PT Autentik Karya Analitika is a smart technology company committed to integrated industrial automation and IoT solutions for laboratories, manufacturing, and workplaces across Indonesia.",
+    "visionTitle": "Vision", "vision": "To become a leading company in applying smart technology for a better life.", "missionTitle": "Mission",
+    "mission": {
+      "opportunities": "Create opportunities for employees to develop their skills and realize their potential",
+      "management": "Build effective and efficient human resource management",
+      "innovation": "Develop innovative smart technology with a focus on sustainability",
+      "service": "Provide excellent customer service with a focus on user satisfaction",
+      "partnership": "Build strategic partnerships to strengthen the technology ecosystem"
+    },
+    "valuesTitle": "Core Values",
+    "values": {
+      "F": { "title": "Faith in God", "description": "We believe in the existence and power of God" },
+      "I": { "title": "Innovative", "description": "We continually innovate and take action for continuous improvement" },
+      "R": { "title": "Resilience", "description": "We face change with confidence" },
+      "S": { "title": "Serve", "description": "We provide customers with excellent service in a professional manner" },
+      "T": { "title": "Totality", "description": "We carry out our duties and responsibilities conscientiously and with integrity, delivering complete solutions" }
+    },
+    "quality": {
+      "title": "Quality Policy", "introduction": "<company>PT. Autentik Karya Analitika</company> is a smart technology company committed to achieving and improving customer satisfaction by:",
+      "products": "Providing <strong>products and services of excellent quality</strong>",
+      "improvement": "Regularly reviewing quality objectives and policies to achieve <strong>continuous improvement</strong>",
+      "management": "Consistently implementing the <strong>ISO 9001:2015</strong> Quality Management System",
+      "quote": "“The director and all staff are committed to working together to put this quality policy into practice.”"
+    }
+  },
+  "profile": { "badge": "Company Profile", "title": "Company Profile & Official Documents", "description": "Explore our company profile to learn more about our vision, mission, products, and services.", "format": "Interactive Document Format", "pdfAvailable": "Available as PDF", "pages": "{count} Pages", "research": "Research & Partnership" },
+  "team": { "title": "Our Team", "description": "The dedicated professionals behind innovation and service at PT Autentik Karya Analitika.", "previous": "Previous", "next": "Next" },
+  "groups": { "title": "Our Group", "description": "Affiliated companies that form an integral part of the Autentik ecosystem." },
+  "partners": { "title": "Our Partners", "description": "Strategic collaboration with technology leaders and educational institutions." },
+  "industryCta": { "title": "Industrial Collaboration & Procurement", "description": "Discuss laboratory instruments, furniture, calibration, and integrated technical solutions with our specialist team.", "sales": "Contact Our Sales Team", "products": "Product Catalogue" },
+  "careerCta": { "title": "Careers & Internships", "description": "Join our team in developing IoT technology and industrial automation.", "view": "View Available Positions" },
+  "footer": { "description": "Industrial technology provider powered by smart IoT integration.", "location": "Semarang, Central Java, Indonesia", "rights": "All rights reserved.", "email": "Email" }
+}

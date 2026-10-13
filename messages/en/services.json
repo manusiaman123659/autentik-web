@@ -1,0 +1,45 @@
+{
+  "metadata": { "title": "Industrial & IoT Solutions | PT Autentik Karya Analitika", "description": "IoT quality monitoring and telemetry, laboratory furniture engineering, equipment calibration and maintenance, industrial water treatment, cloud and analytics integration, and technical consulting for standardization audits." },
+  "ui": {
+    "hero": { "badge": "Integrated Services & Engineering", "heading": "Technical Service Solutions for", "highlight": "Laboratories & Industry", "description": "PT Autentik Karya Analitika offers a complete service ecosystem covering IoT telemetry integration, laboratory layout engineering, industrial water purification, and high-standard instrument calibration.", "contact": "Contact Our Service Team", "catalogue": "View Service Catalogue" },
+    "badges": {
+      "standards": { "title": "ISO 17025 Standards", "description": "Supporting accuracy and compliance with testing regulations." },
+      "iot": { "title": "Smart IoT Systems", "description": "Real-time cloud sensor telemetry, 24/7." },
+      "technicians": { "title": "Experienced Technicians", "description": "Certified specialist support for precise installation." },
+      "support": { "title": "After-Sales Support", "description": "Prompt responses and ongoing maintenance." }
+    },
+    "catalogue": { "title": "Professional Service Portfolio", "description": "Choose the service category that fits your company’s operations and laboratory facilities.", "features": "Key Features & Benefits:", "consult": "Consult About This Service" },
+    "categories": { "all": "All Services", "iot": "IoT & Monitoring", "lab": "Laboratory Engineering & Design", "maintenance": "Calibration & Maintenance", "water": "Water Treatment" },
+    "items": {
+      "iot-monitoring": { "title": "IoT Quality Monitoring & Telemetry", "description": "Implementation and installation of real-time Internet of Things (IoT) monitoring systems for efficient oversight of water quality, air emissions, and industrial environmental parameters.", "highlights": { "one": "High-Precision Water Quality & Emissions Sensors", "two": "Telemetry Connectivity (LoRaWAN / 4G / RS485)", "three": "Automated Notifications & Hazard Alarms (SMS/WA/Email)", "four": "Encrypted Data Storage in the Cloud & Local Servers" }, "target": "Industrial Plants, Wastewater Treatment Facilities, Environmental Testing Laboratories" },
+      "lab-engineering": { "title": "Laboratory Engineering & Furniture", "description": "Layout design, chemical-resistant workbenches, and fume hood exhaust systems", "highlights": { "one": "Laboratory Layout Design (3D Layouts & Ergonomics)", "two": "Laboratory Bench Manufacturing (Phenolic Resin & Stainless Steel)", "three": "Precision High-Flow Fume Hood & Laminar Air Flow Systems", "four": "Safety Certification & Corrosion-Resistant Ducting" }, "target": "Pharmaceutical, Chemical, Educational & Industrial Research Laboratories" },
+      "calibration": { "title": "Equipment Calibration & Maintenance", "description": "Proactive servicing, accuracy validation, and laboratory equipment repairs", "highlights": { "one": "Periodic Calibration to ISO/IEC 17025 Standards", "two": "Preventive Maintenance", "three": "Electrical/Mechanical Component Repairs & Troubleshooting", "four": "Official Calibration Certificates & Record Logs" }, "target": "Testing Laboratories, Manufacturing Industries, QC/QA Units" },
+      "water-treatment": { "title": "Industrial Water Treatment & Purification", "description": "Ultra-pure water solutions (RO/EDI) and automated wastewater filtration systems", "highlights": { "one": "Reverse Osmosis (RO) & Deionization (EDI) Installation", "two": "Automated Dosing Pumps & Online Wastewater Monitoring", "three": "Dry Desiccators & Humidity-Controlled Cabinets", "four": "Post-Filtration Water Quality Testing to SNI Standards" }, "target": "Food & Beverage, Pharmaceuticals, Power Generation, Textiles" },
+      "platform-integration": { "title": "Cloud Platform & Analytics Integration", "description": "Customized dashboards for sensor-data visualization and analytical reports", "highlights": { "one": "Web Dashboard & Multi-Tenant Portal Development", "two": "Trend Analysis & Equipment Failure Prediction (Predictive AI)", "three": "Automated Report Exports for Regulatory Audits", "four": "REST API Integration with Enterprise ERP (SAP, Oracle, Odoo)" }, "target": "Plant Management, Operations Directors, Compliance Teams" },
+      "consulting": { "title": "Technical Consulting & Standardization Audits", "description": "Support with specifications, efficiency audits, and accreditation preparation", "highlights": { "one": "Feasibility Studies & Laboratory Procurement Budgeting", "two": "Laboratory Accreditation Support (ISO/IEC 17025)", "three": "Workplace Safety & Waste Management Audits", "four": "Operator Training in Operation & Troubleshooting" }, "target": "New Companies (Greenfield Projects), Laboratory Upgrades & Accreditation" }
+    },
+    "fulfillment": {
+      "title": "3 Product Fulfillment Paths", "description": "Each product follows the most suitable path: direct purchase, custom orders, or third-party procurement with technical support.",
+      "items": {
+        "ready": { "title": "Ready Stock — Buy Directly", "description": "Components available in our warehouse can be purchased through our Components Marketplace, with prices, stock information, and shipping.", "points": { "one": "Transparent prices & stock", "two": "Fast online checkout", "three": "Regular shipping" }, "cta": "Visit Components Marketplace" },
+        "custom": { "title": "Custom Orders — Consult First", "description": "Products are made for your specific requirements, from dimensions and materials to capacity and custom integration. Engineers review feasibility and quotations before production.", "points": { "one": "Specifications tailored to your needs", "two": "Cost & lead-time estimates", "three": "Technical guidance from engineers" }, "cta": "Submit Custom Requirements" },
+        "thirdParty": { "title": "Third-Party Products — Procurement Support", "description": "We manage procurement from third-party vendors and principals, with technical consultation to fit your application.", "points": { "one": "Procurement managed by our team", "two": "Dedicated technical support", "three": "Verified technical specifications" }, "cta": "Contact MIKA" }
+      },
+      "whatsapp": "Hello MIKA, I need technical support and assistance with third-party product procurement."
+    },
+    "process": { "title": "Service Delivery Process", "description": "A structured methodology to keep implementation and installation projects on schedule and aligned with specifications.", "steps": {
+      "01": { "title": "Consultation & Site Survey", "description": "Our technical team conducts an in-depth initial assessment of specific needs and actual site conditions." },
+      "02": { "title": "Solution Design & Engineering", "description": "Preparation of engineering documents, instrument specifications, and efficient budget estimates." },
+      "03": { "title": "Installation & Integration", "description": "Physical installation, wiring, and IoT device/instrument integration by experienced technicians." },
+      "04": { "title": "Testing & Commissioning", "description": "Comprehensive functional testing, initial calibration, and operational trials (Dry & Wet Run)." },
+      "05": { "title": "Training & Handover", "description": "Comprehensive operator training and handover of warranty certificates and official documentation." }
+    } },
+    "faq": { "title": "Frequently Asked Questions (FAQ)", "description": "Quick answers about our quality commitment, warranty coverage, and service procedures.", "items": {
+      "calibration": { "question": "Does Autentik provide officially certified calibration services?", "answer": "Yes. Our equipment calibration and validation follow ISO/IEC 17025 international standard methods and are performed by certified specialists." },
+      "system": { "question": "Can the IoT system be adapted to our plant’s needs?", "answer": "Certainly. Our IoT hardware and cloud monitoring dashboards are developed in-house with a modular approach, allowing adaptation to your plant’s existing protocols and sensors." },
+      "warranty": { "question": "How long is the service and hardware warranty?", "answer": "We provide an official component and technical-service warranty of up to 12–24 months, depending on the service package, together with after-sales technical support." },
+      "survey": { "question": "How do I request a site survey or initial consultation?", "answer": "Contact our technical team using the Contact Our Service Team button below, or through WhatsApp/email. Our team is ready to respond within one working day." }
+    } },
+    "cta": { "title": "Need Service Advice & Custom Solutions?", "description": "Our engineers are ready to provide technical advice, site surveys, and competitive quotations for your laboratory and industrial projects.", "contact": "Contact Us Now", "products": "View Product Catalogue" }
+  }
+}
