@@ -6,9 +6,9 @@ import Image from "next/image";
 import Link from "@/i18n/navigation";
 import { ArrowUpRight, Box, ChevronLeft, ChevronRight } from "lucide-react";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
-import type { ProductRow } from "@/lib/public-data";
+import type { B2BHomeView } from "@/lib/public-product-presentation";
 
-export default function Product3DTeaser({ products }: { products: ProductRow[] }) {
+export default function Product3DTeaser({ products }: { products: B2BHomeView[] }) {
   const t = useTranslations("home.product3d");
   const [activeIndex, setActiveIndex] = useState(0);
   const product = products[activeIndex] ?? products[0];
@@ -31,11 +31,11 @@ export default function Product3DTeaser({ products }: { products: ProductRow[] }
           style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-card)" }}
         >
           <div className="relative min-h-72 bg-page-alt dark:bg-[#07182e] lg:min-h-[420px]">
-            {product.image_url ? (
+            {product.imageUrl ? (
               <Image
                 key={product.id}
-                src={product.image_url}
-                alt={product.name}
+                src={product.imageUrl}
+                alt={product.display.name}
                 fill
                 sizes="(max-width: 1023px) calc(100vw - 48px), (max-width: 1280px) 55vw, 700px"
                 className="object-contain p-8 sm:p-12"
@@ -80,10 +80,10 @@ export default function Product3DTeaser({ products }: { products: ProductRow[] }
               {product.brand}
             </p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl break-words" style={{ color: "var(--text-primary)" }}>
-              {t("title", { name: product.name })}
+              {t("title", { name: product.display.name })}
             </h2>
             <p className="mt-5 line-clamp-3 max-w-lg leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-              {product.description || t("descriptionFallback")}
+              {product.display.description || t("descriptionFallback")}
             </p>
             <Link
               href={`/products/${product.slug}`}
@@ -100,7 +100,7 @@ export default function Product3DTeaser({ products }: { products: ProductRow[] }
                     key={item.id}
                     type="button"
                     onClick={() => setActiveIndex(index)}
-                    aria-label={t("show", { name: item.name })}
+                    aria-label={t("show", { name: item.display.name })}
                     aria-current={index === activeIndex ? "true" : undefined}
                     className={`h-2 rounded-full transition-all ${
                       index === activeIndex ? "w-8 bg-[#0EA5A0]" : "w-2 bg-slate-300 dark:bg-slate-600"

@@ -12,6 +12,7 @@ interface RfqModalProps {
   onClose: () => void;
   productId?: string;
   productName?: string;
+  displayName?: string;
 }
 
 const inputClass =
@@ -24,6 +25,7 @@ export default function RfqModal({
   onClose,
   productId,
   productName,
+  displayName,
 }: RfqModalProps) {
   const t = useTranslations("requests.rfq");
   const modalRef = useRef<HTMLDivElement>(null);
@@ -111,7 +113,7 @@ export default function RfqModal({
       const res = await fetch("/api/rfq", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, productId: productId || "", productName: productName || "" }),
       });
       const data = await res.json();
 
@@ -151,9 +153,9 @@ export default function RfqModal({
             <h3 id="rfq-dialog-title" className="text-lg font-bold text-slate-900 dark:text-white">
               {t("title")}
             </h3>
-            {productName && (
+            {(displayName || productName) && (
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                {t("product")} <strong>{productName}</strong>
+                {t("product")} <strong>{displayName || productName}</strong>
               </p>
             )}
           </div>

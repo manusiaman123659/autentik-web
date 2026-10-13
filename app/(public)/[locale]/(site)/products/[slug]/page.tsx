@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { NextIntlClientProvider } from "next-intl";
 import { loadMessages } from "@/i18n/messages";
-import type { PublicLocale } from "@/i18n/locales";
+import { isPublicLocale } from "@/i18n/locales";
+import { publicMetadata } from "@/i18n/metadata";
 import { notFound } from "next/navigation";
 import Link from "@/i18n/navigation";
 import {
@@ -13,8 +14,9 @@ import {
   Download,
   FileText,
 } from "lucide-react";
-import { getPublicProductBySlug, getWhatsAppContact } from "@/lib/public-data";
-import type { ProductRow } from "@/lib/public-data";
+import { getWhatsAppContact } from "@/lib/public-data";
+import { getResolvedB2BProduct } from "@/lib/public-b2b-products";
+import { toB2BCatalogueView } from "@/lib/public-product-presentation";
 import AnimatedElement from "@/components/ui/ScrollAnimations";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import ProductMediaTabs from "@/components/product/ProductMediaTabs";
@@ -36,47 +38,27 @@ type Props = {
 
 export const dynamic = "force-dynamic";
 
-function toPublicProduct(row: ProductRow) {
-  return {
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    brand: row.brand,
-    brandColor: row.brand_color ?? "#0EA5A0",
-    category: row.category,
-    categoryColor: row.category_color ?? "teal",
-    description: row.description,
-    features: Array.isArray(row.features)
-      ? row.features.map((f) => String(f ?? "")).filter(Boolean)
-      : [],
-    specs: Array.isArray(row.specs)
-      ? row.specs.map((s) => ({ label: String(s?.label ?? ""), value: String(s?.value ?? "") }))
-      : [],
-    imageUrl: row.image_url ?? undefined,
-    gallery: Array.isArray(row.gallery) ? (row.gallery as string[]).filter(Boolean) : [],
-    brochureUrl: row.brochure_url ?? undefined,
-    model3dUrl: row.model_3d_url ?? undefined,
-  };
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const row = await getPublicProductBySlug(slug);
-  if (!row) notFound();
-  return {
-    title: row.seo_title || `${row.name} — ${row.brand} | PT Autentik Karya Analitika`,
-    description: row.seo_description || row.description,
-  };
+  const current = await getLocale(); const locale = isPublicLocale(current) ? current : "id";
+  const resolved = await getResolvedB2BProduct(slug, locale);
+  if (!resolved) notFound();
+  return publicMetadata(`/products/${resolved.canonical.slug}`, locale, {
+    title: resolved.content.seo_title || `${resolved.content.name} — ${resolved.canonical.brand} | PT Autentik Karya Analitika`,
+    description: resolved.content.seo_description || resolved.content.description,
+  });
 }
 
 export default async function ProductDetailPage({ params }: Props) {
-  const locale = await getLocale() as PublicLocale;
-  const { common, navigation, requests } = await loadMessages(locale);
+  const current = await getLocale(); const locale = isPublicLocale(current) ? current : "id";
+  const { common, navigation, requests, products: productMessages } = await loadMessages(locale);
+  const t = await getTranslations({ locale, namespace: "products.detail" });
+  const nav = await getTranslations({ locale, namespace: "navigation" });
   const { slug } = await params;
-  const row = await getPublicProductBySlug(slug);
-  if (!row) notFound();
-
-  const product = toPublicProduct(row);
+  const resolved = await getResolvedB2BProduct(slug, locale);
+  if (!resolved) notFound();
+  const row = resolved.canonical; const display = resolved.content;
+  const product = { ...toB2BCatalogueView(resolved), gallery: Array.isArray(row.gallery) ? row.gallery.filter(Boolean) : [], brochureUrl: row.brochure_url ?? undefined, model3dUrl: row.model_3d_url ?? undefined };
   const mikaContact = await getWhatsAppContact("mika_product_sales");
 
   let documents: PublicTechnicalDocument[] = [];
@@ -142,21 +124,21 @@ export default async function ProductDetailPage({ params }: Props) {
   }
 
   return (
-    <>
-      <JsonLd data={productSchema(row, await getLocale() as PublicLocale)} />
+    <NextIntlClientProvider locale={locale} timeZone="Asia/Jakarta" messages={{ common, navigation, products: { media: productMessages.media, documents: productMessages.documents }, requests: { rfq: requests.rfq } }}>
+      <JsonLd data={productSchema(row, locale, display)} />
       {/* Breadcrumb */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <nav aria-label="Jejak navigasi" className="flex flex-wrap items-center gap-1.5 text-sm [&_svg]:shrink-0" style={{ color: "var(--text-secondary)" }}>
+          <nav aria-label={t("breadcrumbs")} className="flex flex-wrap items-center gap-1.5 text-sm [&_svg]:shrink-0" style={{ color: "var(--text-secondary)" }}>
             <Link href="/" className="hover:text-[#0EA5A0] transition-colors">
-              Home
+              {nav("home")}
             </Link>
             <ChevronRight size={12} style={{ color: "var(--text-muted)" }} />
             <Link
               href="/products"
               className="hover:text-[#0EA5A0] transition-colors"
             >
-              Katalog Produk
+              {t("catalogue")}
             </Link>
             <ChevronRight size={12} style={{ color: "var(--text-muted)" }} />
             <Link
@@ -167,7 +149,7 @@ export default async function ProductDetailPage({ params }: Props) {
             </Link>
             <ChevronRight size={12} style={{ color: "var(--text-muted)" }} />
             <span className="min-w-0 font-medium [overflow-wrap:anywhere]" style={{ color: "var(--text-primary)" }}>
-              {product.name}
+               {display.name}
             </span>
           </nav>
         </div>
@@ -179,7 +161,7 @@ export default async function ProductDetailPage({ params }: Props) {
           <AnimatedElement type="fade-up" className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Left — Media (Photo / 3D tabs) */}
             <ProductMediaTabs
-              name={product.name}
+              name={display.name}
               brand={product.brand}
               imageUrl={product.imageUrl}
               gallery={product.gallery}
@@ -197,7 +179,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 style={{ color: "var(--text-secondary)" }}
               >
                 <ArrowLeft size={14} />
-                Kembali ke {product.brand}
+                 {t("back", { brand: product.brand })}
               </Link>
 
               {/* Category */}
@@ -207,7 +189,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
               {/* Name */}
               <h1 className="text-3xl md:text-4xl font-bold mb-4 leading-tight" style={{ color: "var(--text-primary)" }}>
-                {product.name}
+                {display.name}
               </h1>
 
               {/* Brand + accent bar */}
@@ -223,18 +205,18 @@ export default async function ProductDetailPage({ params }: Props) {
 
               {/* Description */}
               <p className="leading-relaxed text-base mb-8" style={{ color: "var(--text-secondary)" }}>
-                {product.description}
+                {display.description}
               </p>
 
               {/* Features */}
-              {product.features && product.features.length > 0 && (
+              {display.features.length > 0 && (
                 <div className="mb-8">
                   <h2 className="text-sm font-bold uppercase tracking-wider mb-4 text-[#14B8A6]">
-                    Fitur Utama
+                     {t("features")}
                   </h2>
                   <ul className="space-y-2.5">
-                    {product.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2.5">
+                    {display.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2.5">
                         <CheckCircle2
                           size={16}
                           className="flex-shrink-0 mt-0.5 text-[#14B8A6]"
@@ -251,17 +233,15 @@ export default async function ProductDetailPage({ params }: Props) {
                 {/* Row 1: Sales dan distribusi melalui MIKA */}
                 <WhatsAppButton
                   number={mikaContact?.number ?? null}
-                  label="Hubungi Sales / Distributor"
-                  message={`Halo Admin MIKA, saya ingin berkonsultasi mengenai pembelian atau distribusi produk ${product.name}.`}
+                  label={t("sales")}
+                  message={t("salesMessage", { name: row.name })}
                   variant="button"
                   className="w-full h-11 rounded-xl text-sm font-medium"
                   id="whatsapp-cta"
                 />
 
                 {/* Row 2: RFQ (full-width, highlight) */}
-                <NextIntlClientProvider locale={locale} timeZone="Asia/Jakarta" messages={{ common, navigation, requests: { rfq: requests.rfq } }}>
-                  <RfqButton productId={row.id} productName={product.name} />
-                </NextIntlClientProvider>
+                <RfqButton productId={row.id} productName={row.name} displayName={display.name} />
 
                 {/* Row 3: Brosur (if available) */}
                 {product.brochureUrl && (
@@ -271,7 +251,7 @@ export default async function ProductDetailPage({ params }: Props) {
                     className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#0EA5A0] hover:text-[#0EA5A0] transition-colors"
                   >
                     <FileText size={16} />
-                    Unduh Brosur/Katalog (PDF)
+                    {t("brochure")}
                     <Download size={14} className="opacity-60" />
                   </a>
                 )}
@@ -283,7 +263,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-medium text-white bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 transition-colors"
                 >
                   <Wrench size={16} />
-                  Cari Komponen untuk Produk Ini
+                  {t("components")}
                 </Link>
 
               </div>
@@ -293,19 +273,19 @@ export default async function ProductDetailPage({ params }: Props) {
       </section>
 
       {/* Specifications Table */}
-      {product.specs && product.specs.length > 0 && (
+      {display.specs.length > 0 && (
         <section className="py-12" style={{ backgroundColor: "var(--bg-secondary)" }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <AnimatedElement type="fade-up">
               <h2 className="text-2xl font-bold mb-6" style={{ color: "var(--text-primary)" }}>
-                Spesifikasi Teknis
+                {t("specifications")}
               </h2>
               <div className="rounded-xl border shadow-sm overflow-hidden max-w-4xl" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}>
                 <table className="w-full table-fixed text-sm [&_td]:align-top [&_td]:[overflow-wrap:anywhere]">
                   <tbody>
-                    {product.specs.map((spec) => (
+                    {display.specs.map((spec, index) => (
                       <tr
-                        key={spec.label}
+                        key={index}
                         className="border-b last:border-0"
                         style={{ borderColor: "var(--border-subtle)" }}
                       >
@@ -325,6 +305,6 @@ export default async function ProductDetailPage({ params }: Props) {
 
       {/* Technical Documents */}
       <TechnicalDocsSection documents={documents} />
-    </>
+    </NextIntlClientProvider>
   );
 }

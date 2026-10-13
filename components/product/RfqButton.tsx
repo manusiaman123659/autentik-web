@@ -9,6 +9,7 @@ import RfqModal from "./RfqModal";
 interface RfqButtonProps {
   productId: string;
   productName: string;
+  displayName?: string;
   /** "default" = full-width (product detail page); "compact" = flex-1 (card grid) */
   variant?: "default" | "compact";
 }
@@ -16,6 +17,7 @@ interface RfqButtonProps {
 export default function RfqButton({
   productId,
   productName,
+  displayName,
   variant = "default",
 }: RfqButtonProps) {
   const t = useTranslations("requests.rfq");
@@ -47,6 +49,7 @@ export default function RfqButton({
         onClose={() => setModalOpen(false)}
         productId={productId}
         productName={productName}
+        displayName={displayName}
       />
     </>
   );

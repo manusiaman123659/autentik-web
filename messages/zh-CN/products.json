@@ -1,0 +1,16 @@
+{
+  "metadata": { "title": "产品目录 | PT Autentik Karya Analitika", "description": "实验室设备与技术：精密仪器、水净化设备、干燥柜及物联网监测系统。" },
+  "catalogue": {
+    "eyebrow": "PT AUTENTIK KARYA ANALITIKA 产品",
+    "title": "实验室设备与技术目录", "description": "符合国际标准的精密仪器、水净化设备、干燥柜及物联网监测系统。",
+    "search": "搜索印尼语产品名称/说明、品牌或类别...", "clearSearch": "清除搜索", "brand": "品牌：", "allBrands": "全部", "categoriesTitle": "产品类别", "reset": "重置筛选", "sort": "排序：", "sortLabel": "产品排序", "relevance": "默认顺序", "nameAsc": "印尼语产品名称（A-Z）", "brandAsc": "品牌（A-Z）", "summary": "显示 {count} 款实验室产品", "brandSummary": "品牌：{brand}",
+    "emptyTitle": "没有匹配的产品", "emptyDescription": "请尝试其他关键词、选择其他品牌或重置筛选条件。", "previous": "上一页", "next": "下一页", "loading": "正在加载实验室产品目录...", "detail": "查看详情", "explore": "浏览产品",
+    "solutionsTitle": "核心实验室解决方案", "solutionsDescription": "满足工业及分析实验室需求的精选仪器和基础设施。",
+    "solutions": { "0": { "title": "物联网监测与智能传感器", "description": "通过物联网实时监测温度、湿度及实验室环境，并提供自动告警。" }, "1": { "title": "超纯水净化系统", "description": "符合 ASTM D1193-91 标准的 I 型和 II 型实验室水净化设备及工业反渗透系统。" }, "2": { "title": "实验室家具与安全设备", "description": "符合 ISO 标准的层流设备、生物安全柜、通风柜及耐酸化学品存储柜。" } },
+    "categories": { "all": { "title": "全部类别与品牌", "subtitle": "全部实验室仪器与设备" }, "talpha": { "title": "TALPHA", "subtitle": "空气质量监测设备" }, "cylab": { "title": "CYLAB", "subtitle": "水净化系统" }, "autentik": { "title": "AUTENTIK", "subtitle": "自动干燥柜" }, "ullun": { "title": "ULLUN", "subtitle": "实验室家具" }, "epal": { "title": "EPAL", "subtitle": "环境与废水处理方案" } },
+    "customTitle": "需要定制规格？", "customDescription": "PT Autentik Karya Analitika 提供仪器定制工程及实验室采购服务。", "sales": "咨询销售工程师", "procurementTitle": "交钥匙实验室采购与工程", "procurementDescription": "PT Autentik Karya Analitika 支持大型招标、定制物联网集成及面向工业和教育的交钥匙实验室项目。", "store": "访问组件商城"
+  },
+  "detail": { "breadcrumbs": "面包屑导航", "catalogue": "产品目录", "back": "返回 {brand}", "features": "主要功能", "specifications": "技术规格", "sales": "联系销售 / 经销商", "salesMessage": "您好 MIKA，我想咨询产品 {name} 的采购或经销事宜。", "brochure": "下载宣传册/目录（PDF）", "components": "查找此产品的组件" },
+  "media": { "photo": "图片", "model": "3D 模型", "photoHint": "点击图片上的互动点，查看各个产品部件的信息。", "showDetail": "查看 {name} 的详情", "featureDetail": "{name} 的功能详情", "closeDetail": "关闭功能详情", "thumbnail": "{name}，缩略图 {number}", "missingModel": "暂无 3D 模型。", "viewModel": "查看产品 3D 模型", "viewPhoto": "查看图片", "loading": "正在加载 3D 模型...", "error": "无法加载 3D 模型，文件可能已损坏或格式不受支持。", "hotspotHint": "点击模型上的红点，查看部件详情", "close": "关闭详情" },
+  "documents": { "title": "技术文档与 CAD", "gated": "填写表单后下载", "direct": "直接下载", "downloadTitle": "下载文档", "intro": "请填写信息以下载 {name}", "thanks": "谢谢！", "opening": "正在打开文档 {name} 以供下载。", "close": "关闭", "name": "姓名", "email": "工作邮箱", "company": "公司名称", "phone": "电话号码", "processing": "正在处理...", "download": "立即下载", "error": "暂时无法访问此文档，请稍后重试。", "invalid": "请检查此字段。", "types": { "datasheet": "数据表", "manual": "使用说明书", "cad_3d": "CAD / 3D 文件", "certificate": "证书", "software_firmware": "软件 / 固件" } }
+}

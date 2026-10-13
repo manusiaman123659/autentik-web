@@ -5,9 +5,9 @@ import { ArrowUpRight, Boxes } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
 import AnimatedElement from "./ScrollAnimations";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
-import type { ProductRow } from "@/lib/public-data";
+import type { B2BHomeView } from "@/lib/public-product-presentation";
 
-export default async function FeaturedProducts({ products }: { products: ProductRow[] }) {
+export default async function FeaturedProducts({ products }: { products: B2BHomeView[] }) {
   if (products.length === 0) return null;
   const t = await getTranslations("home.featured");
 
@@ -44,10 +44,10 @@ export default async function FeaturedProducts({ products }: { products: Product
                 className="relative h-44 overflow-hidden"
                 style={{ backgroundColor: "var(--bg-secondary)" }}
               >
-                {product.image_url ? (
+                {product.imageUrl ? (
                   <Image
-                    src={product.image_url}
-                    alt={product.name}
+                    src={product.imageUrl}
+                    alt={product.display.name}
                     fill
                     className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 20vw"
@@ -71,10 +71,10 @@ export default async function FeaturedProducts({ products }: { products: Product
                   {product.category}
                 </p>
                 <h3 className="text-base font-bold mb-1.5 group-hover:text-[#14B8A6] transition-colors line-clamp-2" style={{ color: "var(--text-primary)" }}>
-                  {product.name}
+                  {product.display.name}
                 </h3>
                 <p className="text-sm mb-4 line-clamp-2" style={{ color: "var(--text-secondary)" }}>
-                  {product.description}
+                  {product.display.description}
                 </p>
 
                 <Link

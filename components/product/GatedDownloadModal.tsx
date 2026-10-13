@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { X, Loader2, Download } from "lucide-react";
 import { type DocDownloadLeadFormData } from "@/lib/validations/rfqSchema";
 import { submitDocLeadAndGetUrl } from "@/lib/actions/technicalDocuments";
@@ -18,6 +19,7 @@ export default function GatedDownloadModal({
   documentId,
   documentTitle,
 }: GatedDownloadModalProps) {
+  const t = useTranslations("products.documents");
   const [form, setForm] = useState<Omit<DocDownloadLeadFormData, "documentId">>({
     fullName: "",
     workEmail: "",
@@ -49,15 +51,15 @@ export default function GatedDownloadModal({
     try {
       const result = await submitDocLeadAndGetUrl({ ...form, documentId });
       if (!result.success || !result.fileUrl) {
-        setErrors(result.errors ?? {});
-        setFormError(result.message || "Dokumen tidak dapat diakses saat ini. Silakan coba lagi.");
+        setErrors(Object.fromEntries(Object.keys(result.errors ?? {}).map(key => [key, t("invalid")])));
+        setFormError(t("error"));
         return;
       }
 
       setSubmitted(true);
       window.location.assign(result.fileUrl);
     } catch {
-      setFormError("Dokumen tidak dapat diakses saat ini. Silakan coba lagi.");
+      setFormError(t("error"));
     } finally {
       setSubmitting(false);
     }
@@ -83,6 +85,7 @@ export default function GatedDownloadModal({
       >
         <button
           onClick={handleClose}
+          aria-label={t("close")}
           className="absolute top-4 right-4 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           style={{ color: "var(--text-secondary)" }}
         >
@@ -98,17 +101,17 @@ export default function GatedDownloadModal({
               <Download size={24} style={{ color: "var(--accent-primary)" }} />
             </div>
             <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-              Terima kasih!
+              {t("thanks")}
             </h3>
             <p className="text-sm mb-6" style={{ color: "var(--text-secondary)" }}>
-              Dokumen <strong>{documentTitle}</strong> sedang dibuka untuk diunduh.
+              {t("opening", { name: documentTitle })}
             </p>
             <button
               onClick={handleClose}
               className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
               style={{ backgroundColor: "var(--accent-primary)" }}
             >
-              Tutup
+              {t("close")}
             </button>
           </div>
         ) : (
@@ -117,17 +120,17 @@ export default function GatedDownloadModal({
               className="text-lg font-bold mb-1"
               style={{ color: "var(--text-primary)" }}
             >
-              Download Dokumen
+              {t("downloadTitle")}
             </h3>
             <p className="text-sm mb-5" style={{ color: "var(--text-secondary)" }}>
-              Isi data berikut untuk mengunduh <strong>{documentTitle}</strong>
+              {t("intro", { name: documentTitle })}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {formError && <p role="alert" className="text-xs text-red-500">{formError}</p>}
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Nama Lengkap *
+                  {t("name")} *
                 </label>
                 <input
                   type="text"
@@ -147,7 +150,7 @@ export default function GatedDownloadModal({
 
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Email Kantor *
+                  {t("email")} *
                 </label>
                 <input
                   type="email"
@@ -167,7 +170,7 @@ export default function GatedDownloadModal({
 
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Nama Perusahaan *
+                  {t("company")} *
                 </label>
                 <input
                   type="text"
@@ -187,7 +190,7 @@ export default function GatedDownloadModal({
 
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
-                  Nomor Telepon *
+                  {t("phone")} *
                 </label>
                 <input
                   type="tel"
@@ -214,12 +217,12 @@ export default function GatedDownloadModal({
                 {submitting ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    Memproses...
+                    {t("processing")}
                   </>
                 ) : (
                   <>
                     <Download size={16} />
-                    Download Sekarang
+                    {t("download")}
                   </>
                 )}
               </button>

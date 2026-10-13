@@ -26,7 +26,7 @@ mocks.set('next-intl/server',{
   getTranslations:async input=>createTranslator({locale:typeof input==='object'?input.locale??activeLocale:activeLocale,messages:catalogs[typeof input==='object'?input.locale??activeLocale:activeLocale],namespace:typeof input==='string'?input:input?.namespace}),
 });
 mocks.set('next/headers',{cookies:async()=>({})});
-mocks.set('@/utils/supabase/server',{createClient:()=>({from:()=>{const query={select:()=>query,eq:()=>query,maybeSingle:async()=>({data:{value:projection.manifest}})};return query;}})});
+mocks.set('@/utils/supabase/server',{createClient:()=>({from:()=>{const query={select:()=>query,eq:()=>query,is:()=>query,in:async()=>({data:[],error:null}),maybeSingle:async()=>({data:{value:projection.manifest}})};return query;}})});
 mocks.set('@/lib/public-data',{
   listPublicBrands:async()=>projection.brands,getPublicCareerListings:async()=>({response:{data:projection.jobs,success:true}}),
   getHomepageFeaturedProducts:async()=>projection.products,listPublicProductsByType:async()=>projection.products,
@@ -87,7 +87,7 @@ async function main(){
   const html=renderToStaticMarkup(React.createElement(NextIntlClientProvider,{locale:'en',messages,timeZone:'Asia/Jakarta'},React.createElement(AboutUs)));
   equal(html.includes(messages.home.aboutUs.eyebrow),true,'Home company introduction responds to English locale');
   projection={
-    products:[{id:'product-1',slug:'model-ss1500',name:'PERANGKAT ASLI SS1500',description:'Deskripsi produk asli dari CMS.',brand:'TALPHA',category:'Kategori Asli',image_url:null,model_3d_url:'/models/original.glb'}],
+    products:[{id:'product-1',slug:'model-ss1500',product_type:'b2b_system',status:'published',is_active:true,deleted_at:null,translation_source_revision:1,features:[],specs:[],seo_title:null,seo_description:null,name:'PERANGKAT ASLI SS1500',description:'Deskripsi produk asli dari CMS.',brand:'TALPHA',category:'Kategori Asli',image_url:null,model_3d_url:'/models/original.glb'}],
     brands:[{id:'talpha',name:'TALPHA',brandFilter:'TALPHA',logoSrc:'/images/brand-light.png',logoSrcDark:'/images/brand-dark.png'}],
     distribution:[{id:'distribution-1',name:'PT DISTRIBUTOR ASLI',description:'Deskripsi distribusi asli.',marketSegment:'Segmen asli',distributionType:'group_distribution'}],
     jobs:[{id:123,title:'POSISI ASLI',description:'Deskripsi lowongan asli.',employment_type:'Contract',department:{name:'Departemen Asli'},company:{name:'PT Autentik Karya Analitika'},location:'Lokasi Asli'}],

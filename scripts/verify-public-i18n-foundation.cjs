@@ -130,7 +130,7 @@ async function main() {
   const beforePackage = JSON.parse(execFileSync('git',['show','HEAD:package.json'],{cwd:root,encoding:'utf8'}));
   const afterPackage = JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
   equal(afterPackage.dependencies['next-intl'],'4.14.9','Only approved i18n dependency pinned');
-  delete afterPackage.dependencies['next-intl']; equal(afterPackage,beforePackage,'Other direct dependencies unchanged');
+  delete afterPackage.dependencies['next-intl']; delete beforePackage.dependencies['next-intl']; equal(afterPackage,beforePackage,'Other direct dependencies unchanged');
   console.log(`PASS: ${checks} unit/real-proxy checks; auth/recruitment transport mocked.`);
   if (!process.argv.includes('--unit')) await runtimeSmoke();
 }

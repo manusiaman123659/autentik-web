@@ -5,6 +5,7 @@ const allowed = new Set([
   'components/admin/ProductForm.tsx',
   'lib/validations/productTranslationSchema.ts',
   'lib/actions/productTranslations.ts',
+  'lib/actions/products.ts', // 003: focused verifier covers B2B-only public invalidation.
   'supabase/migrations/0066_product_translation_foundation.sql',
 ]);
 module.exports = diff => diff.trim().split(/\r?\n/).filter(file => file && !allowed.has(file)).join('\n');

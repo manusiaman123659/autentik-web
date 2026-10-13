@@ -7,6 +7,7 @@ import { Box, X, Info } from "lucide-react";
 import { DESIGN_TOKENS } from "@/lib/design-tokens";
 import type { ProductPhotoHotspot } from "@/types";
 import { computeContainedImageRect, type ImageRect } from "@/lib/photo-hotspot-utils";
+import { useTranslations } from "next-intl";
 
 // three.js is heavy — only load it when the visitor actually opens the "3D"
 // tab, so the bundle is never fetched on pages that never show a viewer.
@@ -49,6 +50,7 @@ export default function ProductMediaTabs({
   hotspots = [],
   photoHotspots = [],
 }: ProductMediaTabsProps) {
+  const t = useTranslations("products.media");
   const [tab, setTab] = useState<"foto" | "3d">("foto");
   const has3d = Boolean(model3dUrl);
 
@@ -311,7 +313,7 @@ export default function ProductMediaTabs({
           {tab === "foto" && currentImageHotspots.length > 0 && (
             <div
               role="note"
-              aria-label="Petunjuk interaksi produk"
+              aria-label={t("photoHint")}
               className="flex items-start gap-3 p-3.5 rounded-xl border border-[#0EA5A0]/25 bg-[#0EA5A0]/5 dark:bg-[#0EA5A0]/10 transition-colors"
             >
               <div className="p-1 rounded-lg bg-[#0EA5A0]/10 dark:bg-[#0EA5A0]/20 text-[#0EA5A0] shrink-0 mt-0.5">
@@ -319,10 +321,10 @@ export default function ProductMediaTabs({
               </div>
               <div className="space-y-0.5">
                 <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                  Jelajahi detail produk
+                  {t("featureDetail", { name })}
                 </h3>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Ketuk atau klik titik interaktif pada gambar untuk melihat informasi setiap bagian produk.
+                  {t("photoHint")}
                 </p>
               </div>
             </div>
@@ -387,7 +389,7 @@ export default function ProductMediaTabs({
                       top: `${pos.top}px`,
                       transform: "translate(-50%, -50%)",
                     }}
-                    aria-label={`Lihat detail ${ph.title}`}
+                    aria-label={t("showDetail", { name: ph.title })}
                     aria-expanded={isActive}
                   >
                     <div className="relative flex items-center justify-center pointer-events-none">
@@ -424,7 +426,7 @@ export default function ProductMediaTabs({
               <div
                 ref={cardRef}
                 role="dialog"
-                aria-label={`Detail fitur ${activePhotoHotspot.title}`}
+                aria-label={t("featureDetail", { name: activePhotoHotspot.title })}
                 className="absolute z-30 rounded-xl overflow-hidden shadow-xl shadow-slate-900/10 dark:shadow-2xl dark:shadow-black/30 border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 transition-all duration-200 animate-in fade-in zoom-in-95"
                 style={{
                   ...calloutStyle,
@@ -440,7 +442,7 @@ export default function ProductMediaTabs({
                     type="button"
                     onClick={() => setActivePhotoHotspotId(null)}
                     className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-slate-400 dark:focus:ring-white/40 shrink-0 ml-1.5"
-                    aria-label="Tutup detail fitur"
+                    aria-label={t("closeDetail")}
                   >
                     <X size={14} />
                   </button>
@@ -493,7 +495,7 @@ export default function ProductMediaTabs({
                   >
                     <Image
                       src={src}
-                      alt={`${name} thumbnail ${idx + 1}`}
+                      alt={t("thumbnail", { name, number: idx + 1 })}
                       fill
                       className="object-contain p-1.5"
                       sizes="64px"
@@ -518,10 +520,10 @@ export default function ProductMediaTabs({
           }}
         >
           {model3dUrl ? (
-            <Model3DViewer url={model3dUrl} hotspots={hotspots} />
+            <Model3DViewer url={model3dUrl} hotspots={hotspots} labels={{ loading: t("loading"), error: t("error"), hotspotHint: t("hotspotHint"), close: t("close") }} />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-500">
-              Model 3D tidak tersedia.
+              {t("missingModel")}
             </div>
           )}
         </div>
@@ -537,7 +539,7 @@ export default function ProductMediaTabs({
           className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-semibold border transition-all cursor-pointer bg-white text-slate-800 border-slate-200 hover:bg-slate-50 hover:border-[#0EA5A0] hover:text-[#0EA5A0] dark:bg-slate-900/60 dark:text-white dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:border-[#0EA5A0] dark:hover:text-[#0EA5A0]"
         >
           <Box size={18} />
-          {tab === "foto" ? "Lihat Produk dalam 3D" : "Lihat Foto"}
+          {tab === "foto" ? t("viewModel") : t("viewPhoto")}
         </button>
       )}
     </div>

@@ -20,7 +20,7 @@ import {
   FlaskConical,
   FileText,
 } from "lucide-react";
-import type { Product } from "@/types";
+import type { B2BCatalogueView } from "@/lib/public-product-presentation";
 import RfqModal from "@/components/product/RfqModal";
 import EmptyState from "@/components/ui/EmptyState";
 
@@ -29,38 +29,26 @@ const COMPANY_CATEGORIES = [
   {
     id: "all",
     brand: "Semua",
-    title: "Semua Kategori & Brand",
-    subtitle: "Seluruh instrumen & peralatan laboratorium",
   },
   {
     id: "talpha",
     brand: "Talpha",
-    title: "TALPHA",
-    subtitle: "Smart Air Quality Monitoring Devices",
   },
   {
     id: "cylab",
     brand: "Cylab",
-    title: "CYLAB",
-    subtitle: "Water Purification System",
   },
   {
     id: "autentik",
     brand: "Autentik",
-    title: "AUTENTIK",
-    subtitle: "Auto Dry Desiccator Cabinet",
   },
   {
     id: "ullun",
     brand: "Ullun",
-    title: "ULLUN",
-    subtitle: "Laboratory Furniture",
   },
   {
     id: "epal", 
     brand: "Epal",
-    title: "EPAL",
-    subtitle: "Environmental & Wastewater Solutions",
   },
 ];
 
@@ -70,22 +58,16 @@ const FEATURED_SOLUTIONS = [
   {
     icon: Cpu,
     tag: "TALPHA & AUTENTIK",
-    title: "IoT Monitoring & Smart Sensors",
-    description: "Pemantauan suhu, kelembapan, dan lingkungan laboratorium real-time berbasis IoT dengan notifikasi otomatis.",
     link: "/products?brand=Talpha",
   },
   {
     icon: Droplets,
     tag: "CYLAB WATER TECH",
-    title: "Ultra Pure Water Purification",
-    description: "Sistem pemurnian air laboratorium Tipe I & II standar ASTM D1193-91 dan Reverse Osmosis industri.",
     link: "/products?brand=Cylab",
   },
   {
     icon: FlaskConical,
     tag: "ULLUN INFRASTRUCTURE",
-    title: "Laboratory Furniture & Safety",
-    description: "Laminar Air Flow, Biosafety Cabinet, Fumehood, dan kabinet penyimpanan kimia tahan asam berstandar ISO.",
     link: "/products?brand=Ullun",
   },
 ];
@@ -94,11 +76,12 @@ function ProductCard({
   product,
   onRfqClick,
 }: {
-  product: Product;
-  onRfqClick: (product: Product) => void;
+  product: B2BCatalogueView;
+  onRfqClick: (product: B2BCatalogueView) => void;
 }) {
   const rfq = useTranslations("requests.rfq");
-  const displaySpecs = product.specs ? product.specs.slice(0, 3) : [];
+  const t = useTranslations("products.catalogue");
+  const displaySpecs = product.display.specs.slice(0, 3);
 
   return (
     <div
@@ -120,7 +103,7 @@ function ProductCard({
           {product.imageUrl ? (
             <Image
               src={product.imageUrl}
-              alt={product.name}
+              alt={product.display.name}
               fill
               className="object-contain p-4 group-hover:scale-105 transition-transform duration-300"
               sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) 50vw, (max-width: 1279px) 35vw, (max-width: 1536px) 25vw, 380px"
@@ -151,7 +134,7 @@ function ProductCard({
               className="text-lg font-bold group-hover:text-[#0EA5A0] transition-colors line-clamp-2 leading-snug"
               style={{ color: "var(--text-primary)" }}
             >
-              {product.name}
+              {product.display.name}
             </h3>
           </Link>
 
@@ -159,7 +142,7 @@ function ProductCard({
             className="text-sm leading-relaxed line-clamp-2"
             style={{ color: "var(--text-secondary)" }}
           >
-            {product.description}
+            {product.display.description}
           </p>
 
           {/* 3 Key Specifications */}
@@ -190,7 +173,7 @@ function ProductCard({
           href={`/products/${product.slug}`}
           className="inline-flex items-center justify-center min-h-11 px-3 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors gap-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
         >
-          <span>Detail</span>
+          <span>{t("detail")}</span>
           <ChevronRight size={13} />
         </Link>
         <button
@@ -200,7 +183,7 @@ function ProductCard({
             onRfqClick(product);
           }}
           className="inline-flex items-center justify-center gap-1.5 min-h-11 px-2 rounded-lg text-sm font-medium text-white bg-teal-600 hover:bg-teal-500 active:scale-95 transition-all shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
-          title="Minta Penawaran Resmi"
+          title={rfq("title")}
         >
           <FileText size={13} className="shrink-0" />
           <span>{rfq("triggerCompact")}</span>
@@ -210,7 +193,8 @@ function ProductCard({
   );
 }
 
-function KatalogContent({ products }: { products: Product[] }) {
+function KatalogContent({ products }: { products: B2BCatalogueView[] }) {
+  const t = useTranslations("products.catalogue");
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -223,7 +207,7 @@ function KatalogContent({ products }: { products: Product[] }) {
   const itemsPerPage = 6; // 3 columns x 2 rows = 6 items per page
 
   // Single RFQ modal state (lifted from ProductCard)
-  const [rfqProduct, setRfqProduct] = useState<Product | null>(null);
+  const [rfqProduct, setRfqProduct] = useState<B2BCatalogueView | null>(null);
 
   const handleBrandChipClick = (brandChip: string) => {
     setActiveBrand(brandChip);
@@ -273,16 +257,16 @@ function KatalogContent({ products }: { products: Product[] }) {
 
       const matchesSearch =
         searchQuery === "" ||
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.canonicalName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchQuery.toLowerCase());
+        p.canonicalDescription.toLowerCase().includes(searchQuery.toLowerCase());
 
       return matchesBrand && matchesSearch;
     });
 
     if (sortBy === "name-asc") {
-      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+      list = [...list].sort((a, b) => a.canonicalName.localeCompare(b.canonicalName));
     } else if (sortBy === "brand-asc") {
       list = [...list].sort((a, b) => a.brand.localeCompare(b.brand));
     }
@@ -323,18 +307,18 @@ function KatalogContent({ products }: { products: Product[] }) {
           <div className="inline-flex items-center gap-2 bg-white/70 dark:bg-white/10 border border-base dark:border-white/20 rounded-full px-4 py-1.5 mb-5 backdrop-blur-md">
             <Package size={14} className="text-[#0EA5A0]" />
             <span className="text-xs font-semibold uppercase tracking-widest text-[#0EA5A0]">
-              PT AUTENTIK KARYA ANALITIKA PRODUCTS
+              {t("eyebrow")}
             </span>
           </div>
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-heading mb-4 leading-tight">
-            Katalog Peralatan & Teknologi Laboratorium
+            {t("title")}
           </h1>
 
           {/* Description */}
           <p className="text-body dark:text-slate-200 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
-            Instrumen presisi tinggi, pemurnian air, dry cabinet, dan sistem pemantauan berbasis IoT berstandar internasional.
+            {t("description")}
           </p>
 
           {/* Wide Search Bar */}
@@ -347,12 +331,14 @@ function KatalogContent({ products }: { products: Product[] }) {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Cari produk lab, sensor, brand, atau spesifikasi (contoh: Talpha, WPS, Dry Cabinet, Fumehood)..."
+              placeholder={t("search")}
+              aria-label={t("search")}
               className="w-full pl-13 pr-12 py-3.5 rounded-2xl bg-white text-[#0B1F3A] placeholder:text-slate-400 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-[#0EA5A0]/40 transition-all shadow-md"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
+                aria-label={t("clearSearch")}
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
               >
                 <X size={16} />
@@ -363,7 +349,7 @@ function KatalogContent({ products }: { products: Product[] }) {
           {/* Brand Chips */}
           <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto">
             <span className="text-sm font-bold uppercase tracking-wider text-body mr-2">
-              Brand:
+              {t("brand")}
             </span>
             {BRAND_CHIPS.map((chip) => {
               const isActive = activeBrand.toLowerCase() === chip.toLowerCase();
@@ -377,7 +363,7 @@ function KatalogContent({ products }: { products: Product[] }) {
                       : "bg-white/70 hover:bg-white text-heading border border-base dark:bg-white/10 dark:hover:bg-white/20 dark:border-white/20"
                   }`}
                 >
-                  {chip}
+                  {chip === "Semua" ? t("allBrands") : chip}
                 </button>
               );
             })}
@@ -392,10 +378,10 @@ function KatalogContent({ products }: { products: Product[] }) {
         <section className="mb-16">
           <div className="text-center mb-8">
             <h2 className="text-2xl sm:text-3xl font-extrabold mb-2" style={{ color: "var(--text-primary)" }}>
-              Solusi Utama Laboratorium
+              {t("solutionsTitle")}
             </h2>
             <p className="text-sm font-light max-w-xl mx-auto" style={{ color: "var(--text-secondary)" }}>
-              Portofolio instrumen dan infrastruktur pilihan untuk memenuhi standar operasional industri & laboratorium analitik.
+              {t("solutionsDescription")}
             </p>
           </div>
 
@@ -419,10 +405,10 @@ function KatalogContent({ products }: { products: Product[] }) {
                       {item.tag}
                     </span>
                     <h3 className="text-xl font-bold mb-3 group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
-                      {item.title}
+                      {t(`solutions.${idx}.title`)}
                     </h3>
                     <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--text-secondary)" }}>
-                      {item.description}
+                      {t(`solutions.${idx}.description`)}
                     </p>
                   </div>
 
@@ -430,7 +416,7 @@ function KatalogContent({ products }: { products: Product[] }) {
                     href={item.link}
                     className="inline-flex items-center gap-2 text-sm font-bold text-teal-600 dark:text-teal-300 hover:text-[#0D9E98] transition-colors group/link mt-auto"
                   >
-                    <span>Jelajahi Produk</span>
+                    <span>{t("explore")}</span>
                     <ArrowRight size={14} className="group-hover/link:translate-x-1 transition-transform" />
                   </Link>
                 </div>
@@ -454,14 +440,14 @@ function KatalogContent({ products }: { products: Product[] }) {
             <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: "var(--border-subtle)" }}>
               <div className="flex items-center gap-2 font-bold text-base" style={{ color: "var(--text-primary)" }}>
                 <SlidersHorizontal size={18} className="text-[#0EA5A0]" />
-                <span>Kategori Produk</span>
+                <span>{t("categoriesTitle")}</span>
               </div>
               <button
                 onClick={handleResetFilters}
                 className="text-sm font-semibold text-body hover:text-[#0EA5A0] flex items-center gap-1 transition-colors"
               >
                 <RefreshCw size={12} />
-                Reset Filter
+                {t("reset")}
               </button>
             </div>
 
@@ -488,7 +474,7 @@ function KatalogContent({ products }: { products: Product[] }) {
                     }
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm">{cat.title}</span>
+                      <span className="font-bold text-sm">{t(`categories.${cat.id}.title`)}</span>
                       <ChevronRight
                         size={16}
                         className={isActive ? "text-white" : "text-slate-400"}
@@ -499,7 +485,7 @@ function KatalogContent({ products }: { products: Product[] }) {
                         isActive ? "text-slate-100" : "text-body"
                       }`}
                     >
-                      {cat.subtitle}
+                      {t(`categories.${cat.id}.subtitle`)}
                     </p>
                   </button>
                 );
@@ -514,15 +500,15 @@ function KatalogContent({ products }: { products: Product[] }) {
                 borderColor: "var(--border-subtle)",
               }}
             >
-              <p className="font-bold text-[#0EA5A0] text-sm">Butuh Penyesuaian Spesifikasi?</p>
+              <p className="font-bold text-[#0EA5A0] text-sm">{t("customTitle")}</p>
               <p className="leading-relaxed font-light" style={{ color: "var(--text-secondary)" }}>
-                PT Autentik Karya Analitika menerima rekayasa khusus instrumen & pengadaan laboratorium.
+                {t("customDescription")}
               </p>
               <Link
                 href="/contact"
                 className="inline-flex items-center gap-1 font-bold text-[#0EA5A0] hover:underline pt-1"
               >
-                Konsultasi dengan Sales Engineer
+                {t("sales")}
                 <ArrowRight size={12} />
               </Link>
             </div>
@@ -540,18 +526,18 @@ function KatalogContent({ products }: { products: Product[] }) {
             >
               <div>
                 <p className="text-sm font-medium text-slate-500">
-                  Menampilkan <span className="font-bold text-[#0EA5A0]">{filteredProducts.length}</span> produk laboratorium
+                  {t("summary", { count: filteredProducts.length })}
                   {activeBrand !== "Semua" && (
-                    <> (Brand: <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{activeBrand}</span>)</>
+                    <> ({t("brandSummary", { brand: activeBrand })})</>
                   )}
                 </p>
               </div>
 
               {/* Sort Dropdown */}
               <div className="flex min-w-0 max-w-full items-center gap-2 self-end sm:self-auto">
-                <span className="text-sm font-semibold text-body whitespace-nowrap">Urutkan:</span>
+                <span className="text-sm font-semibold text-body whitespace-nowrap">{t("sort")}</span>
                 <select
-                  aria-label="Urutkan produk"
+                  aria-label={t("sortLabel")}
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as "relevance" | "name-asc" | "brand-asc")}
                   className="min-w-0 max-w-full px-3.5 py-2 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]"
@@ -561,9 +547,9 @@ function KatalogContent({ products }: { products: Product[] }) {
                     color: "var(--text-primary)",
                   }}
                 >
-                  <option value="relevance">Relevansi</option>
-                  <option value="name-asc">Nama Produk (A-Z)</option>
-                  <option value="brand-asc">Brand (A-Z)</option>
+                  <option value="relevance">{t("relevance")}</option>
+                  <option value="name-asc">{t("nameAsc")}</option>
+                  <option value="brand-asc">{t("brandAsc")}</option>
                 </select>
               </div>
             </div>
@@ -582,14 +568,14 @@ function KatalogContent({ products }: { products: Product[] }) {
             ) : (
               <EmptyState
                 icon={Package}
-                title="Tidak ada produk yang cocok"
-                description="Coba ubah kata kunci pencarian, pilih brand lain, atau reset filter Anda."
+                title={t("emptyTitle")}
+                description={t("emptyDescription")}
                 action={
                 <button
                   onClick={handleResetFilters}
                    className="px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
                 >
-                  Reset Filter
+                  {t("reset")}
                 </button>
                 }
               />
@@ -600,7 +586,7 @@ function KatalogContent({ products }: { products: Product[] }) {
               <div className="flex flex-wrap items-center justify-center gap-2 pt-8">
                 <button
                   disabled={currentPage === 1}
-                  aria-label="Halaman sebelumnya"
+                  aria-label={t("previous")}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   className="p-2.5 rounded-xl border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   style={{
@@ -633,7 +619,7 @@ function KatalogContent({ products }: { products: Product[] }) {
 
                 <button
                   disabled={currentPage === totalPages}
-                  aria-label="Halaman berikutnya"
+                  aria-label={t("next")}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   className="p-2.5 rounded-xl border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   style={{
@@ -656,17 +642,17 @@ function KatalogContent({ products }: { products: Product[] }) {
             <Building2 size={32} />
           </div>
           <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: "var(--text-primary)" }}>
-            Pengadaan & Rekayasa Laboratorium Turnkey
+            {t("procurementTitle")}
           </h2>
           <p className="text-base leading-relaxed max-w-2xl mx-auto font-light" style={{ color: "var(--text-secondary)" }}>
-            PT Autentik Karya Analitika menerima pengadaan tender skala besar, integrasi IoT kustom, serta proyek perancangan laboratorium turnkey untuk sektor industri & pendidikan.
+            {t("procurementDescription")}
           </p>
           <div className="flex flex-wrap gap-4 justify-center pt-4">
             <Link
               href="/contact"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] shadow-lg hover:opacity-95 transition-all"
             >
-              Konsultasi dengan Sales Engineer
+              {t("sales")}
               <ArrowRight size={18} />
             </Link>
             <Link
@@ -678,7 +664,7 @@ function KatalogContent({ products }: { products: Product[] }) {
                 color: "var(--text-primary)",
               }}
             >
-              Kunjungi Marketplace / Store
+              {t("store")}
             </Link>
           </div>
         </div>
@@ -690,18 +676,20 @@ function KatalogContent({ products }: { products: Product[] }) {
         isOpen={rfqProduct !== null}
         onClose={() => setRfqProduct(null)}
         productId={rfqProduct?.id}
-        productName={rfqProduct?.name}
+        productName={rfqProduct?.canonicalName}
+        displayName={rfqProduct?.display.name}
       />
     </div>
   );
 }
 
-export default function KatalogClient({ products }: { products: Product[] }) {
+export default function KatalogClient({ products }: { products: B2BCatalogueView[] }) {
+  const t = useTranslations("products.catalogue");
   return (
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center text-slate-400 font-medium">
-          Memuat katalog laboratorium...
+          {t("loading")}
         </div>
       }
     >

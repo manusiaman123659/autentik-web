@@ -8,6 +8,7 @@ import { createClient } from "@/utils/supabase/server";
 import { productIdSchema, productSchema, type VariantRow } from "@/lib/validations/productSchema";
 import { recordAudit } from "@/lib/audit";
 import { resolveAkaProductMediaUrl } from "@/lib/supabase-public-media";
+import { revalidateB2BProduct } from "@/lib/product-public-revalidation";
 
 export interface ActionResult {
   success: boolean;
@@ -101,14 +102,16 @@ export async function upsertProduct(
   // delete replaced/removed files from Storage after a successful save.
   let oldBrochureUrl: string | null = null;
   let oldModel3dUrl: string | null = null;
+  let oldSlug: string | null = null;
   if (isB2B && p.id?.trim()) {
     const { data: existing } = await supabase
       .from("products")
-      .select("brochure_url, model_3d_url")
+      .select("brochure_url, model_3d_url, slug")
       .eq("id", p.id.trim())
       .maybeSingle();
     oldBrochureUrl = existing?.brochure_url ?? null;
     oldModel3dUrl = existing?.model_3d_url ?? null;
+    oldSlug = existing?.slug ?? null;
   }
 
   const record = isB2B
@@ -199,6 +202,8 @@ export async function upsertProduct(
     { name: p.name, type: p.productType }
   );
   revalidateProductRoutes();
+  // Invalidate after the primary write, including partial child-save success paths.
+  if (isB2B) revalidateB2BProduct([oldSlug, p.slug]);
 
   // Wire variants untuk sparepart via RPC
   if (variantsPayload && isSparepart) {
@@ -327,7 +332,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id)
     .is("deleted_at", null)
-    .select("id")
+    .select("id, slug, product_type")
     .maybeSingle();
   if (error) {
     console.error("[action] archive product", { code: error.code, message: error.message });
@@ -340,6 +345,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 
   await recordAudit("product.archived", "product", id, { id });
   revalidateProductRoutes();
+  if (archived.product_type === "b2b_system") revalidateB2BProduct([archived.slug]);
 
   return { success: true, message: "Produk berhasil diarsipkan." };
 }
@@ -380,6 +386,7 @@ export async function restoreProduct(id: string): Promise<ActionResult> {
   revalidateProductRoutes();
   revalidatePath("/products");
   revalidatePath("/store");
+  if (restored.product_type === "b2b_system") revalidateB2BProduct([restored.slug]);
   revalidatePath(
     restored.product_type === "sparepart"
       ? `/store/${restored.slug}`

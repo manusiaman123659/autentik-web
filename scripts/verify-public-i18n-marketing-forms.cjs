@@ -30,10 +30,10 @@ async function main(){
     for(const locale of ['en','zh-CN']){const translated=leaves(require(path.join(root,'messages',locale,namespace+'.json')));equal(Object.keys(translated).sort(),Object.keys(id).sort(),'Catalog keys complete '+locale+'/'+namespace);for(const text of Object.values(translated))equal(text.trim().length>0,true,'No empty translated leaf');}
   }
   for(const route of ['privacy-policy','terms-of-service']){
-    const before=execFileSync('git',['show',`HEAD:app/(site)/${route}/page.tsx`],{cwd:root,encoding:'utf8'});const after=fs.readFileSync(path.join(root,`app/(public)/[locale]/(site)/${route}/page.tsx`),'utf8');
+    const before=execFileSync('git',['show',`HEAD:app/(public)/[locale]/(site)/${route}/page.tsx`],{cwd:root,encoding:'utf8'});const after=fs.readFileSync(path.join(root,`app/(public)/[locale]/(site)/${route}/page.tsx`),'utf8');
     const body=source=>source.match(/className="public-rich-text"[\s\S]*?>\s*([\s\S]*?)\s*<\/div>/)[1];equal(body(after),body(before),'Full Indonesian legal body unchanged '+route);equal(after.includes('lang="id"'),true,'Indonesian legal language marked');equal(after.includes('locale !== "id"'),true,'Notice limited to non-ID locale');
   }
-  const modal=fs.readFileSync(path.join(root,'components/product/RfqModal.tsx'),'utf8');equal(modal.includes('href={result.waUrl}'),true,'Server WhatsApp URL remains authoritative');equal(modal.includes('data.message'),false,'Backend prose not displayed');equal(modal.includes('JSON.stringify(form)'),true,'RFQ request payload unchanged');
+  const modal=fs.readFileSync(path.join(root,'components/product/RfqModal.tsx'),'utf8');equal(modal.includes('href={result.waUrl}'),true,'Server WhatsApp URL remains authoritative');equal(modal.includes('data.message'),false,'Backend prose not displayed');equal(modal.includes('JSON.stringify({ ...form, productId: productId || "", productName: productName || "" })'),true,'RFQ request pins canonical identity props');
   if(!process.argv.includes('--unit'))await require('./verify-public-i18n-marketing-forms-browser.cjs')(equal);
   console.log(`PASS: ${checks} marketing form checks.`);
 }

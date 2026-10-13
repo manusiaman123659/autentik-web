@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { FileText, FileDown, HardDrive, Shield, Download, Lock } from "lucide-react";
-import { FILE_TYPE_LABELS, type FileType } from "@/lib/validations/rfqSchema";
 import GatedDownloadModal from "./GatedDownloadModal";
 import type { PublicTechnicalDocument } from "@/lib/public-technical-document";
 
@@ -15,6 +15,7 @@ const FILE_ICONS: Record<string, typeof FileText> = {
 };
 
 export default function TechnicalDocsSection({ documents }: { documents: PublicTechnicalDocument[] }) {
+  const t = useTranslations("products.documents");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<Extract<PublicTechnicalDocument, { requires_lead: true }> | null>(null);
 
@@ -45,7 +46,7 @@ export default function TechnicalDocsSection({ documents }: { documents: PublicT
             className="text-2xl sm:text-3xl font-bold tracking-tight mb-8"
             style={{ color: "var(--text-primary)" }}
           >
-            Dokumen Teknis & CAD
+            {t("title")}
           </h2>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -83,7 +84,7 @@ export default function TechnicalDocsSection({ documents }: { documents: PublicT
                   </h3>
 
                   <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text-secondary)" }}>
-                    <span>{FILE_TYPE_LABELS[doc.file_type as FileType] ?? doc.file_type}</span>
+                    <span>{Object.hasOwn(FILE_ICONS, doc.file_type) ? t(`types.${doc.file_type}`) : doc.file_type}</span>
                     {doc.file_size_kb && (
                       <>
                         <span>&middot;</span>
@@ -93,7 +94,7 @@ export default function TechnicalDocsSection({ documents }: { documents: PublicT
                   </div>
 
                   <p className="text-xs mt-3" style={{ color: "var(--text-secondary)" }}>
-                    {doc.requires_lead ? "Isi form untuk download" : "Download langsung"}
+                    {t(doc.requires_lead ? "gated" : "direct")}
                   </p>
                 </button>
               );

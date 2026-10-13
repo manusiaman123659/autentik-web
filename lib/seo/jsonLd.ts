@@ -2,6 +2,7 @@ import type { ProductRow } from "@/lib/admin-data";
 import type { CareerPosition } from "@/lib/data/careers";
 import { getCanonicalOrigin } from "@/lib/public-url";
 import { localizeHref, type PublicLocale } from "@/i18n/locales";
+import type { ResolvedProductContent } from "@/lib/product-translation-types";
 
 const baseUrl = getCanonicalOrigin();
 
@@ -34,13 +35,13 @@ export function organizationSchema() {
   };
 }
 
-export function productSchema(product: ProductRow, locale: PublicLocale = "id") {
+export function productSchema(product: ProductRow, locale: PublicLocale = "id", display?: Pick<ResolvedProductContent, "name" | "description">) {
   return {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.name,
+    name: display?.name ?? product.name,
     image: product.image_url || undefined,
-    description: product.description,
+    description: display?.description ?? product.description,
     brand: {
       "@type": "Brand",
       name: product.brand,

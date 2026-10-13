@@ -4,6 +4,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { isPublicLocale } from "@/i18n/locales";
 import { loadMessages } from "@/i18n/messages";
 import { publicMetadata } from "@/i18n/metadata";
+import { resolvePublicB2BProducts } from "@/lib/public-b2b-products";
+import { toB2BHomeView } from "@/lib/public-product-presentation";
 import Hero from "@/components/home/Hero";
 import AboutUs from "@/components/home/AboutUs";
 import Brands from "@/components/home/Brands";
@@ -54,14 +56,19 @@ export default async function HomePage() {
     getWhatsAppContact("mika_distributor_inquiry"),
     getWhatsAppContact("mika_product_sales"),
   ]);
+  const products3d = publicProducts.filter((product) => product.model_3d_url?.trim());
+  const resolved = await resolvePublicB2BProducts([...new Map([...featuredProducts, ...products3d].map(row => [row.id, row])).values()], locale);
+  const contentById = new Map(resolved.map(product => [product.canonical.id, product]));
+  const featuredViews = featuredProducts.map(row => toB2BHomeView(contentById.get(row.id)!));
+  const modelViews = products3d.map(row => toB2BHomeView(contentById.get(row.id)!));
   const heroSlides = resolveHeroSlides(featuredProducts).map(slide => ({
     ...slide,
+    ...(!slide.isCompanyFallback && contentById.has(slide.key) ? { productName: contentById.get(slide.key)!.content.name, subtitle: contentById.get(slide.key)!.content.description } : {}),
     ctaLabel: home.hero.viewProduct,
     ...(slide.isCompanyFallback ? { badge: home.hero.companyBadge, subtitle: home.hero.companySubtitle } : {}),
     ...(!slide.isCompanyFallback && !featuredProducts.find(product => product.id === slide.key)?.brand
       ? { badge: home.hero.productBadge } : {}),
   }));
-  const products3d = publicProducts.filter((product) => product.model_3d_url?.trim());
   const hasGroupDistribution = distributionEntities.some(
     (entity) => entity.distributionType === "group_distribution",
   );
@@ -75,9 +82,9 @@ export default async function HomePage() {
       <Hero slides={heroSlides} />
       <AboutUs />
       <Brands items={brandItems} />
-      <FeaturedProducts products={featuredProducts} />
+       <FeaturedProducts products={featuredViews} />
       <CoreSolutions />
-      {products3d.length > 0 && <Product3DTeaser products={products3d} />}
+       {modelViews.length > 0 && <Product3DTeaser products={modelViews} />}
       {hasGroupDistribution && (
         <DistributionNetworkTeaser entities={distributionEntities} number={distributorContact?.number ?? null} />
       )}

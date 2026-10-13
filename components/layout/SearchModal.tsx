@@ -2,22 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Search, X, Package, Briefcase, FileText, ArrowRight } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
+import { matchesCanonicalB2BSearch, type B2BSearchView } from "@/lib/public-product-presentation";
 import type { MikaJob } from "@/types/mika-career";
 
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface SearchProduct {
-  slug: string;
-  name: string;
-  brand: string;
-  category: string;
-  description: string;
 }
 
 interface SearchJob {
@@ -42,40 +34,30 @@ const sitePages = [
 ];
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
+  const locale = useLocale();
+  return isOpen ? <SearchModalContent key={locale} locale={locale} onClose={onClose} /> : null;
+}
+
+function SearchModalContent({ locale, onClose }: { locale: string; onClose: () => void }) {
   const t = useTranslations("common");
   const navigation = useTranslations("navigation");
   const pages = sitePages.map(page => ({ ...page, title: navigation(page.title) }));
   const [query, setQuery] = useState("");
-  const [products, setProducts] = useState<SearchProduct[]>([]);
+  const [products, setProducts] = useState<B2BSearchView[]>([]);
   const [jobs, setJobs] = useState<SearchJob[]>([]);
   const router = useRouter();
 
-  // Product search retains its existing RLS-filtered query. Careers use only
-  // the fixed-scope server proxy, never the unverified legacy careers table.
+  // One public index load per opening/locale; keystrokes match canonical text locally.
   useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    const supabase = createClient();
-    supabase
-        .from("products")
-        .select("slug, name, brand, category, description")
-        .eq("product_type", "b2b_system")
-        .eq("status", "published")
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("sort_order", { ascending: true }).then((prodRes) => {
-      if (cancelled) return;
-      if (!prodRes.error && prodRes.data) {
-        setProducts(prodRes.data as SearchProduct[]);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen]);
+    const controller = new AbortController();
+    void fetch(`/api/products/search?${new URLSearchParams({ locale })}`, { cache: "no-store", signal: controller.signal })
+      .then(async response => { const json = await response.json(); if (!controller.signal.aborted) setProducts(response.ok && json.success && Array.isArray(json.data) ? json.data : []); })
+      .catch(() => { if (!controller.signal.aborted) setProducts([]); });
+    return () => controller.abort();
+  }, [locale]);
 
   useEffect(() => {
-    if (!isOpen || !query.trim()) return;
+    if (!query.trim()) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
@@ -89,26 +71,22 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
       } catch { if (!controller.signal.aborted) setJobs([]); }
     }, 280);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [isOpen, query]);
+  }, [query]);
 
   // Keyboard shortcut listener (Cmd+K / Ctrl+K & Escape)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        if (isOpen) {
-          onClose();
-        }
+        onClose();
       }
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === "Escape") {
         onClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
+  }, [onClose]);
 
   const trimmed = query.trim().toLowerCase();
 
@@ -118,11 +96,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
   const filteredProducts = trimmed
     ? products.filter(
-        (prod) =>
-          prod.name.toLowerCase().includes(trimmed) ||
-          prod.brand.toLowerCase().includes(trimmed) ||
-          prod.category.toLowerCase().includes(trimmed) ||
-          prod.description.toLowerCase().includes(trimmed)
+        (prod) => matchesCanonicalB2BSearch(prod, trimmed)
       ).slice(0, 5)
     : [];
 
@@ -199,11 +173,11 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                           {prod.brand}
                         </span>
                         <h4 className="text-sm font-semibold group-hover:text-[#0EA5A0] transition-colors" style={{ color: "var(--text-primary)" }}>
-                          {prod.name}
+                          {prod.display.name}
                         </h4>
                       </div>
                       <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">
-                        {prod.description}
+                        {prod.display.description}
                       </p>
                     </div>
                     <ArrowRight size={16} className="text-slate-400 group-hover:text-[#0EA5A0] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100" />

@@ -17,6 +17,11 @@ export interface Hotspot {
   title: string;
   description: string | null;
 }
+export interface ProductViewerLabels { loading: string; error: string; hotspotHint: string; close: string }
+export const DEFAULT_VIEWER_LABELS: ProductViewerLabels = {
+  loading: "Memuat model 3D...", error: "Model 3D gagal dimuat. File mungkin rusak atau format tidak didukung.",
+  hotspotHint: "Klik titik merah pada model untuk melihat detail bagian", close: "Tutup detail",
+};
 
 const DRAG_THRESHOLD = 5;
 
@@ -244,21 +249,21 @@ function ModelView({
   );
 }
 
-function LoadingOverlay() {
+function LoadingOverlay({ label = DEFAULT_VIEWER_LABELS.loading }: { label?: string }) {
   const { active, progress } = useProgress();
   if (!active) return null;
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-50/95 dark:bg-[#0a1628]/90">
       <Loader2 size={26} className="animate-spin text-[#0EA5A0]" />
       <p className="text-sm text-body">
-        Memuat model 3D... {Math.round(progress)}%
+        {label} {Math.round(progress)}%
       </p>
     </div>
   );
 }
 
 class ViewerErrorBoundary extends Component<
-  { children: ReactNode },
+  { children: ReactNode; errorLabel?: string },
   { hasError: boolean }
 > {
   state = { hasError: false };
@@ -271,8 +276,7 @@ class ViewerErrorBoundary extends Component<
         <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-page-alt p-6 text-center">
           <AlertTriangle size={26} className="text-amber-400" />
           <p className="text-sm text-body">
-            Model 3D gagal dimuat. File mungkin rusak atau format tidak
-            didukung.
+            {this.props.errorLabel ?? DEFAULT_VIEWER_LABELS.error}
           </p>
         </div>
       );
@@ -286,12 +290,15 @@ export default function Product3DViewer({
   hotspots = [],
   editable = false,
   onHotspotPlace,
+  labels,
 }: {
   url: string;
   hotspots?: Hotspot[];
   editable?: boolean;
   onHotspotPlace?: (local: { x: number; y: number; z: number }) => void;
+  labels?: Partial<ProductViewerLabels>;
 }) {
+  const copy = { ...DEFAULT_VIEWER_LABELS, ...labels };
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
   const displayedHotspot = activeKey
@@ -303,7 +310,7 @@ export default function Product3DViewer({
     : null;
 
   return (
-    <ViewerErrorBoundary>
+    <ViewerErrorBoundary errorLabel={copy.error}>
       <div
         className="relative w-full h-full"
       >
@@ -327,7 +334,7 @@ export default function Product3DViewer({
             />
           </Suspense>
         </Canvas>
-        <LoadingOverlay />
+        <LoadingOverlay label={copy.loading} />
       </div>
       <div className="mt-3 rounded-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3 min-h-[72px]">
         {displayedHotspot ? (
@@ -339,6 +346,7 @@ export default function Product3DViewer({
               <button
                 type="button"
                 onClick={() => setActiveKey(null)}
+                aria-label={copy.close}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0 leading-none text-lg"
               >
                 &times;
@@ -353,7 +361,7 @@ export default function Product3DViewer({
         ) : (
           <p className="text-sm text-center text-slate-600 dark:text-slate-300">
             {hotspots.length > 0
-              ? "Klik titik merah pada model untuk melihat detail bagian"
+              ? copy.hotspotHint
               : ""}
           </p>
         )}
