@@ -152,11 +152,22 @@ export function EmptyState({
   );
 }
 
-export function TableShell({ children }: { children: ReactNode }) {
+export function TableShell({ children, tableClassName, scrollLabel, scrollDescriptionId }: {
+  children: ReactNode;
+  tableClassName?: string;
+  scrollLabel?: string;
+  scrollDescriptionId?: string;
+}) {
   return (
     <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">{children}</table>
+      <div
+        className={cn("overflow-x-auto", scrollLabel && "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0EA5A0]")}
+        role={scrollLabel ? "region" : undefined}
+        aria-label={scrollLabel}
+        aria-describedby={scrollDescriptionId}
+        tabIndex={scrollLabel ? 0 : undefined}
+      >
+        <table className={cn("w-full text-sm", tableClassName)}>{children}</table>
       </div>
     </Card>
   );

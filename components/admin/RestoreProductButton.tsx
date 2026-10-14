@@ -38,7 +38,7 @@ export default function RestoreProductButton({ id, name }: { id: string; name?: 
         onClick={() => setOpen(true)}
         disabled={busy}
         aria-label={`Pulihkan Produk${name ? ` ${name}` : ""}`}
-        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[#0EA5A0]/30 text-xs font-semibold text-[#0C8C87] dark:text-teal-300 hover:bg-[#0EA5A0]/10 hover:border-[#0EA5A0]/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[#0EA5A0]/30 text-xs font-semibold text-[#0C8C87] dark:text-teal-300 hover:bg-[#0EA5A0]/10 hover:border-[#0EA5A0]/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0EA5A0]"
       >
         <RotateCcw size={12} aria-hidden="true" />
         Pulihkan
