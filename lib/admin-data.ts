@@ -11,8 +11,9 @@ import {
 import { getAdminUser, requireCapability } from "@/lib/admin";
 import { APPLICATION_ROLES, hasCapability, isCmsRole, type CmsRole } from "@/lib/admin-permissions";
 import { parseBankAccount, type BankAccount } from "@/lib/bank-account";
+import { toProductAttributes, type ProductAttributes } from "@/lib/product-attributes";
 
-export interface ProductRow {
+export interface ProductRow extends ProductAttributes {
   id: string;
   slug: string;
   name: string;
@@ -560,6 +561,7 @@ export async function listStoreProducts(): Promise<ProductRow[]> {
       : [];
     return {
       ...p,
+      ...toProductAttributes(p),
       has_active_variants: activeVariants.length > 0,
     };
   });
@@ -570,7 +572,8 @@ export async function getProduct(id: string): Promise<ProductRow | null> {
   const supabase = await getSupabase();
   const { data, error } = await supabase.from("products").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
   if (error || !data) return null;
-  return data as ProductRow;
+  const product = data as ProductRow;
+  return product.product_type === "sparepart" ? { ...product, ...toProductAttributes(product) } : product;
 }
 
 export async function getProductBySlug(slug: string): Promise<ProductRow | null> {
@@ -582,7 +585,8 @@ export async function getProductBySlug(slug: string): Promise<ProductRow | null>
     .is("deleted_at", null)
     .maybeSingle();
   if (error || !data) return null;
-  return data as ProductRow;
+  const product = data as ProductRow;
+  return product.product_type === "sparepart" ? { ...product, ...toProductAttributes(product) } : product;
 }
 
 export async function getRelatedProducts(

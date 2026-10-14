@@ -8,6 +8,8 @@ import {
   useMemo,
   useState,
 } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { minimumPurchase, purchaseQuantity, refreshPurchaseRules, type PurchaseRuleRow } from "@/lib/product-attributes";
 
 export interface CartItem {
   key: string;
@@ -21,6 +23,9 @@ export interface CartItem {
   price: number;
   stock: number;
   quantity: number;
+  min_purchase_qty?: number;
+  unit?: string | null;
+  purchase_unavailable?: boolean;
 }
 
 export function getCartItemKey(productId: string, variantId?: string | null): string {
@@ -38,6 +43,9 @@ export interface CartItemInput {
   price?: number | null;
   stock?: number | null;
   fulfillmentType?: "ready_stock" | "custom_request" | "third_party" | null;
+  min_purchase_qty?: number;
+  unit?: string | null;
+  has_active_variants?: boolean;
 }
 
 interface CartContextValue {
@@ -49,6 +57,8 @@ interface CartContextValue {
   removeItem: (keyOrId: string, variantId?: string | null) => void;
   updateQty: (keyOrId: string, quantity: number, variantId?: string | null) => void;
   clearCart: () => boolean;
+  rulesLoading: boolean;
+  rulesError: boolean;
 }
 
 const STORAGE_KEY = "autentik-cart:v1";
@@ -74,13 +84,13 @@ function readStorage(): CartItem[] {
         typeof x.price === "number" &&
         typeof x.stock === "number" &&
         typeof x.quantity === "number" &&
-        x.quantity >= 1
+        Number.isInteger(x.quantity) && x.quantity >= 1 && Number.isFinite(x.price) && Number.isInteger(x.stock) && x.stock >= 0
       ) {
         const variantId = typeof x.variant_id === "string" && x.variant_id ? x.variant_id : null;
         const key = typeof x.key === "string" && x.key.includes("::") ? x.key : getCartItemKey(x.id, variantId);
         const existing = map.get(key);
         if (existing) {
-          existing.quantity = Math.min(existing.stock, existing.quantity + x.quantity);
+          existing.quantity += x.quantity;
         } else {
           map.set(key, {
             key,
@@ -94,6 +104,8 @@ function readStorage(): CartItem[] {
             price: x.price,
             stock: x.stock,
             quantity: x.quantity,
+            min_purchase_qty: typeof x.min_purchase_qty === "number" ? x.min_purchase_qty : undefined,
+            unit: typeof x.unit === "string" ? x.unit : null,
           });
         }
       }
@@ -117,6 +129,43 @@ export default function CartProvider({
 }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [rulesLoading, setRulesLoading] = useState(true);
+  const [rulesError, setRulesError] = useState(false);
+  const ruleIds = JSON.stringify([...new Set(items.map(item => item.id))].sort());
+
+  useEffect(() => {
+    if (!hydrated) return;
+    let cancelled = false;
+    let generation = 0;
+    const refresh = async () => {
+      const currentGeneration = ++generation;
+      setRulesLoading(true);
+      try {
+        const ids: string[] = JSON.parse(ruleIds);
+        const rows: PurchaseRuleRow[] = [];
+        const supabase = createClient();
+        for (let start = 0; start < ids.length; start += 100) {
+          const { data, error } = await supabase.from("products")
+            .select("id,min_purchase_qty,unit,stock,product_variants(id,stock,is_active,deleted_at)")
+            .in("id", ids.slice(start, start + 100)).eq("product_type", "sparepart")
+            .eq("status", "published").eq("is_active", true).eq("is_store_visible", true)
+            .eq("fulfillment_type", "ready_stock").is("deleted_at", null);
+          if (error) throw error;
+          rows.push(...(data ?? []) as PurchaseRuleRow[]);
+        }
+        if (cancelled || currentGeneration !== generation) return;
+        setItems(previous => refreshPurchaseRules(previous, rows));
+        setRulesError(false);
+      } catch {
+        if (!cancelled && currentGeneration === generation) setRulesError(true);
+      } finally {
+        if (!cancelled && currentGeneration === generation) setRulesLoading(false);
+      }
+    };
+    void refresh();
+    window.addEventListener("focus", refresh);
+    return () => { cancelled = true; window.removeEventListener("focus", refresh); };
+  }, [hydrated, ruleIds]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -136,7 +185,11 @@ export default function CartProvider({
   const addItem = useCallback((product: CartItemInput, quantity = 1) => {
     setItems((prev) => {
       const stock = Math.max(0, product.stock ?? 0);
-      if (stock < 1 || product.price == null) return prev;
+      const minimum = minimumPurchase(product.min_purchase_qty);
+      const qty = purchaseQuantity(quantity, stock, minimum);
+      if (qty === null || product.price == null || !Number.isFinite(product.price)
+        || (product.fulfillmentType ?? "ready_stock") !== "ready_stock"
+        || (product.has_active_variants && !product.variant_id)) return prev;
       const variantId = product.variant_id ?? null;
       const variantLabel = product.variant_label ?? null;
       const key = getCartItemKey(product.id, variantId);
@@ -153,8 +206,9 @@ export default function CartProvider({
         price: product.price,
         stock,
         quantity: 1,
+        min_purchase_qty: minimum,
+        unit: product.unit ?? null,
       };
-      const qty = Math.max(1, Math.min(stock, quantity));
 
       // If a valid variant is selected, clean up any conflicting legacy unselected (null) variant of the same product
       let baseList = prev;
@@ -170,7 +224,10 @@ export default function CartProvider({
           ...existing,
           price: item.price,
           stock: item.stock,
-          quantity: Math.min(item.stock, existing.quantity + qty),
+          min_purchase_qty: minimum,
+          unit: item.unit,
+          purchase_unavailable: false,
+          quantity: Math.min(item.stock, 999, existing.quantity + qty),
         };
         return nextList;
       }
@@ -195,8 +252,9 @@ export default function CartProvider({
         const matches = keyOrId.includes("::")
           ? i.key === keyOrId
           : i.id === keyOrId && i.variant_id === (variantId ?? null);
-        return matches
-          ? { ...i, quantity: Math.max(1, Math.min(i.stock, quantity)) }
+        const next = purchaseQuantity(quantity, i.stock, minimumPurchase(i.min_purchase_qty));
+        return matches && next !== null && !i.purchase_unavailable
+          ? { ...i, quantity: next }
           : i;
       })
     );
@@ -232,8 +290,10 @@ export default function CartProvider({
       removeItem,
       updateQty,
       clearCart,
+      rulesLoading,
+      rulesError,
     }),
-    [items, hydrated, totalItems, subtotal, addItem, removeItem, updateQty, clearCart]
+    [items, hydrated, totalItems, subtotal, addItem, removeItem, updateQty, clearCart, rulesLoading, rulesError]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

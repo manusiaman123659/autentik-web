@@ -23,6 +23,8 @@ import CopyLinkButton from "@/components/store/CopyLinkButton";
 import StickyMobileBar from "@/components/store/StickyMobileBar";
 import WishlistButton from "@/components/store/WishlistButton";
 import { useRecentlyViewed } from "@/components/store/useRecentlyViewed";
+import ProductAttributes from "@/components/product/ProductAttributes";
+import { minimumPurchase, purchaseQuantity, toProductAttributes } from "@/lib/product-attributes";
 
 type Tab = "description" | "specs";
 
@@ -58,10 +60,11 @@ export default function StoreProductDetail({
 
   const productVariants = variants;
   const hasVariants = productVariants.length > 0;
+  const minimum = minimumPurchase(product.min_purchase_qty);
 
   const [selectedVariant, setSelectedVariant] = useState<StoreVariant | null>(() => {
     if (productVariants.length === 0) return null;
-    const available = productVariants.filter((v) => v.stock > 0);
+    const available = productVariants.filter((v) => v.stock >= minimum);
     return available[0] ?? productVariants[0];
   });
 
@@ -98,7 +101,8 @@ export default function StoreProductDetail({
   const features: string[] = (product.features ?? []).map(String);
 
   async function handleBuyNow(qty: number) {
-    if (hasVariants && !selectedVariant) {
+    if (!isReady || effectivePrice == null || (hasVariants && !selectedVariant)
+      || purchaseQuantity(qty, effectiveStock, minimum) !== qty) {
       return;
     }
     const directItem: DirectBuyItem = {
@@ -113,6 +117,8 @@ export default function StoreProductDetail({
       price: effectivePrice ?? 0,
       stock: effectiveStock ?? 0,
       quantity: qty,
+      min_purchase_qty: minimum,
+      unit: product.unit ?? null,
     };
     setDirectBuyItem(directItem);
 
@@ -209,7 +215,7 @@ export default function StoreProductDetail({
                     {hasDiscount && (
                       <span className="text-xs text-slate-400 line-through">{formatRupiah(product.compare_at_price!)}</span>
                     )}
-                    <span className="text-red-600 dark:text-red-400 font-bold text-xl">{formatRupiah(effectivePrice)}</span>
+                    <span className="text-red-600 dark:text-red-400 font-bold text-xl">{formatRupiah(effectivePrice)}{product.unit ? ` / ${product.unit}` : ""}</span>
                   </>
                 ) : (
                   <span className="text-sm font-medium text-slate-400">Harga: hubungi kami</span>
@@ -362,12 +368,7 @@ export default function StoreProductDetail({
                   <span style={{ color: "var(--text-muted)" }}>Kategori</span>
                   <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{product.category}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--text-muted)" }}>Berat</span>
-                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                    {product.weight_grams != null ? `${product.weight_grams}g` : "—"}
-                  </span>
-                </div>
+                <ProductAttributes attributes={toProductAttributes(product)} />
               </div>
 
               <div className="border-t" style={{ borderColor: "var(--border-subtle)" }} />
@@ -378,7 +379,7 @@ export default function StoreProductDetail({
                   {hasDiscount && (
                     <span className="text-[11px] text-slate-400 line-through">{formatRupiah(product.compare_at_price!)}</span>
                   )}
-                  <span className="text-red-600 dark:text-red-400 font-bold text-base">{formatRupiah(effectivePrice)}</span>
+                  <span className="text-red-600 dark:text-red-400 font-bold text-base">{formatRupiah(effectivePrice)}{product.unit ? ` / ${product.unit}` : ""}</span>
                 </div>
               ) : (
                 <p className="text-[11px] font-medium text-slate-400">Harga: hubungi kami</p>
@@ -501,8 +502,11 @@ export default function StoreProductDetail({
           stock: effectiveStock,
           variant_id: selectedVariant?.id ?? null,
           variant_label: selectedVariant?.label ?? null,
-        })}
-        onBuyNow={() => handleBuyNow(1)}
+        }, minimum)}
+        onBuyNow={() => {
+          if (isReady) void handleBuyNow(minimum);
+          else if (mikaSalesNumber) window.open(`https://wa.me/${mikaSalesNumber}?text=${encodeURIComponent(`Halo Admin MIKA, saya ingin berkonsultasi mengenai ${product.name}`)}`, "_blank", "noopener,noreferrer");
+        }}
         waNumber={isReady ? ppicAkaNumber : mikaSalesNumber}
         effectivePrice={effectivePrice}
         effectiveStock={effectiveStock}

@@ -20,6 +20,18 @@ export interface VariantRow {
 
 export const productIdSchema = z.string().trim().min(1).max(200);
 
+const integerInput = (value: unknown) => typeof value === "string" && /^\d+$/.test(value.trim()) ? Number(value.trim()) : value;
+const weightInput = z.preprocess(value => value == null || (typeof value === "string" && !value.trim())
+  ? null : integerInput(value), z.number().int().min(0).max(2147483647).nullable()).default(null);
+const dimensionInput = z.preprocess(value => value == null || (typeof value === "string" && !value.trim())
+  ? null : typeof value === "number" ? String(value) : typeof value === "string" ? value.trim().replace(",", ".") : value,
+z.string().regex(/^\d+(?:\.\d{1,3})?$/, "Dimensi harus angka positif, maksimal 3 desimal")
+  .transform(Number).pipe(z.number().positive("Dimensi harus lebih dari 0").max(999999999.999)).nullable()).default(null);
+const unitInput = z.string().refine(v => !/[\u0000-\u001f\u007f-\u009f]/.test(v), "Satuan tidak boleh berisi karakter kontrol")
+  .trim().max(50, "Satuan maksimal 50 karakter").transform(v => v || null).nullable().default(null);
+const noteInput = z.string().refine(v => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/.test(v), "Catatan mengandung karakter kontrol")
+  .trim().max(2000, "Catatan maksimal 2000 karakter").transform(v => v || null).nullable().default(null);
+
 const baseProduct = z.object({
   id: z.string().optional(),
   slug: z
@@ -43,6 +55,12 @@ const baseProduct = z.object({
   seoDescription: z.string().default(""),
 });
 
+function validateDimensions(value: { length: number | null; width: number | null; height: number | null; dimensionUnit: string | null }, ctx: z.RefinementCtx) {
+  if ([value.length, value.width, value.height].some(v => v !== null) && value.dimensionUnit === null) {
+    ctx.addIssue({ code: "custom", path: ["dimensionUnit"], message: "Satuan dimensi wajib jika ada ukuran" });
+  }
+}
+
 export const productSchema = z.discriminatedUnion("productType", [
   baseProduct.extend({
     productType: z.literal("b2b_system"),
@@ -52,16 +70,24 @@ export const productSchema = z.discriminatedUnion("productType", [
   baseProduct
     .extend({
       productType: z.literal("sparepart"),
+      minPurchaseQty: z.preprocess(integerInput, z.number().int().min(1, "Minimum paling sedikit 1").max(999, "Minimum maksimal 999")).default(1),
+      unit: unitInput,
+      length: dimensionInput,
+      width: dimensionInput,
+      height: dimensionInput,
+      dimensionUnit: z.preprocess(v => v === "" || v == null ? null : v, z.enum(["mm", "cm", "m"]).nullable()).default(null),
+      dimensionsNote: noteInput,
       sku: z.string().min(1, "SKU wajib diisi"),
       price: z.coerce.number().min(1, "Harga wajib diisi dan lebih dari 0").optional(),
       compareAtPrice: z.coerce.number().min(0).default(0),
-      weightGrams: z.coerce.number().int().min(1, "Berat wajib diisi (gram)"),
+      weightGrams: weightInput.pipe(z.number().int().min(1, "Berat wajib diisi (gram)")),
       stock: z.coerce.number().int().min(0, "Stok tidak boleh negatif").optional(),
       lowStockThreshold: z.coerce.number().int().min(0).default(5),
       variants: z.array(z.object({ name: z.string(), options: z.array(z.string()) })).default([]),
       isStoreVisible: z.boolean().default(true),
     })
     .superRefine((val, ctx) => {
+      validateDimensions(val, ctx);
       if (val.fulfillmentType === "ready_stock" && (val.price == null || val.price < 1)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -77,7 +103,9 @@ export const productSchema = z.discriminatedUnion("productType", [
         });
       }
     }),
-]);
+]).transform(value => value.productType === "sparepart"
+  ? { ...value, dimensionUnit: [value.length, value.width, value.height].every(v => v === null) ? null : value.dimensionUnit }
+  : value);
 
 export type ProductFormData = z.infer<typeof productSchema>;
 export type ProductType = "b2b_system" | "sparepart";

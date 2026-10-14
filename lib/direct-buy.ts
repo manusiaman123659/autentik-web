@@ -1,3 +1,5 @@
+import { needsPurchaseReview } from "@/lib/product-attributes";
+
 export interface DirectBuyItem {
   key: string;
   id: string; // product_id
@@ -10,12 +12,16 @@ export interface DirectBuyItem {
   price: number;
   stock: number;
   quantity: number;
+  min_purchase_qty?: number;
+  unit?: string | null;
+  purchase_unavailable?: boolean;
 }
 
 const DIRECT_BUY_STORAGE_KEY = "autentik-direct-buy:v1";
 
 export function setDirectBuyItem(item: DirectBuyItem): void {
   if (typeof window === "undefined") return;
+  if (needsPurchaseReview(item)) return;
   try {
     window.sessionStorage.setItem(DIRECT_BUY_STORAGE_KEY, JSON.stringify(item));
   } catch (err) {
@@ -34,7 +40,10 @@ export function getDirectBuyItem(): DirectBuyItem | null {
       typeof parsed === "object" &&
       typeof parsed.id === "string" &&
       typeof parsed.quantity === "number" &&
-      parsed.quantity >= 1
+      Number.isInteger(parsed.quantity) && parsed.quantity >= 1 && parsed.quantity <= 999 &&
+      typeof parsed.stock === "number" && Number.isInteger(parsed.stock) && parsed.stock >= 0 &&
+      typeof parsed.price === "number" && Number.isFinite(parsed.price) && parsed.price >= 0 &&
+      typeof parsed.slug === "string" && typeof parsed.name === "string" && typeof parsed.brand === "string"
     ) {
       return parsed as DirectBuyItem;
     }

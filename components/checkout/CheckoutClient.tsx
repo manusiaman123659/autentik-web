@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link, { useRouter } from "@/i18n/navigation";
 import Image from "next/image";
 import { useForm, useWatch } from "react-hook-form";
@@ -36,6 +37,7 @@ const labelClass = "block text-xs font-semibold mb-1.5 uppercase tracking-wide";
 
 export default function CheckoutClient({ waNumber }: { waNumber?: string | null }) {
   const router = useRouter();
+  const attributes = useTranslations("products.attributes");
   const searchParams = useSearchParams();
   const isDirectMode = searchParams.get("mode") === "direct";
 
@@ -277,6 +279,10 @@ export default function CheckoutClient({ waNumber }: { waNumber?: string | null 
         items: activeItems.map((i) => ({ productId: i.id, quantity: i.quantity, variantId: i.variant_id ?? null })),
       });
       if (authGeneration.current !== requestAuthGeneration) return;
+      if (result.minimumPurchaseRejected) {
+        setServerError(attributes("checkoutError"));
+        return;
+      }
 
       if (result.idempotencyConflict) {
         if (result.orderCode) {

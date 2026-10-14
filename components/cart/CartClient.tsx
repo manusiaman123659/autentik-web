@@ -15,24 +15,31 @@ import {
 import { useCart } from "@/components/cart/CartProvider";
 import { formatRupiah } from "@/lib/format";
 import EmptyState from "@/components/ui/EmptyState";
+import { useTranslations } from "next-intl";
+import { minimumPurchase, needsPurchaseReview, purchaseQuantity } from "@/lib/product-attributes";
 
 function QtyStepper({
   itemKey,
   quantity,
   stock,
+  minimum,
+  unavailable,
 }: {
   itemKey: string;
   quantity: number;
   stock: number;
+  minimum: number;
+  unavailable?: boolean;
 }) {
   const { updateQty } = useCart();
+  const t = useTranslations("products.attributes");
   return (
     <div className="inline-flex items-center rounded-lg border" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
       <button
         type="button"
         onClick={() => updateQty(itemKey, quantity - 1)}
-        disabled={quantity <= 1}
-        aria-label="Kurangi jumlah"
+        disabled={quantity <= minimum || stock < minimum || unavailable}
+        aria-label={t("decrease")}
         className="w-9 h-9 flex items-center justify-center disabled:opacity-40 transition-colors"
         style={{ color: "var(--text-primary)" }}
       >
@@ -44,8 +51,8 @@ function QtyStepper({
       <button
         type="button"
         onClick={() => updateQty(itemKey, quantity + 1)}
-        disabled={quantity >= stock}
-        aria-label="Tambah jumlah"
+        disabled={quantity >= Math.min(stock, 999) || stock < minimum || unavailable}
+        aria-label={t("increase")}
         className="w-9 h-9 flex items-center justify-center disabled:opacity-40 transition-colors"
         style={{ color: "var(--text-primary)" }}
       >
@@ -56,7 +63,9 @@ function QtyStepper({
 }
 
 export default function CartClient() {
-  const { items, hydrated, totalItems, subtotal, removeItem, clearCart } = useCart();
+  const { items, hydrated, totalItems, subtotal, removeItem, clearCart, updateQty, rulesLoading, rulesError } = useCart();
+  const t = useTranslations("products.attributes");
+  const needsReview = rulesLoading || rulesError || items.some(needsPurchaseReview);
 
   if (!hydrated) {
     return (
@@ -168,9 +177,17 @@ export default function CartClient() {
                             Varian: {item.variant_label}
                           </p>
                         ) : null}
-                        <p className="text-sm font-semibold mt-1.5" style={{ color: "var(--text-primary)" }}>
-                          {formatRupiah(item.price)}
-                        </p>
+                         <p className="text-sm font-semibold mt-1.5" style={{ color: "var(--text-primary)" }}>
+                           {formatRupiah(item.price)}{item.unit ? ` / ${item.unit}` : ""}
+                         </p>
+                         <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>{t("minimumContext", { quantity: minimumPurchase(item.min_purchase_qty), unit: item.unit ? ` ${item.unit}` : "" })}</p>
+                         {needsPurchaseReview(item) && <div className="text-xs text-red-600 mt-2" role="status">
+                           <p>{t("review")}</p>
+                           {!item.purchase_unavailable && purchaseQuantity(item.quantity, item.stock, minimumPurchase(item.min_purchase_qty)) !== null && <button
+                             type="button" className="underline mt-1" onClick={() => updateQty(item.key, purchaseQuantity(item.quantity, item.stock, minimumPurchase(item.min_purchase_qty))!)}>
+                             {t("correct", { quantity: purchaseQuantity(item.quantity, item.stock, minimumPurchase(item.min_purchase_qty))! })}
+                           </button>}
+                         </div>}
                       </div>
                       <button
                         type="button"
@@ -183,7 +200,7 @@ export default function CartClient() {
                     </div>
 
                     <div className="flex items-center justify-between flex-wrap gap-3">
-                      <QtyStepper itemKey={item.key} quantity={item.quantity} stock={item.stock} />
+                       <QtyStepper itemKey={item.key} quantity={item.quantity} stock={item.stock} minimum={minimumPurchase(item.min_purchase_qty)} unavailable={item.purchase_unavailable} />
                       <p className="text-sm font-extrabold" style={{ color: "var(--text-primary)" }}>
                         {formatRupiah(item.price * item.quantity)}
                       </p>
@@ -217,13 +234,15 @@ export default function CartClient() {
                 </span>
               </div>
 
-              <Link
+              {rulesLoading && <p role="status" className="text-xs mt-4">{t("checking")}</p>}
+              {rulesError && <p role="alert" className="text-xs text-red-600 mt-4">{t("refreshFailed")}</p>}
+              {needsReview ? <p className="text-xs mt-4" role="status">{t("review")}</p> : <Link
                 href="/store/checkout"
                 className="mt-6 w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md"
               >
                 Checkout
                 <ChevronRight size={16} />
-              </Link>
+              </Link>}
               <p className="text-[11px] text-slate-400 text-center mt-2 font-light">
                 Pembayaran aman via Midtrans.
               </p>

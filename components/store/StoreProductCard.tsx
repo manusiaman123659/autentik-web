@@ -111,7 +111,7 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
                 </span>
               )}
               <span className="text-red-600 dark:text-red-400 font-bold text-sm md:text-base leading-tight">
-                {formatRupiah(product.price)}
+                {formatRupiah(product.price)}{product.unit ? ` / ${product.unit}` : ""}
               </span>
             </div>
           ) : (

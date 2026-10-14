@@ -7,6 +7,8 @@ import type { ProductRow } from "@/lib/admin-data";
 import type { StoreVariant } from "@/components/store/StoreProductDetail";
 import { useCallback, useState } from "react";
 import WishlistButton from "@/components/store/WishlistButton";
+import { useTranslations } from "next-intl";
+import { minimumPurchase, purchaseQuantity } from "@/lib/product-attributes";
 
 interface StickyMobileBarProps {
   product: ProductRow;
@@ -30,12 +32,15 @@ export default function StickyMobileBar({
   hasVariants,
 }: StickyMobileBarProps) {
   const [added, setAdded] = useState(false);
+  const t = useTranslations("products.attributes");
+  const minimum = minimumPurchase(product.min_purchase_qty);
+  const unit = product.unit ? ` ${product.unit}` : "";
   const [shareCopied, setShareCopied] = useState(false);
 
   const stock = effectiveStock;
   const fulfillmentType = product.fulfillment_type ?? "ready_stock";
   const isReady = fulfillmentType === "ready_stock";
-  const canAdd = isReady && stock > 0 && effectivePrice != null && (!hasVariants || selectedVariant != null);
+  const canAdd = isReady && purchaseQuantity(minimum, stock, minimum) !== null && effectivePrice != null && (!hasVariants || selectedVariant != null);
   const waMessage = isReady
     ? `Halo PPIC AKA, saya ingin menanyakan ketersediaan komponen ${product.name}`
     : fulfillmentType === "custom_request"
@@ -84,9 +89,11 @@ export default function StickyMobileBar({
       <div className="flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap">
         {/* Price */}
         <div className="w-full sm:w-auto flex-shrink-0 min-w-0">
+          <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{stock < minimum && isReady
+            ? t("insufficient", { quantity: minimum, unit }) : t("minimumContext", { quantity: minimum, unit })}</p>
           {effectivePrice != null ? (
             <span className="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
-              {formatRupiah(effectivePrice)}
+              {formatRupiah(effectivePrice)}{product.unit ? ` / ${product.unit}` : ""}
             </span>
           ) : (
             <span className="text-sm font-medium text-body">Harga: hubungi</span>
@@ -97,7 +104,7 @@ export default function StickyMobileBar({
         <button
           type="button"
           onClick={isReady ? handleCart : onBuyNow}
-          disabled={!isReady && !waHref}
+          disabled={isReady ? !canAdd : !waHref}
           className="flex-1 min-w-0 h-11 rounded-sm font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
           style={{
             backgroundColor: isReady ? "#0EA5A0" : "#25D366",
@@ -106,9 +113,9 @@ export default function StickyMobileBar({
         >
           {isReady ? (
             added ? (
-              <><Check size={14} /> Ditambahkan</>
+               <><Check size={14} /> {t("added")}</>
             ) : (
-              <><ShoppingCart size={14} /> Keranjang</>
+               <><ShoppingCart size={14} /> {t("cart")}</>
             )
           ) : (
             "Beli Sekarang"

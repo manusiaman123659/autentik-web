@@ -88,6 +88,13 @@ export interface ProductFormValues {
   price?: string;
   compareAtPrice?: string;
   weightGrams?: string;
+  minPurchaseQty: string;
+  unit: string;
+  length: string;
+  width: string;
+  height: string;
+  dimensionUnit: string;
+  dimensionsNote: string;
   stock?: string;
   lowStockThreshold?: string;
   variants: VariantRow[];
@@ -95,6 +102,7 @@ export interface ProductFormValues {
 }
 
 function toFormValues(product: ProductRow | undefined, productType: ProductType): ProductFormValues {
+  const attributes = productType === "sparepart" ? product : undefined;
   return {
     id: product?.id,
     productType,
@@ -124,6 +132,13 @@ function toFormValues(product: ProductRow | undefined, productType: ProductType)
     price: product?.price != null ? String(product.price) : "",
     compareAtPrice: product?.compare_at_price != null ? String(product.compare_at_price) : "",
     weightGrams: product?.weight_grams != null ? String(product.weight_grams) : "",
+    minPurchaseQty: String(attributes?.min_purchase_qty ?? 1),
+    unit: attributes?.unit ?? "",
+    length: attributes?.length != null ? String(attributes.length) : "",
+    width: attributes?.width != null ? String(attributes.width) : "",
+    height: attributes?.height != null ? String(attributes.height) : "",
+    dimensionUnit: attributes?.dimension_unit ?? "",
+    dimensionsNote: attributes?.dimensions_note ?? "",
     stock: product?.stock != null ? String(product.stock) : "",
     lowStockThreshold: product?.low_stock_threshold != null ? String(product.low_stock_threshold) : "5",
     variants: [],
@@ -681,12 +696,17 @@ export default function ProductForm({
     // sedangkan form sekarang pakai VariantRow[]. Variants akan diproses
     // terpisah via upsert_product_variants RPC.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- sengaja di-destructure agar tidak ikut ke payload upsertProduct
-    const { variants: _excluded, ...payload } = {
+    const { variants: _excluded, minPurchaseQty, unit, length, width, height, dimensionUnit, dimensionsNote, weightGrams, ...sourcePayload } = {
       ...form,
       productType,
       specs: form.specs.filter((s) => s.label.trim() || s.value.trim()),
       features: form.features.filter((f) => f.trim()),
     };
+    const payload = isSparepart ? {
+      ...sourcePayload, minPurchaseQty, unit,
+      length: length.trim().replace(",", "."), width: width.trim().replace(",", "."), height: height.trim().replace(",", "."),
+      dimensionUnit, dimensionsNote, weightGrams,
+    } : sourcePayload;
 
     const result = await upsertProduct(payload, variantsPayload, hotspotsPayload, photoHotspotsPayload);
     if (!result.success) {
@@ -1579,6 +1599,57 @@ onChange={(e) => set("description", e.target.value)}
         </section>
       )}
 
+      {isSparepart && (<section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+        <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">Atribut Produk</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+          Minimum berlaku per produk dan varian untuk pembelian stok siap. Satuan jual menjelaskan satu jumlah barang; harga, stok, dan berat mengikuti satuan tersebut.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-5">
+          <div>
+            <label htmlFor="attribute-minimum" className={labelClass}>Minimal Pembelian</label>
+            <input id="attribute-minimum" type="number" min={1} max={999} step={1} className={inputClass} value={form.minPurchaseQty} onChange={e => set("minPurchaseQty", e.target.value)} />
+            <FieldError message={errors.minPurchaseQty} />
+            <p className="text-xs text-slate-500 mt-1">Batas bawah 1–999, bukan kelipatan pesanan.</p>
+          </div>
+          <div>
+            <label htmlFor="attribute-unit" className={labelClass}>Satuan Jual (opsional)</label>
+            <input id="attribute-unit" list="sale-unit-suggestions" maxLength={50} className={inputClass} value={form.unit} onChange={e => set("unit", e.target.value)} placeholder="Pcs, Liter, Batang, Set, Unit, Pack" />
+            <datalist id="sale-unit-suggestions">{["Pcs", "Liter", "Batang", "Set", "Unit", "Pack"].map(unit => <option key={unit} value={unit} />)}</datalist>
+            <FieldError message={errors.unit} />
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-4 gap-5 mt-5">
+          {([ ["length", "Panjang"], ["width", "Lebar"], ["height", "Tinggi"] ] as const).map(([field, label]) => (
+            <div key={field}>
+              <label htmlFor={`attribute-${field}`} className={labelClass}>{label} (opsional)</label>
+              <input id={`attribute-${field}`} inputMode="decimal" className={inputClass} value={form[field]} onChange={e => set(field, e.target.value)} placeholder="12,5" />
+              <FieldError message={errors[field]} />
+            </div>
+          ))}
+          <div>
+            <label htmlFor="attribute-dimension-unit" className={labelClass}>Satuan Dimensi</label>
+            <select id="attribute-dimension-unit" className={inputClass} value={form.dimensionUnit} onChange={e => set("dimensionUnit", e.target.value)}>
+              <option value="">Pilih satuan</option>{["mm", "cm", "m"].map(unit => <option key={unit} value={unit}>{unit}</option>)}
+            </select>
+            <FieldError message={errors.dimensionUnit} />
+          </div>
+        </div>
+        <p className="text-xs text-slate-500 mt-2">Isi hanya ukuran yang diketahui. Maksimal 3 desimal; koma atau titik desimal diterima. Tidak ada konversi otomatis.</p>
+        <div className="grid sm:grid-cols-2 gap-5 mt-5">
+          <div>
+            <label htmlFor="attribute-note" className={labelClass}>Catatan Dimensi (opsional)</label>
+            <textarea id="attribute-note" rows={3} maxLength={2000} className={inputClass} value={form.dimensionsNote} onChange={e => set("dimensionsNote", e.target.value)} placeholder="Diameter, ukuran nominal, atau bentuk tidak beraturan" />
+            <FieldError message={errors.dimensionsNote} />
+          </div>
+          <div>
+            <label htmlFor="attribute-weight" className={labelClass}>Berat (gram)</label>
+            <input id="attribute-weight" type="number" min={1} max={2147483647} step={1} className={inputClass} value={form.weightGrams ?? ""} onChange={e => set("weightGrams", e.target.value)} placeholder="500" />
+            <FieldError message={errors.weightGrams} />
+            <p className="text-xs text-slate-500 mt-1">Berat per satuan jual dalam gram. Dimensi tidak digunakan untuk menghitung ongkir volumetrik.</p>
+          </div>
+        </div>
+      </section>)}
+
       {isSparepart && (
         <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
           <h2 className="text-base font-bold text-slate-900 dark:text-white mb-5">Stok & Harga Jual</h2>
@@ -1610,18 +1681,6 @@ onChange={(e) => set("description", e.target.value)}
                 onChange={(e) => set("compareAtPrice", e.target.value)}
                 placeholder="200000"
               />
-            </div>
-            <div>
-              <label className={labelClass}>Berat (gram)</label>
-              <input
-                type="number"
-                min={0}
-                className={inputClass}
-                value={form.weightGrams ?? ""}
-                onChange={(e) => set("weightGrams", e.target.value)}
-                placeholder="500"
-              />
-              <FieldError message={errors.weightGrams} />
             </div>
 {!isNonReady && (
               <div>

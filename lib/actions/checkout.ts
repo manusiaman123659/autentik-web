@@ -37,6 +37,7 @@ export interface CheckoutResult {
   intentTerminal?: boolean;
   orderStatus?: string;
   paymentStatus?: string;
+  minimumPurchaseRejected?: boolean;
 }
 
 function toErrors(error: ZodError): Record<string, string> {
@@ -350,6 +351,10 @@ export async function submitCheckout(input: unknown): Promise<CheckoutResult> {
       code: /^[A-Z0-9]{5,8}$/.test(error.code ?? "") ? error.code : "unknown",
     });
     const errText = error.message || "";
+    if (error.code === "P1064") {
+      return { success: false, minimumPurchaseRejected: true,
+        message: "Minimum pembelian produk berubah. Periksa minimum terbaru di keranjang atau halaman produk, lalu ubah jumlah sebelum mencoba lagi." };
+    }
     if (error.code === "P0023" || errText.includes("idempotency_conflict")) {
       const { data: existingOrder } = await supabase
         .from("orders")
