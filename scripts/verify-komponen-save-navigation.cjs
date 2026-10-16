@@ -26,7 +26,7 @@ async function fixtureTests() {
     window.renderCase=(type='sparepart',edit=false)=>{window.calls=[];window.paths=[];window.refreshes=0;window.fail=false;const source={id:'qa-save',slug:'qa-save',product_type:type,name:'QA Komponen First Save',brand:'QA INTERNAL SAVE',brand_id:null,category:'QA SAVE',description:'Deskripsi QA first-save.',features:[],specs:[],seo_title:null,seo_description:null,translation_source_revision:1,deleted_at:null,status:'draft',is_active:false,is_store_visible:false,sku:'QA-DOUBLE-SAVE-001',price:12345,stock:17,weight_grams:250,fulfillment_type:'ready_stock'};flushSync(()=>app.render(<ToastProvider key={++version}><ProductEditor productType={type} initial={edit?source:undefined} initialSnapshot={edit?parseEditorSnapshot(source,[]):null}/></ToastProvider>))};
     window.renderCase();
   ` }, bundle: true, write: false, platform: 'browser', jsx: 'automatic', alias: { '@': root }, plugins: [{ name: 'boundaries', setup(build) {
-    build.onResolve({ filter: /^(next\/link|next\/navigation|next\/dynamic|next\/image|@\/utils\/supabase\/client|@\/lib\/actions\/products|@\/lib\/actions\/technicalDocuments|@\/lib\/actions\/productTranslations|@\/lib\/actions\/productTranslationEditor)$/ }, args => ({ path: args.path, namespace: 'fixture' }));
+    build.onResolve({ filter: /^(next\/link|next\/navigation|next\/dynamic|next\/image|@\/utils\/supabase\/client|@\/lib\/actions\/products|@\/lib\/actions\/technicalDocuments|@\/lib\/actions\/productTranslations|@\/lib\/actions\/productTranslationEditor|@\/lib\/actions\/productTranslationGeneration)$/ }, args => ({ path: args.path, namespace: 'fixture' }));
     build.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ resolveDir: root, loader: 'jsx', contents: {
       'next/link': "import React from 'react';export default function Link({href,...props}){return <a {...props} href={href}/>} ",
       'next/navigation': 'export const useRouter=()=>window.router;',
@@ -37,6 +37,7 @@ async function fixtureTests() {
       '@/lib/actions/technicalDocuments': 'export const upsertTechnicalDocument=async()=>({success:true});export const deleteTechnicalDocument=async()=>({success:true});',
       '@/lib/actions/productTranslations': 'export const saveProductTranslation=async()=>({success:true});export const unpublishProductTranslation=async()=>({success:true});export const deleteProductTranslation=async()=>({success:true});',
       '@/lib/actions/productTranslationEditor': 'export const reloadProductTranslationEditor=async()=>({success:false,message:"Tidak dimuat pada fixture ini."});',
+      '@/lib/actions/productTranslationGeneration': 'export const generateProductTranslationDraft=async()=>({success:false,message:"Layanan draf AI belum dikonfigurasi."});',
     }[args.path] }));
   } }] });
   const css = fs.readdirSync(path.join(root, '.next/static'), { recursive: true }).filter(file => file.endsWith('.css')).map(file => fs.readFileSync(path.join(root, '.next/static', file), 'utf8')).join('\n');

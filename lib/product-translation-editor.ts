@@ -3,6 +3,7 @@ import { productIdSchema } from "./validations/productSchema";
 import { productTranslationRowSchema, productTranslationSaveSchema } from "./validations/productTranslationSchema";
 import { validateProductTranslationBlocks } from "./product-translations";
 import type { ProductTranslationLocale, ProductTranslationStatus, ProductSpecification } from "./product-translation-types";
+import { generationCandidateSchema, createGeneratedSnapshot, machineGeneratedUntouched, type GenerationCandidate, type NormalizedEditableContent } from "./product-translation-generation";
 
 const revision = z.number().int().min(1).max(2147483647);
 const sourceSchema = z.object({
@@ -24,6 +25,7 @@ export interface LocaleDraft {
   source: EditorSource; row: ManagedTranslationRow | null; locale: ProductTranslationLocale;
   content: LocaleContent; baseline: string; reviewedRevision: number | null;
   initialReviewedRevision: number | null; blocked: boolean; message: string;
+  generatedCandidateSnapshot?: NormalizedEditableContent;
 }
 export type LocaleBuffers = Record<ProductTranslationLocale, LocaleDraft>;
 
@@ -54,7 +56,7 @@ export function createLocaleDraft(snapshot: ProductTranslationEditorSnapshot, lo
   return { source: snapshot.source, row, locale, content, baseline: JSON.stringify(content), reviewedRevision, initialReviewedRevision: reviewedRevision, blocked: false, message: "" };
 }
 export function isLocaleDirty(draft: LocaleDraft): boolean {
-  return JSON.stringify(draft.content) !== draft.baseline || draft.reviewedRevision !== draft.initialReviewedRevision;
+  return draft.generatedCandidateSnapshot !== undefined || JSON.stringify(draft.content) !== draft.baseline || draft.reviewedRevision !== draft.initialReviewedRevision;
 }
 export function hasDirtyTranslations(buffers: Partial<LocaleBuffers>): boolean {
   return Object.values(buffers).some(draft => draft && isLocaleDirty(draft));
@@ -70,6 +72,7 @@ export function rebuildLocaleBlock(draft: LocaleDraft, block: "features" | "spec
 }
 export function buildSaveInput(draft: LocaleDraft, status: ProductTranslationStatus) {
   if (draft.blocked) throw new Error("Muat ulang data sebelum menyimpan kembali.");
+  if (machineGeneratedUntouched(draft)) throw new Error("Draf dibuat oleh AI. Tinjau dan edit hasil sebelum menyimpan atau menerbitkan.");
   if (!sourceFeatures(draft.source) || !sourceSpecs(draft.source)) throw new Error("Struktur fitur atau Spesifikasi Indonesia tidak valid. Perbaiki konten utama.");
   if (draft.row?.source_revision !== undefined && draft.row.source_revision !== draft.source.translation_source_revision && draft.reviewedRevision !== draft.source.translation_source_revision) {
     throw new Error("Tinjau isi dan urutan terjemahan terhadap sumber Indonesia terbaru terlebih dahulu.");
@@ -95,4 +98,18 @@ export function acceptLocaleRefresh(buffers: LocaleBuffers, locale: ProductTrans
 }
 export function blockLocaleDraft(draft: LocaleDraft, message: string): LocaleDraft {
   return { ...draft, blocked: true, message };
+}
+
+export function applyGeneratedCandidate(draft: LocaleDraft, input: GenerationCandidate): LocaleDraft {
+  const candidate = generationCandidateSchema.parse(input);
+  if (draft.blocked || draft.source.product_type !== "b2b_system" || candidate.productId !== draft.source.id || candidate.locale !== draft.locale || candidate.sourceRevision !== draft.source.translation_source_revision) {
+    throw new Error("Sumber atau buffer berubah. Muat ulang data sebelum membuat draf AI.");
+  }
+  const features = sourceFeatures(draft.source); const specs = sourceSpecs(draft.source);
+  if (!features || !specs || !validateProductTranslationBlocks({ ...draft.source, features, specs }, candidate.payload)) throw new Error("Struktur hasil terjemahan tidak sesuai sumber.");
+  const payload = candidate.payload;
+  const content: LocaleContent = { name: payload.name ?? "", description: payload.description ?? "", seo_title: payload.seo_title ?? "", seo_description: payload.seo_description ?? "",
+    features: payload.features!.map(f => f.text), specs: payload.specs!.map(s => ({ label: s.label ?? "", value_text: s.value_text ?? "" })) };
+  return { ...draft, content, generatedCandidateSnapshot: createGeneratedSnapshot(draft.source, content),
+    reviewedRevision: draft.row && draft.row.source_revision !== draft.source.translation_source_revision ? null : draft.reviewedRevision, message: "" };
 }

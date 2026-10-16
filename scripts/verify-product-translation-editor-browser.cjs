@@ -41,12 +41,14 @@ async function fixtureTests() {
     window.renderEditor=(create=false,error=false)=>flushSync(()=>app.render(<ToastProvider key={++version}><ProductEditor productType={window.snapshot.source.product_type} initial={create?undefined:window.snapshot.source} initialSnapshot={create||error?null:structuredClone(window.snapshot)} translationError={error?'Data belum dapat dimuat.':''}/></ToastProvider>));
     window.renderEditor();
   ` }, bundle: true, write: false, platform: 'browser', jsx: 'automatic', alias: { '@': root }, plugins: [{ name: 'boundaries', setup(build) {
-    build.onResolve({ filter: /^(next\/link|next\/navigation|@\/lib\/actions\/productTranslations|@\/lib\/actions\/productTranslationEditor)$|^\.\/ProductForm$/ }, args => ({ path: args.path, namespace: 'fixture' }));
+    build.onResolve({ filter: /^(next\/link|next\/image|next\/navigation|@\/lib\/actions\/productTranslations|@\/lib\/actions\/productTranslationEditor|@\/lib\/actions\/productTranslationGeneration)$|^\.\/ProductForm$/ }, args => ({ path: args.path, namespace: 'fixture' }));
     build.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ resolveDir: root, loader: 'jsx', contents: {
       'next/navigation': 'export const useRouter=()=>window.router;',
+      'next/image': "import React from 'react';export default function Image({unoptimized,priority,fill,...props}){return <img {...props}/>} ",
       'next/link': "import React from 'react';export default function Link({href,...props}){return <a {...props} href={href}/>} ",
       '@/lib/actions/productTranslations': 'export const saveProductTranslation=x=>window.save(x);export const unpublishProductTranslation=x=>window.withdraw(x,false);export const deleteProductTranslation=x=>window.withdraw(x,true);',
       '@/lib/actions/productTranslationEditor': 'export const reloadProductTranslationEditor=()=>window.reload();',
+      '@/lib/actions/productTranslationGeneration': 'export const generateProductTranslationDraft=async()=>({success:false,message:"Layanan draf AI belum dikonfigurasi."});',
       './ProductForm': "import React,{useState} from 'react';export default function ProductForm({initial,onBeforeNavigate}){const [name,setName]=useState(initial?.name??'');return <div><label>Konten utama<input id='fixture-source-name' value={name} onChange={e=>setName(e.target.value)}/></label><button onClick={async()=>{if(await onBeforeNavigate())window.router.push('/admin/sparepart')}}>Simpan sumber fixture</button></div>}",
     }[args.path] }));
   } }] });

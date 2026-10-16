@@ -1,18 +1,20 @@
 "use client";
 
 import { AlertTriangle, Loader2, LockKeyhole } from "lucide-react";
+import { machineGeneratedUntouched } from "@/lib/product-translation-generation";
 import { Badge, Card, inputClass, labelClass } from "./ui";
 import { isLocaleDirty, localeStatus, sourceFeatures, sourceSpecs, type LocaleDraft, type LocaleContent } from "@/lib/product-translation-editor";
 
 export type TranslationOperation = "draft" | "published" | "unpublish" | "delete";
 const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0EA5A0] disabled:opacity-50 disabled:cursor-not-allowed";
 
-export default function ProductTranslationEditor({ draft, busy, actionsBusy, currentSourceRevision, onChange, onRebuild, onOperation, onReload }: {
+export default function ProductTranslationEditor({ draft, busy, actionsBusy, currentSourceRevision, onChange, onRebuild, onOperation, onReload, onGenerate, generating = false, generationMessage = "", generationError = false }: {
   draft: LocaleDraft; busy: boolean; actionsBusy: boolean; currentSourceRevision: number;
   onChange: (update: Partial<LocaleDraft>) => void;
   onRebuild: (block: "features" | "specs") => void;
   onOperation: (operation: TranslationOperation) => void;
   onReload: () => void;
+  onGenerate?: () => void; generating?: boolean; generationMessage?: string; generationError?: boolean;
 }) {
   const { source, content, row, locale } = draft;
   const features = sourceFeatures(source); const specs = sourceSpecs(source);
@@ -21,6 +23,7 @@ export default function ProductTranslationEditor({ draft, busy, actionsBusy, cur
   const featureMismatch = content.features !== null && content.features.length !== features?.length;
   const specMismatch = content.specs !== null && content.specs.length !== specs?.length;
   const unsafe = !features || !specs || featureMismatch || specMismatch || sourceChanged || draft.blocked;
+  const untouched = machineGeneratedUntouched(draft);
   const set = <K extends keyof LocaleContent>(field: K, value: LocaleContent[K]) => onChange({ content: { ...content, [field]: value } });
   const paired = (label: string, original: string | null, field: "name" | "description" | "seo_title" | "seo_description", multiline = false) => (
     <div className="grid gap-3 md:grid-cols-2">
@@ -43,6 +46,14 @@ export default function ProductTranslationEditor({ draft, busy, actionsBusy, cur
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Perubahan yang belum disimpan di Konten Utama tidak termasuk dalam sumber terjemahan.</p>
         {source.status !== "published" || !source.is_active ? <p className="mt-2 text-xs text-slate-500">Produk utama belum aktif/terbit. Status terjemahan tidak mengaktifkan produk utama.</p> : null}
       </Card>
+      {onGenerate && <Card className="space-y-3 p-4 sm:p-6" aria-busy={generating}>
+        <button type="button" className={`${button} border-[#0EA5A0] text-[#0C8C87] dark:text-teal-300`} disabled={generating || actionsBusy || sourceChanged || draft.blocked || !features || !specs} onClick={onGenerate}>
+          {generating && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}Buat Draf dengan AI
+        </button>
+        <p className="text-sm text-slate-500 dark:text-slate-400">AI membantu membuat draf dari konten Indonesia. Periksa dan edit hasil sebelum menyimpan atau menerbitkan.</p>
+        {generationMessage && <p role={generationError ? "alert" : "status"} data-generation-error={generationError || undefined} className={generationError ? "text-sm text-red-700 dark:text-red-300" : "text-sm text-slate-600 dark:text-slate-300"}>{generationMessage}</p>}
+      </Card>}
+      {untouched && <p role="status" className="rounded-lg border border-amber-300 p-4 text-sm text-amber-900 dark:text-amber-200">Draf dibuat oleh AI. Tinjau dan edit hasil sebelum menyimpan atau menerbitkan.</p>}
       {(stale || sourceChanged) && <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
         <p className="flex items-start gap-2 font-semibold"><AlertTriangle size={18} className="shrink-0" />Konten Indonesia telah berubah. Tinjau ulang terjemahan sebelum menerbitkannya kembali.</p>
         {row && <p className="mt-2">Status tersimpan: {row.status === "published" ? "Terbit" : "Draf"} · Revisi sumber {row.source_revision}</p>}
@@ -50,7 +61,7 @@ export default function ProductTranslationEditor({ draft, busy, actionsBusy, cur
         {sourceChanged && <p className="mt-2">Sumber terbaru adalah revisi {currentSourceRevision}. Muat ulang data untuk meninjaunya.</p>}
       </div>}
       {draft.message && <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950 dark:text-red-100">{draft.message}</div>}
-      <fieldset disabled={busy} className="space-y-5">
+      <fieldset disabled={busy || generating} className="space-y-5">
         <Card className="space-y-5 p-4 sm:p-6">{paired("Nama Produk", source.name, "name")}{paired("Deskripsi", source.description, "description", true)}</Card>
         <Card className="space-y-4 p-4 sm:p-6">
           <h3 className="font-semibold text-slate-900 dark:text-white">Fitur</h3>
@@ -76,13 +87,14 @@ export default function ProductTranslationEditor({ draft, busy, actionsBusy, cur
         <Card className="space-y-5 p-4 sm:p-6">{paired("Judul SEO", source.seo_title, "seo_title")}{paired("Deskripsi SEO", source.seo_description, "seo_description", true)}</Card>
         {stale && <label className="flex items-start gap-3 rounded-lg border border-amber-300 p-4 text-sm"><input type="checkbox" className="mt-1" checked={draft.reviewedRevision === source.translation_source_revision} onChange={event => onChange({ reviewedRevision: event.target.checked ? source.translation_source_revision : null })} />Saya telah meninjau isi dan urutan semua terjemahan terhadap sumber Indonesia revisi {source.translation_source_revision}.</label>}
         <div className="flex flex-wrap gap-2 pb-6">
-          <button type="button" className={`${button} border-[#0EA5A0] text-[#0C8C87] dark:text-teal-300`} disabled={actionsBusy || unsafe || (stale && draft.reviewedRevision !== source.translation_source_revision)} onClick={() => onOperation("draft")}>Simpan Draf</button>
-          <button type="button" className={`${button} border-[#0EA5A0] bg-[#0EA5A0] text-white`} disabled={actionsBusy || unsafe || (stale && draft.reviewedRevision !== source.translation_source_revision)} onClick={() => onOperation("published")}>{busy && <Loader2 size={16} className="animate-spin" />}Terbitkan</button>
+          <button type="button" className={`${button} border-[#0EA5A0] text-[#0C8C87] dark:text-teal-300`} disabled={actionsBusy || unsafe || untouched || (stale && draft.reviewedRevision !== source.translation_source_revision)} onClick={() => onOperation("draft")}>Simpan Draf</button>
+          <button type="button" className={`${button} border-[#0EA5A0] bg-[#0EA5A0] text-white`} disabled={actionsBusy || unsafe || untouched || (stale && draft.reviewedRevision !== source.translation_source_revision)} onClick={() => onOperation("published")}>{busy && <Loader2 size={16} className="animate-spin" />}Terbitkan</button>
           <button type="button" className={button} disabled={actionsBusy || !row || row.status !== "published" || draft.blocked} onClick={() => onOperation("unpublish")}>Batalkan Terbit</button>
           <button type="button" className={`${button} text-red-600 dark:text-red-400`} disabled={actionsBusy || !row || draft.blocked} onClick={() => onOperation("delete")}>Hapus Terjemahan</button>
+          {row === null && <p role="status" className="basis-full text-xs text-slate-500 dark:text-slate-400">Belum ada terjemahan tersimpan untuk bahasa ini. Hapus Terjemahan aktif setelah terjemahan tersimpan; Batalkan Terbit aktif ketika statusnya Terbit.</p>}
         </div>
       </fieldset>
-      <button type="button" className={button} disabled={actionsBusy} onClick={onReload}>Muat ulang data</button>
+      <button type="button" className={button} disabled={actionsBusy || generating} onClick={onReload}>Muat ulang data</button>
     </div>
   );
 }
