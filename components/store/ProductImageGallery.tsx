@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Package } from "lucide-react";
+import { useTranslations } from "next-intl";
+import StoreMediaPlaceholder from "./StoreMediaPlaceholder";
 
 interface ProductImageGalleryProps {
   imageUrl: string | null;
@@ -19,6 +20,7 @@ export default function ProductImageGallery({
   name,
   badges,
 }: ProductImageGalleryProps) {
+  const t = useTranslations("products.storeUi");
   const allImages = [
     ...(imageUrl ? [imageUrl] : []),
     ...gallery.filter((url) => url && url !== imageUrl),
@@ -30,22 +32,20 @@ export default function ProductImageGallery({
     <div className="space-y-2">
       {/* Main image */}
       <div
-        className="relative aspect-square rounded-sm border overflow-hidden"
+        className="relative h-[220px] sm:h-[300px] lg:h-[360px] rounded border overflow-hidden"
         style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}
       >
         {activeSrc ? (
           <Image
             src={activeSrc}
-            alt={`${name} - gambar ${activeIdx + 1}`}
+            alt={t("image", { name, number: activeIdx + 1 })}
             fill
             className="object-contain p-3"
-            sizes="(max-width: 1023px) calc(100vw - 32px), (max-width: 1280px) 65vw, 920px"
+            sizes="(max-width: 767px) calc(100vw - 32px), (max-width: 1279px) 40vw, 480px"
             loading="eager"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Package size={64} className="text-slate-400" />
-          </div>
+          <StoreMediaPlaceholder brand={brand} />
         )}
 
         {/* Brand badge */}
@@ -72,7 +72,9 @@ export default function ProductImageGallery({
               key={url + idx}
               type="button"
               onClick={() => setActiveIdx(idx)}
-              className={`relative w-[60px] h-[60px] rounded-sm border flex-shrink-0 overflow-hidden transition-colors ${
+                aria-label={t("thumbnail", { number: idx + 1 })}
+                aria-pressed={idx === activeIdx}
+                className={`relative w-[60px] h-[60px] rounded border flex-shrink-0 overflow-hidden focus-visible:outline-2 focus-visible:outline-teal-600 ${
                 idx === activeIdx
                   ? "border-[#0EA5A0] ring-1 ring-[#0EA5A0]/30"
                   : "border-[var(--border-subtle)] opacity-60 hover:opacity-100"

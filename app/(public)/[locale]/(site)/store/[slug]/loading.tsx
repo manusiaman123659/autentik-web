@@ -1,56 +1,13 @@
 export default function Loading() {
-  return (
-    <section
-      className="py-12"
-      style={{ backgroundColor: "var(--bg-primary)" }}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
-          {/* Left — Image skeleton */}
-          <div className="space-y-4">
-            <div className="w-full aspect-square rounded-2xl animate-pulse bg-slate-200 dark:bg-slate-800 relative">
-              <div className="absolute top-4 left-4 h-6 w-16 rounded-full animate-pulse bg-slate-300 dark:bg-slate-700" />
-              <div className="absolute top-4 right-4 h-6 w-20 rounded-full animate-pulse bg-slate-300 dark:bg-slate-700" />
-            </div>
-          </div>
-
-          {/* Right — Details skeleton */}
-          <div className="space-y-5">
-            <div className="h-4 w-20 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-            <div className="h-4 w-24 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-            <div className="h-10 w-3/4 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-            <div className="h-8 w-32 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-            <div className="space-y-2">
-              <div className="h-4 w-full rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-              <div className="h-4 w-5/6 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-            </div>
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="h-16 rounded-xl animate-pulse bg-slate-200 dark:bg-slate-800" />
-              <div className="h-16 rounded-xl animate-pulse bg-slate-200 dark:bg-slate-800" />
-              <div className="h-16 rounded-xl animate-pulse bg-slate-200 dark:bg-slate-800" />
-              <div className="h-16 rounded-xl animate-pulse bg-slate-200 dark:bg-slate-800" />
-            </div>
-            <div className="flex gap-3 pt-4">
-              <div className="h-12 flex-1 rounded-xl animate-pulse bg-slate-200 dark:bg-slate-800" />
-              <div className="h-12 w-12 rounded-xl animate-pulse bg-slate-200 dark:bg-slate-800" />
-            </div>
-            <div className="space-y-2 pt-2">
-              <div className="flex justify-between">
-                <div className="h-4 w-20 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-                <div className="h-4 w-24 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-              </div>
-              <div className="flex justify-between">
-                <div className="h-4 w-16 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-                <div className="h-4 w-20 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-              </div>
-              <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-800">
-                <div className="h-5 w-12 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-                <div className="h-5 w-28 rounded animate-pulse bg-slate-200 dark:bg-slate-800" />
-              </div>
-            </div>
-          </div>
-        </div>
+  return <div aria-busy="true" className="container-custom py-6 space-y-6 motion-safe:animate-pulse">
+    <div className="h-11 w-40 bg-page-alt rounded" /><div className="h-20 w-5/6 bg-page-alt rounded" />
+    <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-6 lg:gap-8">
+      <div className="h-[220px] sm:h-[300px] lg:h-[360px] border border-base bg-page-alt rounded" />
+      <div className="rounded border border-base p-6 space-y-5">
+        <div className="h-10 w-2/3 bg-page-alt" /><div className="h-5 w-1/3 bg-page-alt" />
+        <div className="h-24 bg-page-alt" /><div className="h-12 bg-page-alt" /><div className="h-12 bg-page-alt" />
       </div>
-    </section>
-  );
+    </div>
+    <div className="grid lg:grid-cols-2 gap-6"><div className="h-60 bg-page-alt" /><div className="h-60 bg-page-alt" /></div>
+  </div>;
 }

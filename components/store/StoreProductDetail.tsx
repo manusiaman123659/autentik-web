@@ -1,12 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link, { useRouter } from "@/i18n/navigation";
-import {
-  ChevronRight,
-  CheckCircle2,
-  Check,
-} from "lucide-react";
+import { ChevronRight, CheckCircle2, Check } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
 import type { ResolvedProductContent } from "@/lib/product-translation-types";
 import type { PublicLocale } from "@/i18n/locales";
@@ -29,8 +26,6 @@ import { useRecentlyViewed } from "@/components/store/useRecentlyViewed";
 import ProductAttributes from "@/components/product/ProductAttributes";
 import { minimumPurchase, purchaseQuantity, toProductAttributes } from "@/lib/product-attributes";
 
-type Tab = "description" | "specs";
-
 export interface StoreVariant {
   id: string;
   label: string;
@@ -50,477 +45,140 @@ interface StoreProductDetailProps {
   variants?: StoreVariant[];
 }
 
-export default function StoreProductDetail({
-  product,
-  display,
-  locale,
-  ppicAkaNumber,
-  mikaSalesNumber,
-  relatedProducts = [],
-  variants = [],
-}: StoreProductDetailProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("description");
+export default function StoreProductDetail({ product, display, locale, ppicAkaNumber,
+  mikaSalesNumber, relatedProducts = [], variants = [] }: StoreProductDetailProps) {
+  const t = useTranslations("products.storeUi");
   const router = useRouter();
   const supabase = createClient();
   const { addItem } = useCart();
   const { add: recordView } = useRecentlyViewed();
-
   const productVariants = variants;
   const hasVariants = productVariants.length > 0;
   const minimum = minimumPurchase(product.min_purchase_qty);
-
   const [selectedVariant, setSelectedVariant] = useState<StoreVariant | null>(() => {
     if (productVariants.length === 0) return null;
     const available = productVariants.filter((v) => v.stock >= minimum);
     return available[0] ?? productVariants[0];
   });
-
   const effectivePrice = selectedVariant?.price_override ?? product.price ?? null;
   const effectiveStock = selectedVariant?.stock ?? product.stock ?? 0;
-
   useEffect(() => {
-    recordView({
-      id: product.id,
-      slug: product.slug,
-      name: product.name,
-      brand: product.brand,
-      image_url: product.image_url ?? null,
-      price: product.price ?? null,
-    });
+    recordView({ id: product.id, slug: product.slug, name: product.name, brand: product.brand,
+      image_url: product.image_url ?? null, price: product.price ?? null });
   }, [product.id, product.slug, product.name, product.brand, product.image_url, product.price, recordView]);
-
-  const stock = product.stock ?? 0;
   const low = product.low_stock_threshold ?? 5;
-  const outOfStock = stock === 0;
-  const lowStock = !outOfStock && stock <= low;
-
   const fulfillmentType = product.fulfillment_type ?? "ready_stock";
   const isReady = fulfillmentType === "ready_stock";
-
-  const hasDiscount = selectedVariant == null &&
-    product.compare_at_price != null &&
-    product.compare_at_price > (product.price ?? 0);
-  const discountPct = hasDiscount
-    ? Math.round(((product.compare_at_price! - (product.price ?? 0)) / product.compare_at_price!) * 100)
-    : 0;
-
+  const hasDiscount = selectedVariant == null && product.compare_at_price != null && product.compare_at_price > (product.price ?? 0);
+  const discountPct = hasDiscount ? Math.round(((product.compare_at_price! - (product.price ?? 0)) / product.compare_at_price!) * 100) : 0;
   const specs = display.specs;
   const features = display.features;
+  const pageRef = useRef<HTMLDivElement>(null);
 
   async function handleBuyNow(qty: number) {
     if (!isReady || effectivePrice == null || (hasVariants && !selectedVariant)
-      || purchaseQuantity(qty, effectiveStock, minimum) !== qty) {
-      return;
-    }
+      || purchaseQuantity(qty, effectiveStock, minimum) !== qty) return;
     const directItem: DirectBuyItem = {
-      key: `${product.id}::${selectedVariant?.id ?? "default"}`,
-      id: product.id,
-      variant_id: selectedVariant?.id ?? null,
-      variant_label: selectedVariant?.label ?? null,
-      slug: product.slug,
-      name: product.name,
-      brand: product.brand,
-      image_url: product.image_url ?? null,
-      price: effectivePrice ?? 0,
-      stock: effectiveStock ?? 0,
-      quantity: qty,
-      min_purchase_qty: minimum,
-      unit: product.unit ?? null,
+      key: `${product.id}::${selectedVariant?.id ?? "default"}`, id: product.id,
+      variant_id: selectedVariant?.id ?? null, variant_label: selectedVariant?.label ?? null,
+      slug: product.slug, name: product.name, brand: product.brand,
+      image_url: product.image_url ?? null, price: effectivePrice ?? 0, stock: effectiveStock ?? 0,
+      quantity: qty, min_purchase_qty: minimum, unit: product.unit ?? null,
     };
     setDirectBuyItem(directItem);
-
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.push(`/auth/login?redirect=${encodeURIComponent("/store/checkout?mode=direct")}`);
-      return;
-    }
+    if (!user) { router.push(`/auth/login?redirect=${encodeURIComponent("/store/checkout?mode=direct")}`); return; }
     router.push("/store/checkout?mode=direct");
   }
 
-  return (
-    <div className="min-h-screen pb-[calc(120px+env(safe-area-inset-bottom))] lg:pb-0" style={{ backgroundColor: "var(--bg-primary)" }}>
-      {/* Breadcrumb */}
-      <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2">
-          <nav aria-label="Jejak navigasi" className="flex flex-wrap items-center gap-1.5 text-sm [&_svg]:shrink-0" style={{ color: "var(--text-secondary)" }}>
-            <Link href="/" className="hover:text-[#0EA5A0] transition-colors">Home</Link>
-            <ChevronRight size={10} />
-            <Link href="/store" className="hover:text-[#0EA5A0] transition-colors">Marketplace Komponen</Link>
-            <ChevronRight size={10} />
-            <span className="font-medium truncate max-w-[180px]" style={{ color: "var(--text-primary)" }}>
-              {display.name}
-            </span>
-          </nav>
+  return <div ref={pageRef} data-store-detail className="min-h-screen pb-[var(--store-bar-clearance,160px)] lg:pb-0 bg-page">
+    <div className="container-custom py-4">
+      <nav aria-label={t("breadcrumbs")} className="flex min-w-0 items-center flex-wrap gap-2 text-xs text-body">
+        <Link href="/" className="min-h-11 inline-flex items-center focus-visible:outline-2">{t("home")}</Link>
+        <ChevronRight size={12} aria-hidden="true" />
+        <Link href="/store" className="min-h-11 inline-flex items-center focus-visible:outline-2">{t("heading")}</Link>
+      </nav>
+      <header className="mb-6 border-b border-base pb-5">
+        <p className="text-sm text-body mb-2 break-words">{product.brand} <span aria-hidden="true" className="mx-2">/</span> {product.category}</p>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="min-w-0 max-w-4xl break-words text-2xl sm:text-3xl font-bold leading-snug tracking-tight text-heading">{display.name}</h1>
+          <WishlistButton product={{ id: product.id, slug: product.slug, name: product.name, brand: product.brand,
+            image_url: product.image_url ?? null, price: product.price ?? null }} variant="detail" />
         </div>
-      </div>
-
-      {/* Main */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4 items-start">
-
-          {/* Left: Image + Info + Tabs */}
-          <div className="space-y-4 min-w-0">
-            {/* Image Gallery */}
-            <ProductImageGallery
-              imageUrl={product.image_url ?? null}
-              gallery={Array.isArray(product.gallery) ? product.gallery : []}
-              brand={product.brand}
-              name={display.name}
-              badges={
-                <>
-                  {/* Stock badge */}
-                  <div className="absolute top-2 right-2 z-10">
-                    {!isReady ? (
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-[#0EA5A0] text-white">
-                        {fulfillmentType === "custom_request" ? "Custom" : "3rd Party"}
-                      </span>
-                    ) : outOfStock ? (
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-red-500 text-white">Habis</span>
-                    ) : lowStock ? (
-                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-amber-500 text-white">
-                        Sisa {stock}
-                      </span>
-                    ) : null}
-                  </div>
-                  {/* Discount badge */}
-                  {hasDiscount && (
-                    <span className="absolute bottom-2 left-2 z-10 px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-red-600 text-white">
-                      -{discountPct}%
-                    </span>
-                  )}
-                </>
-              }
-            />
-
-            {/* Info */}
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#0EA5A0] mb-1">
-                {product.category}
-              </p>
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <h1 className="text-lg md:text-xl font-bold leading-snug flex-1" style={{ color: "var(--text-primary)" }}>
-                  {display.name}
-                </h1>
-                <WishlistButton
-                  product={{
-                    id: product.id,
-                    slug: product.slug,
-                    name: product.name,
-                    brand: product.brand,
-                    image_url: product.image_url ?? null,
-                    price: product.price ?? null,
-                  }}
-                  variant="detail"
-                />
-              </div>
-              <p className="text-[11px] font-mono text-slate-400 mb-2">SKU: {product.sku || "—"}</p>
-
-              {/* Price */}
-              <div className="flex items-baseline gap-2 flex-wrap mb-3">
-                {effectivePrice != null ? (
-                  <>
-                    {hasDiscount && (
-                      <span className="text-xs text-slate-400 line-through">{formatRupiah(product.compare_at_price!)}</span>
-                    )}
-                    <span className="text-red-600 dark:text-red-400 font-bold text-xl">{formatRupiah(effectivePrice)}{product.unit ? ` / ${product.unit}` : ""}</span>
-                  </>
-                ) : (
-                  <span className="text-sm font-medium text-slate-400">Harga: hubungi kami</span>
-                )}
-              </div>
-
-              {/* Stock label */}
-              {isReady && (
-                <p className={`text-xs font-semibold mb-3 ${effectiveStock === 0 ? "text-red-500" : effectiveStock <= low ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400"}`}>
-                  {effectiveStock === 0 ? "Stok Habis" : effectiveStock <= low ? `Stok Terbatas (${effectiveStock} tersisa)` : "Ready Stock"}
-                </p>
-              )}
-            </div>
-
-            {/* Tabs */}
-            <div className="border-t" style={{ borderColor: "var(--border-subtle)" }}>
-              <div className="flex gap-0">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("description")}
-                  className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
-                    activeTab === "description"
-                      ? "border-[#0EA5A0] text-[#0EA5A0]"
-                      : "border-transparent hover:border-slate-300 dark:hover:border-slate-600"
-                  }`}
-                  style={{ color: activeTab === "description" ? undefined : "var(--text-secondary)" }}
-                >
-                  Deskripsi
-                </button>
-                {specs.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("specs")}
-                    className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
-                      activeTab === "specs"
-                        ? "border-[#0EA5A0] text-[#0EA5A0]"
-                        : "border-transparent hover:border-slate-300 dark:hover:border-slate-600"
-                    }`}
-                    style={{ color: activeTab === "specs" ? undefined : "var(--text-secondary)" }}
-                  >
-                    Spesifikasi
-                  </button>
-                )}
-              </div>
-
-              {/* Tab content */}
-              <div className="py-3">
-                {activeTab === "description" ? (
-                  <div className="space-y-3">
-                    <p className="text-sm leading-relaxed break-words" style={{ color: "var(--text-secondary)" }}>
-                      {display.description}
-                    </p>
-
-                    {/* Features */}
-                    {features.length > 0 && (
-                      <div>
-                        <h3 className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                          Keunggulan
-                        </h3>
-                        <ul className="space-y-1.5">
-                          {features.map((f) => (
-                            <li key={f} className="flex items-start gap-1.5">
-                              <CheckCircle2 size={12} className="flex-shrink-0 mt-0.5 text-[#0EA5A0]" />
-                              <span className="text-sm break-words" style={{ color: "var(--text-secondary)" }}>{f}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="rounded-sm border overflow-hidden" style={{ borderColor: "var(--border-color)" }}>
-                    <table className="w-full table-fixed text-sm [&_td]:align-top [&_td]:[overflow-wrap:anywhere]">
-                      <tbody>
-                        {specs.map((s, i) => (
-                          <tr key={s.label} className={i % 2 === 0 ? "bg-slate-50 dark:bg-slate-900" : ""}>
-                            <td className="py-2 px-3 font-semibold w-2/5 border-r" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}>
-                              {s.label}
-                            </td>
-                            <td className="py-2 px-3" style={{ color: "var(--text-secondary)" }}>{s.value}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Variant selector — mobile */}
-            {hasVariants && (
-              <div className="lg:hidden">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                    Pilih Varian
-                  </h3>
-                  {selectedVariant && (
-                    <span className="text-[11px] font-semibold text-[#0EA5A0]">
-                      {selectedVariant.label}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {productVariants.map((v) => {
-                    const isSelected = selectedVariant?.id === v.id;
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setSelectedVariant(v)}
-                        aria-pressed={isSelected}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs transition-all ${
-                          isSelected
-                            ? "border-[#0EA5A0] bg-[#0EA5A0]/15 text-[#0EA5A0] font-semibold ring-1 ring-[#0EA5A0] shadow-xs"
-                            : v.stock === 0
-                              ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-50"
-                              : "border-[var(--border-subtle)] hover:border-[#0EA5A0]/60 hover:bg-[#0EA5A0]/5"
-                        }`}
-                        disabled={v.stock === 0}
-                        style={!isSelected ? { color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" } : undefined}
-                      >
-                        {isSelected && <Check size={13} className="text-[#0EA5A0] flex-shrink-0" />}
-                        <span>{v.label}</span>
-                        {v.price_override != null && v.price_override !== product.price && (
-                          <span className="text-[10px] opacity-80">({formatRupiah(v.price_override)})</span>
-                        )}
-                        {v.stock === 0 && <span className="text-[10px] text-red-500">(Habis)</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right: Sticky Purchase Box */}
-          <div className="lg:sticky lg:top-20 space-y-3">
-            {/* Purchase box */}
-            <div
-              className="rounded-sm border p-4 space-y-3"
-              style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}
-            >
-              {/* Mini info */}
-              <div className="space-y-2 text-sm [&>div]:gap-3 [&>div>span]:min-w-0 [&>div>span]:[overflow-wrap:anywhere] [&>div>span:last-child]:text-right">
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--text-muted)" }}>Merek</span>
-                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{product.brand}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--text-muted)" }}>Kategori</span>
-                  <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{product.category}</span>
-                </div>
-                <ProductAttributes attributes={toProductAttributes(product)} />
-              </div>
-
-              <div className="border-t" style={{ borderColor: "var(--border-subtle)" }} />
-
-              {/* Price in box */}
-              {effectivePrice != null ? (
-                <div className="flex items-baseline gap-1.5">
-                  {hasDiscount && (
-                    <span className="text-[11px] text-slate-400 line-through">{formatRupiah(product.compare_at_price!)}</span>
-                  )}
-                  <span className="text-red-600 dark:text-red-400 font-bold text-base">{formatRupiah(effectivePrice)}{product.unit ? ` / ${product.unit}` : ""}</span>
-                </div>
-              ) : (
-                <p className="text-[11px] font-medium text-slate-400">Harga: hubungi kami</p>
-              )}
-
-              {/* Quantity + Add to cart */}
-              {isReady ? (
-                <AddToCartButton
-                  product={product}
-                  variant="detail"
-                  onBuyNow={isReady ? handleBuyNow : undefined}
-                  selectedVariant={selectedVariant}
-                  hasVariants={hasVariants}
-                />
-              ) : (
-                <ProductFulfillmentCta
-                  fulfillmentType={fulfillmentType}
-                  name={product.name}
-                  slug={product.slug}
-                  waNumber={mikaSalesNumber}
-                  variant="detail"
-                />
-              )}
-
-              {/* WhatsApp */}
-              {isReady && (
-                <WhatsAppButton
-                  number={ppicAkaNumber}
-                  label="Tanya via WhatsApp"
-                  message={`Halo PPIC AKA, saya ingin menanyakan ketersediaan komponen ${product.name}`}
-                  variant="button"
-                  className="w-full py-2 text-white font-semibold text-xs rounded-sm flex items-center justify-center gap-1.5 shadow-none transition-opacity hover:opacity-90"
-                />
-              )}
-
-              {/* Share row — desktop */}
-              <div className="hidden lg:flex items-center gap-2 border-t pt-3 mt-3" style={{ borderColor: "var(--border-subtle)" }}>
-                <CopyLinkButton slug={product.slug} />
-                <ShareProductButton slug={product.slug} name={display.name} />
-              </div>
-
-              {/* Trust info — merged into purchase box */}
-              <div className="border-t pt-3 mt-3" style={{ borderColor: "var(--border-subtle)" }}>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">Garansi</p>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Resmi</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">Kondisi</p>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Baru</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Variant selector — desktop */}
-            {hasVariants && (
-              <div className="hidden lg:block rounded-sm border p-4" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                    Pilih Varian
-                  </h3>
-                  {selectedVariant && (
-                    <span className="text-[11px] font-semibold text-[#0EA5A0]">
-                      {selectedVariant.label}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {productVariants.map((v) => {
-                    const isSelected = selectedVariant?.id === v.id;
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setSelectedVariant(v)}
-                        aria-pressed={isSelected}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs transition-all ${
-                          isSelected
-                            ? "border-[#0EA5A0] bg-[#0EA5A0]/15 text-[#0EA5A0] font-semibold ring-1 ring-[#0EA5A0] shadow-xs"
-                            : v.stock === 0
-                              ? "border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed opacity-50"
-                              : "border-[var(--border-subtle)] hover:border-[#0EA5A0]/60 hover:bg-[#0EA5A0]/5"
-                        }`}
-                        disabled={v.stock === 0}
-                        style={!isSelected ? { color: "var(--text-primary)", backgroundColor: "var(--bg-secondary)" } : undefined}
-                      >
-                        {isSelected && <Check size={13} className="text-[#0EA5A0] flex-shrink-0" />}
-                        <span>{v.label}</span>
-                        {v.price_override != null && v.price_override !== product.price && (
-                          <span className="text-[10px] opacity-80">({formatRupiah(v.price_override)})</span>
-                        )}
-                        {v.stock === 0 && <span className="text-[10px] text-red-500">(Habis)</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+        <p className="mt-3 text-xs font-mono text-body break-all">SKU: {product.sku || "—"}</p>
+      </header>
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-6 lg:gap-8 items-start">
+        <div className="min-w-0">
+          <ProductImageGallery imageUrl={product.image_url ?? null} gallery={Array.isArray(product.gallery) ? product.gallery : []}
+            brand={product.brand} name={display.name} badges={hasDiscount ? <span className="absolute top-3 right-3 rounded-sm bg-red-700 text-white px-2 py-1 text-xs font-semibold">-{discountPct}%</span> : undefined} />
+          <div className="mt-5 hidden md:flex flex-wrap items-center gap-3 text-body [&_button]:min-h-11 [&_button]:focus-visible:outline-2">
+            <CopyLinkButton slug={product.slug} /><ShareProductButton slug={product.slug} name={display.name} />
           </div>
         </div>
-
-        {/* Related Products */}
-        {relatedProducts.length > 0 && (
-          <RelatedProducts products={relatedProducts} mikaSalesNumber={mikaSalesNumber} />
-        )}
-
-        {/* Recently Viewed */}
-        <RecentlyViewed locale={locale} />
-
+        <section data-purchase-panel aria-label={t("price")} className="min-w-0 rounded border border-base bg-card-base p-4 sm:p-6 space-y-5 lg:sticky lg:top-20">
+          <div>
+            {hasDiscount && <p className="text-sm line-through text-body mb-1">{formatRupiah(product.compare_at_price!)}</p>}
+            {effectivePrice != null ? <p className="flex flex-wrap items-baseline gap-x-2 text-red-700 dark:text-red-400">
+              <span data-effective-price className="text-2xl sm:text-3xl font-bold tabular-nums break-words">{formatRupiah(effectivePrice)}</span>
+              {product.unit && <span className="text-base text-body">/ {product.unit}</span>}
+            </p> : <p className="text-lg font-semibold text-heading">{t("contactPrice")}</p>}
+            {isReady && <p data-effective-stock className={`mt-3 text-sm font-medium ${effectiveStock === 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-300"}`}>
+              {effectiveStock === 0 ? t("out") : effectiveStock <= low ? t("remaining", { stock: effectiveStock }) : t("ready")}
+            </p>}
+          </div>
+          {hasVariants && <fieldset className="border-t border-base pt-4">
+            <legend className="text-sm font-semibold text-heading pr-3">{t("chooseVariant")}</legend>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {productVariants.map(v => {
+                const isSelected = selectedVariant?.id === v.id;
+                return <button key={v.id} type="button" onClick={() => setSelectedVariant(v)} aria-pressed={isSelected} disabled={v.stock === 0}
+                  className={`min-h-11 max-w-full inline-flex flex-wrap items-center gap-2 rounded border px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 disabled:opacity-50 ${isSelected ? "border-teal-700 bg-teal-700/10 text-teal-800 dark:text-teal-200 font-semibold" : "border-base text-heading"}`}>
+                  {isSelected && <Check size={16} aria-hidden="true" />}<span className="break-words">{v.label}</span>
+                  {v.price_override != null && v.price_override !== product.price && <span className="text-xs">({formatRupiah(v.price_override)})</span>}
+                  {v.stock === 0 && <span className="text-xs">({t("out")})</span>}
+                </button>;
+              })}
+            </div>
+          </fieldset>}
+          <div className="border-t border-base pt-4">
+            {isReady ? <AddToCartButton product={product} variant="detail" onBuyNow={isReady ? handleBuyNow : undefined}
+              selectedVariant={selectedVariant} hasVariants={hasVariants} /> : <ProductFulfillmentCta fulfillmentType={fulfillmentType}
+              name={product.name} slug={product.slug} waNumber={mikaSalesNumber} variant="detail" />}
+          </div>
+          {isReady && <WhatsAppButton number={ppicAkaNumber} label={t("consult")}
+            message={`Halo PPIC AKA, saya ingin menanyakan ketersediaan komponen ${product.name}`} variant="link"
+            className="min-h-11 w-full flex items-center justify-center rounded border border-base px-3 py-2 text-sm text-body focus-visible:outline-2" />}
+          <p className="text-xs text-body border-t border-base pt-4">{t("original")} · {t("warranty")}</p>
+        </section>
       </div>
-
-      {/* Sticky Mobile Bottom Bar */}
-      <StickyMobileBar
-        product={product}
-        displayName={display.name}
-        onAddToCart={() => addItem({
-          ...product,
-          price: effectivePrice,
-          stock: effectiveStock,
-          variant_id: selectedVariant?.id ?? null,
-          variant_label: selectedVariant?.label ?? null,
-        }, minimum)}
-        onBuyNow={() => {
-          if (isReady) void handleBuyNow(minimum);
-          else if (mikaSalesNumber) window.open(`https://wa.me/${mikaSalesNumber}?text=${encodeURIComponent(`Halo Admin MIKA, saya ingin berkonsultasi mengenai ${product.name}`)}`, "_blank", "noopener,noreferrer");
-        }}
-        waNumber={isReady ? ppicAkaNumber : mikaSalesNumber}
-        effectivePrice={effectivePrice}
-        effectiveStock={effectiveStock}
-        selectedVariant={selectedVariant}
-        hasVariants={hasVariants}
-      />
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section className="min-w-0 border-t border-base pt-6">
+          <h2 className="text-lg font-semibold text-heading mb-4">{t("description")}</h2>
+          <p className="text-sm sm:text-base leading-relaxed whitespace-pre-line break-words text-body">{display.description}</p>
+          {features.length > 0 && <div className="mt-6"><h3 className="text-sm font-semibold text-heading mb-3">{t("features")}</h3>
+            <ul className="space-y-3">{features.map((feature, i) => <li key={i} className="flex items-start gap-2 text-sm text-body">
+              <CheckCircle2 size={16} aria-hidden="true" className="shrink-0 mt-0.5 text-teal-700 dark:text-teal-300" /><span className="min-w-0 break-words">{feature}</span>
+            </li>)}</ul></div>}
+        </section>
+        <section className="min-w-0 border-t border-base pt-6">
+          <h2 className="text-lg font-semibold text-heading mb-4">{t("specs")}</h2>
+          {specs.length > 0 && <dl className="rounded border border-base overflow-hidden text-sm">
+            {specs.map((spec, i) => <div key={i} className="grid grid-cols-1 min-[390px]:grid-cols-[minmax(100px,2fr)_minmax(0,3fr)] gap-1 min-[390px]:gap-4 px-4 py-3 border-b last:border-b-0 border-base odd:bg-page-alt">
+              <dt className="font-medium text-heading break-words">{spec.label}</dt><dd className="text-body break-words whitespace-pre-wrap">{spec.value}</dd>
+            </div>)}
+          </dl>}
+          <div className="mt-5 [--text-muted:var(--text-secondary)]"><ProductAttributes attributes={toProductAttributes(product)} /></div>
+        </section>
+      </div>
+      {relatedProducts.length > 0 && <RelatedProducts products={relatedProducts} mikaSalesNumber={mikaSalesNumber} />}
+      <RecentlyViewed locale={locale} />
     </div>
-  );
+    <StickyMobileBar product={product} displayName={display.name} clearanceTarget={pageRef}
+      onAddToCart={() => addItem({ ...product, price: effectivePrice, stock: effectiveStock,
+        variant_id: selectedVariant?.id ?? null, variant_label: selectedVariant?.label ?? null }, minimum)}
+      onBuyNow={() => { if (isReady) void handleBuyNow(minimum);
+        else if (mikaSalesNumber) window.open(`https://wa.me/${mikaSalesNumber}?text=${encodeURIComponent(`Halo Admin MIKA, saya ingin berkonsultasi mengenai ${product.name}`)}`, "_blank", "noopener,noreferrer"); }}
+      waNumber={isReady ? ppicAkaNumber : mikaSalesNumber} effectivePrice={effectivePrice} effectiveStock={effectiveStock}
+      selectedVariant={selectedVariant} hasVariants={hasVariants} />
+  </div>;
 }

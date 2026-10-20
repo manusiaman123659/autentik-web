@@ -2,7 +2,8 @@
 
 import Link from "@/i18n/navigation";
 import Image from "next/image";
-import { Package } from "lucide-react";
+import { useTranslations } from "next-intl";
+import StoreMediaPlaceholder from "./StoreMediaPlaceholder";
 import type { StoreSearchItem } from "@/lib/store-search-types";
 import { formatRupiah } from "@/lib/format";
 import AddToCartButton from "@/components/cart/AddToCartButton";
@@ -15,6 +16,7 @@ interface StoreProductCardProps {
 }
 
 export default function StoreProductCard({ product: { canonical: product, display }, mikaSalesNumber }: StoreProductCardProps) {
+  const t = useTranslations("products.storeUi");
   const stock = product.stock ?? 0;
   const low = product.low_stock_threshold ?? 5;
   const fulfillment = product.fulfillment_type ?? "ready_stock";
@@ -24,23 +26,23 @@ export default function StoreProductCard({ product: { canonical: product, displa
 
   return (
     <div
-      className="rounded-sm border hover:border-[#0EA5A0] transition-colors flex flex-col overflow-hidden group"
+      data-store-card
+      className="min-w-0 rounded border hover:border-teal-600 transition-colors flex flex-col overflow-hidden group"
       style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}
     >
       {/* Image */}
-      <Link href={`/store/${product.slug}`} className="block relative aspect-square border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+      <div className="relative aspect-[4/3] border-b border-base">
+      <Link href={`/store/${product.slug}`} aria-label={display.name} className="absolute inset-0 block focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-teal-600" style={{ backgroundColor: "var(--bg-secondary)" }}>
         {product.image_url ? (
           <Image
             src={product.image_url}
             alt={display.name}
             fill
-            className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+            className="object-contain p-4"
             sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) 50vw, (max-width: 1279px) 35vw, (max-width: 1440px) 25vw, 320px"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Package size={28} className="text-slate-400" />
-          </div>
+          <StoreMediaPlaceholder brand={product.brand} />
         )}
 
         {/* Discount badge — top left */}
@@ -53,21 +55,22 @@ export default function StoreProductCard({ product: { canonical: product, displa
         {/* Stock badge — top right */}
         <div className="absolute top-1.5 right-1.5 z-10">
           {!isReady ? (
-            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-[#0EA5A0] text-white">
+            <span className="px-2 py-1 text-xs font-semibold rounded-sm bg-teal-700 text-white">
               {fulfillment === "custom_request" ? "Custom" : "3rd Party"}
             </span>
           ) : stock === 0 ? (
-            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-red-500 text-white">
-              Habis
+            <span className="px-2 py-1 text-xs font-semibold rounded-sm bg-red-700 text-white">
+              {t("out")}
             </span>
           ) : stock <= low ? (
-            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-sm bg-amber-500 text-white">
-              Sisa {stock}
+            <span className="px-2 py-1 text-xs font-semibold rounded-sm bg-amber-800 text-white">
+              {t("remaining", { stock })}
             </span>
           ) : null}
         </div>
 
-        {/* Wishlist button — bottom right */}
+      </Link>
+        {/* Kept outside the media link for valid keyboard semantics. */}
         <WishlistButton
           product={{
             id: product.id,
@@ -79,19 +82,19 @@ export default function StoreProductCard({ product: { canonical: product, displa
           }}
           variant="card"
         />
-      </Link>
+      </div>
 
       {/* Info */}
-      <div className="p-2.5 flex flex-col flex-1 min-h-0">
+      <div className="p-4 flex flex-col flex-1 min-h-0">
         {/* Category */}
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#0EA5A0] mb-0.5 truncate">
+        <p className="text-xs font-medium text-body mb-2 break-words">
           {product.category}
         </p>
 
         {/* Title */}
         <Link href={`/store/${product.slug}`}>
           <h3
-            className="text-sm font-medium line-clamp-2 leading-relaxed hover:text-[#0EA5A0] transition-colors min-h-[2.5rem] break-words"
+            className="text-base font-semibold line-clamp-3 leading-snug hover:text-teal-700 transition-colors min-h-[4rem] break-words"
             style={{ color: "var(--text-primary)" }}
           >
             {display.name}
@@ -99,43 +102,43 @@ export default function StoreProductCard({ product: { canonical: product, displa
         </Link>
 
         {/* Brand */}
-        <p className="text-sm text-body mt-1 break-words">{product.brand}</p>
+        <p className="text-xs text-body mt-2 break-words">{product.brand}</p>
 
         {/* Price */}
-        <div className="mt-auto pt-1.5">
+        <div className="mt-auto pt-4">
           {product.price != null ? (
             <div className="flex items-baseline gap-1.5 flex-wrap">
               {hasDiscount && (
-                <span className="text-[11px] text-slate-400 line-through leading-none">
+                <span className="text-xs text-body line-through leading-none">
                   {formatRupiah(product.compare_at_price!)}
                 </span>
               )}
-              <span className="text-red-600 dark:text-red-400 font-bold text-sm md:text-base leading-tight">
+              <span className="text-red-700 dark:text-red-400 font-bold text-lg tabular-nums leading-snug break-words">
                 {formatRupiah(product.price)}{product.unit ? ` / ${product.unit}` : ""}
               </span>
             </div>
           ) : (
-            <span className="text-sm font-medium text-body">Harga: hubungi kami</span>
+            <span className="text-sm font-medium text-body">{t("contactPrice")}</span>
           )}
         </div>
 
         {/* Stock label */}
         {isReady && stock > 0 && (
-          <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
-            {stock <= low ? "Stok Terbatas" : "Ready Stock"}
+          <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mt-2">
+            {t(stock <= low ? "low" : "ready")}
           </p>
         )}
       </div>
 
       {/* CTA */}
-      <div className="px-2.5 pb-2.5">
+      <div className="px-4 pb-4">
         {isReady ? (
           product.has_active_variants ? (
             <Link
               href={`/store/${product.slug}`}
-              className="w-full flex-shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-3 text-sm font-semibold transition-colors rounded-sm border border-[#0EA5A0] text-teal-600 dark:text-teal-300 hover:bg-[#0EA5A0]/10 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+              className="min-h-11 w-full flex-shrink-0 flex items-center justify-center gap-2 py-2.5 px-3 text-sm font-semibold rounded border border-teal-700 text-teal-800 dark:text-teal-200 hover:bg-teal-700/10 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
             >
-              Pilih Varian
+              {t("chooseVariant")}
             </Link>
           ) : (
             <AddToCartButton product={product} variant="card" />

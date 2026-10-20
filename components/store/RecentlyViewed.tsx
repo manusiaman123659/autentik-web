@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "@/i18n/navigation";
 import Image from "next/image";
-import { Package } from "lucide-react";
+import StoreMediaPlaceholder from "./StoreMediaPlaceholder";
+import { useTranslations } from "next-intl";
 import { useRecentlyViewed } from "@/components/store/useRecentlyViewed";
 import { formatRupiah } from "@/lib/format";
 import type { PublicLocale } from "@/i18n/locales";
@@ -12,6 +13,7 @@ import type { toStoreRecentView } from "@/lib/public-store-presentation";
 type RecentView = ReturnType<typeof toStoreRecentView>;
 
 export default function RecentlyViewed({ locale }: { locale: PublicLocale }) {
+  const t = useTranslations("products.storeUi");
   const { items, hydrated } = useRecentlyViewed();
   const key = JSON.stringify([locale, ...items.slice(0, 8).map(item => item.id)]);
   const [resolved, setResolved] = useState<{ key: string; items: RecentView[] } | null>(null);
@@ -37,7 +39,7 @@ export default function RecentlyViewed({ locale }: { locale: PublicLocale }) {
   return (
     <div className="border-t pt-8 mt-8" style={{ borderColor: "var(--border-subtle)" }}>
       <h2 className="text-sm font-bold mb-4" style={{ color: "var(--text-primary)" }}>
-        Baru Dilihat
+        {t("recent")}
       </h2>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
         {resolved.items.map((item) => (
@@ -48,35 +50,33 @@ export default function RecentlyViewed({ locale }: { locale: PublicLocale }) {
             style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }}
           >
             {/* Image */}
-            <div className="relative aspect-square border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
+            <div className="relative h-40 border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
               {item.image_url ? (
                 <Image
                   src={item.image_url}
                   alt={item.displayName}
                   fill
-                  className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                  className="object-contain p-3"
                   sizes="180px"
                 />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Package size={24} className="text-slate-400" />
-                </div>
+                <StoreMediaPlaceholder brand={item.brand} />
               )}
             </div>
 
             {/* Info */}
             <div className="p-2">
-              <p className="text-[11px] font-semibold line-clamp-2 leading-snug min-h-[2rem]" style={{ color: "var(--text-primary)" }}>
+              <p className="text-sm font-semibold line-clamp-3 leading-snug min-h-[3.5rem]" style={{ color: "var(--text-primary)" }}>
                 {item.displayName}
               </p>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">{item.brand}</p>
+              <p className="text-xs text-body mt-1 truncate">{item.brand}</p>
               <div className="mt-1">
                 {item.price != null ? (
                   <span className="text-red-600 dark:text-red-400 font-bold text-xs">
                     {formatRupiah(item.price)}
                   </span>
                 ) : (
-                  <span className="text-[10px] font-medium text-slate-400">Harga: hubungi kami</span>
+                  <span className="text-xs font-medium text-body">{t("contactPrice")}</span>
                 )}
               </div>
             </div>

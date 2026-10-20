@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { Search, X, Package } from "lucide-react";
@@ -22,6 +23,8 @@ export default function StoreSearchBar({
   rpcEnabled: boolean;
   onQueryChange: (q: string) => void;
 }) {
+  const t = useTranslations("products.storeUi");
+  const listId = useId();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQ = searchParams.get("q") ?? "";
@@ -150,21 +153,26 @@ export default function StoreSearchBar({
   const showDropdown = open && [...input.trim()].length >= 2;
 
   return (
-    <div ref={wrapperRef} className="relative w-full max-w-xl">
+    <div ref={wrapperRef} className="relative w-full min-w-0">
       <form onSubmit={handleSubmit} className="relative">
         <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
+          role="combobox"
+          aria-label={t("search")}
+          aria-expanded={showDropdown}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={showDropdown && highlightIdx >= 0 && suggestions[highlightIdx] ? `${listId}-${highlightIdx}` : undefined}
           value={input}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => input.trim().length >= 2 && setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Cari komponen, merek, atau SKU..."
-          className="w-full rounded-sm border pl-8 pr-8 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
+          placeholder={t("search")}
+          className="min-h-12 w-full rounded border border-slate-500 dark:border-slate-400 pl-9 pr-12 py-3 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
           style={{
             backgroundColor: "var(--bg-primary)",
-            borderColor: "var(--border-subtle)",
             color: "var(--text-primary)",
           }}
         />
@@ -172,7 +180,8 @@ export default function StoreSearchBar({
           <button
             type="button"
             onClick={clearInput}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            aria-label={t("clearSearch")}
+            className="absolute right-0.5 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded focus-visible:outline-2"
           >
             <X size={13} className="text-slate-400" />
           </button>
@@ -181,7 +190,7 @@ export default function StoreSearchBar({
 
       {showDropdown && (
         <div
-          className="absolute z-40 top-full mt-1 w-full rounded-sm border shadow-lg overflow-hidden"
+          className="absolute z-40 top-full mt-2 w-full rounded border shadow-md max-h-[60dvh] overflow-y-auto"
           style={{
             backgroundColor: "var(--bg-card)",
             borderColor: "var(--border-subtle)",
@@ -189,25 +198,26 @@ export default function StoreSearchBar({
         >
           {rpcEnabled && active?.error ? (
             <div role="alert" className="px-3 py-4 text-center text-[11px]" style={{ color: "var(--text-secondary)" }}>
-              Pencarian Komponen belum tersedia. Silakan coba lagi.
+              {t("error")}
             </div>
           ) : rpcEnabled && !active ? (
-            <div role="status" className="px-3 py-4 text-center text-[11px]" style={{ color: "var(--text-secondary)" }}>Sedang mencari...</div>
+            <div role="status" className="px-3 py-4 text-center text-sm text-body">{t("searching")}</div>
           ) : suggestions.length === 0 ? (
             <div className="px-3 py-4 text-center">
               <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
-                Tidak ada hasil untuk &quot;{input.trim()}&quot;
+                {t("searchEmpty", { query: input.trim() })}
               </p>
             </div>
           ) : (
-            <ul className="py-1">
+            <ul id={listId} role="listbox" aria-label={t("search")} className="py-1">
               {suggestions.map((product, idx) => (
-                <li key={product.id}>
+                <li key={product.id} role="option" id={`${listId}-${idx}`} aria-selected={idx === highlightIdx}>
                   <button
                     type="button"
                     onClick={() => selectSuggestion(product)}
                     onMouseEnter={() => setHighlightIdx(idx)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ${
+                    tabIndex={-1}
+                    className={`min-h-14 w-full flex flex-wrap sm:flex-nowrap items-center gap-2.5 px-3 py-3 text-left focus-visible:outline-2 ${
                       idx === highlightIdx ? "bg-[#0EA5A0]/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
                     }`}
                   >
@@ -224,7 +234,7 @@ export default function StoreSearchBar({
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>
+                      <p className="text-sm font-semibold break-words" style={{ color: "var(--text-primary)" }}>
                         {product.displayName}
                       </p>
                       <p className="text-[10px] truncate" style={{ color: "var(--text-secondary)" }}>
@@ -233,7 +243,7 @@ export default function StoreSearchBar({
                       </p>
                     </div>
                     {product.price != null && (
-                      <span className="text-[11px] font-bold text-red-600 dark:text-red-400 tabular-nums flex-shrink-0">
+                      <span className="text-sm font-semibold text-red-700 dark:text-red-400 tabular-nums">
                         {formatRupiah(product.price)}
                       </span>
                     )}
@@ -246,10 +256,10 @@ export default function StoreSearchBar({
             <button
               type="button"
               onClick={handleSubmit}
-              className="w-full px-3 py-2 text-[11px] font-semibold text-[#0EA5A0] border-t hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              className="min-h-11 w-full px-3 py-3 text-sm font-semibold text-teal-700 dark:text-teal-300 border-t focus-visible:outline-2"
               style={{ borderColor: "var(--border-subtle)" }}
             >
-              Lihat semua hasil untuk &quot;{input.trim()}&quot;
+              {t("searchAll", { query: input.trim() })}
             </button>
           )}
         </div>

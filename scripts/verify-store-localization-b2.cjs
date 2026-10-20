@@ -93,7 +93,8 @@ async function main() {
     const requestKey=JSON.stringify(['en',filters,2,0]);
     const state=[filters,2,false,0,{key:requestKey,data}];
     const mini=name=>({__esModule:true,default:props=>React.createElement('span',{},props.brands?.map(b=>b.name+':'+b.count).join(',')||name)});
-    const mocks=new Map([['react',{...React,useState:initial=>[state.shift()??(typeof initial==='function'?initial():initial),()=>{}]}]]);
+    const intl={useTranslations:namespace=>require('use-intl/core').createTranslator({locale:'en',messages:{products:require('../messages/en/products.json')},namespace})};
+    const mocks=new Map([['next-intl',intl],['react',{...React,useState:initial=>[state.shift()??(typeof initial==='function'?initial():initial),()=>{}]}]]);
     for(const name of ['StoreSearchBar','StoreProductCard','CategoryToolbar','StoreFilterSidebar','StoreTrustStrip','StorePromoBanner'])
       mocks.set('@/components/store/'+name,name==='StoreProductCard'?{__esModule:true,default:({product})=>React.createElement('span',{},product.display.name)}:mini(name));
     mocks.set('@/components/ui/WhatsAppButton',mini('WhatsApp'));
@@ -101,17 +102,18 @@ async function main() {
     const StoreClient=loader(mocks)('app/(public)/[locale]/(site)/store/StoreClient.tsx').default;
     const html=renderToStaticMarkup(React.createElement(StoreClient,{products:[],rpcEnabled:true,locale:'en',initialQuery:'English name',compatible:null,ppicAkaNumber:null,mikaSalesNumber:null}));
     eq(html.includes('English name'),true,'Enabled page renders translated match from RPC');
-    eq(html.includes('12</span> produk ditemukan'),true,'Result total comes from RPC, not 1 page row');
-    eq(html.includes('Halaman <span')&&html.includes('>2</span> dari'),true,'RPC resolved page determines navigation');
+    eq(html.includes('12 products found'),true,'Result total comes from RPC, not 1 page row');
+    eq(html.includes('Page 2 of 2'),true,'RPC resolved page determines navigation');
     eq(html.includes('AKA:12'),true,'Global facet count comes from RPC');
     const failure=[filters,2,false,0,{key:requestKey,error:true}];
     const failedMocks=new Map(mocks);failedMocks.set('react',{...React,useState:initial=>[failure.shift()??(typeof initial==='function'?initial():initial),()=>{}]});
     const failed=loader(failedMocks)('app/(public)/[locale]/(site)/store/StoreClient.tsx').default;
     const failedHtml=renderToStaticMarkup(React.createElement(failed,{products:[],rpcEnabled:true,locale:'en',initialQuery:'English name',compatible:null,ppicAkaNumber:null,mikaSalesNumber:null}));
-    eq(failedHtml.includes('Pencarian Komponen belum tersedia'),true,'Enabled RPC failure visible instead of canonical fallback');
+    eq(failedHtml.includes(require('../messages/en/products.json').storeUi.error),true,'Enabled RPC failure visible instead of canonical fallback');
     const zhSuggestion={id:canonical.id,slug:canonical.slug,displayName:'中文名称',brand:canonical.brand,sku:canonical.sku,image_url:null,price:canonical.price};
     const suggestions=['中文',true,-1,{key:JSON.stringify(['zh-CN','中文']),items:[zhSuggestion]}];
     const barMocks=new Map([
+      ['next-intl',intl],
       ['react',{...React,useState:initial=>[suggestions.shift()??(typeof initial==='function'?initial():initial),()=>{}]}],
       ['next/navigation',{useSearchParams:()=>new URLSearchParams('q=中文')}],
       ['@/i18n/navigation',{useRouter:()=>({push:()=>{}})}],
@@ -124,7 +126,7 @@ async function main() {
     barMocks.set('react',{...React,useState:initial=>[badState.shift()??(typeof initial==='function'?initial():initial),()=>{}]});
     const BadBar=loader(barMocks)('components/store/StoreSearchBar.tsx').default;
     const badHtml=renderToStaticMarkup(React.createElement(BadBar,{products:[],rpcEnabled:true,locale:'zh-CN',onQueryChange:()=>{}}));
-    eq(badHtml.includes('Pencarian Komponen belum tersedia'),true,'Suggestion RPC errors are visible');
+    eq(badHtml.includes(require('../messages/en/products.json').storeUi.error),true,'Suggestion RPC errors are visible');
     console.log(`PASS: ${checks} Store B2 gate/RPC payload/response/error assertions; no database or network.`);
   } finally { if(previous===undefined)delete process.env.STORE_SEARCH_RPC_ENABLED;else process.env.STORE_SEARCH_RPC_ENABLED=previous; }
 }

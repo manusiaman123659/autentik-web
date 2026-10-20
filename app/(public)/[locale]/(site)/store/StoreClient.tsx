@@ -6,7 +6,6 @@ import {
   RotateCcw,
   ChevronRight,
   ChevronLeft,
-  ShoppingBag,
   PackageCheck,
   Package,
   SlidersHorizontal,
@@ -21,6 +20,7 @@ import StoreTrustStrip from "@/components/store/StoreTrustStrip";
 import StorePromoBanner from "@/components/store/StorePromoBanner";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import EmptyState from "@/components/ui/EmptyState";
+import { useTranslations } from "next-intl";
 
 const ITEMS_PER_PAGE = 9;
 
@@ -50,6 +50,7 @@ export default function StoreClient({
   mikaSalesNumber: string | null;
   initialQuery?: string;
 }) {
+  const t = useTranslations("products.storeUi");
   const [filters, setFilters] = useState<FilterState>({
     ...INITIAL_FILTERS,
     query: initialQuery ?? "",
@@ -161,51 +162,35 @@ export default function StoreClient({
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "var(--bg-primary)" }}>
-      {/* Hero — simplified */}
-      <section className="pt-28 pb-12 relative overflow-hidden text-white" style={{ background: "linear-gradient(135deg, #050d1a 0%, #0B1F3A 50%, #0e2a4d 100%)" }}>
-        <div
-          className="absolute inset-0 opacity-5 pointer-events-none"
-          style={{ backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`, backgroundSize: "40px 40px" }}
-        />
-        <div
-          className="absolute top-1/2 right-10 -translate-y-1/2 w-96 h-96 rounded-full opacity-15 blur-3xl pointer-events-none"
-          style={{ background: "radial-gradient(circle, #0EA5A0, transparent)" }}
-        />
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 mb-4 backdrop-blur-md">
-            <ShoppingBag size={14} className="text-[#0EA5A0]" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-[#0EA5A0]">Marketplace Komponen</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">
-            Marketplace Komponen
+      <section className="border-b border-base">
+        <div className="container-custom py-6 sm:py-8">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-heading mb-2">
+            {t("heading")}
           </h1>
-          <p className="text-slate-200 text-sm sm:text-base max-w-xl font-light">
-            Komponen original bergaransi untuk unit Talpha, Cylab, Ullun, dan Epal.
+          <p className="text-body text-sm sm:text-base max-w-2xl">
+            {t("intro")}
           </p>
           {compatible && (
-            <div className="max-w-xl mt-4 p-3 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-200 text-sm flex items-start gap-2">
+            <div className="max-w-2xl mt-4 p-3 rounded border border-base text-body text-sm flex items-start gap-2">
               <PackageCheck size={16} className="text-[#0EA5A0] mt-0.5 shrink-0" />
               <span>
-                Komponen untuk <strong className="text-white uppercase">{compatible.replace(/-/g, " ")}</strong>. Sistem belum bisa filter otomatis —{" "}
+                {t("compatible", { name: compatible.replace(/-/g, " ") })}{" "}
                 <WhatsAppButton
                   number={ppicAkaNumber}
                   variant="link"
-                  label="tanya via WhatsApp"
+                  label={t("consult")}
                   message={`Halo, saya membutuhkan komponen yang kompatibel dengan ${compatible.replace(/-/g, " ")}. Bisa bantu rekomendasinya?`}
-                  className="text-teal-200 hover:text-white"
+                  className="text-teal-600 dark:text-teal-300 underline"
                 />
-                {" "}untuk rekomendasi yang tepat.
               </span>
             </div>
           )}
         </div>
       </section>
 
-      <StoreTrustStrip />
-
       {/* Search bar + Category toolbar */}
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-3 space-y-2.5">
+        <div className="container-custom py-4 space-y-3">
           <Suspense fallback={<div className="h-9" />}>
             <StoreSearchBar products={products} locale={locale} rpcEnabled={rpcEnabled} onQueryChange={(q) => handleFilterChange({ query: q })} />
           </Suspense>
@@ -218,32 +203,33 @@ export default function StoreClient({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-6">
-        <StorePromoBanner />
-      </div>
+      <StoreTrustStrip />
 
       {/* Catalog */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-12 py-10">
+      <div className="container-custom py-6">
         {/* Mobile filter toggle + result count */}
         <div className="flex items-center justify-between mb-4 lg:mb-6">
           <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{totalCount}</span> produk ditemukan
+            <span className="font-semibold" style={{ color: "var(--text-primary)" }} aria-live="polite">{rpcEnabled && !active ? t("loading") : t("results", { count: totalCount })}</span>
           </p>
           <button
             type="button"
             onClick={() => setMobileFilterOpen(true)}
-            className="lg:hidden inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            aria-haspopup="dialog"
+            aria-expanded={mobileFilterOpen}
+            aria-controls="store-filter-drawer"
+            className="lg:hidden min-h-11 inline-flex items-center gap-2 px-4 py-2.5 rounded border text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
             style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
           >
             <SlidersHorizontal size={15} />
-            Filter
+            {t("filter")}
             {activeFilterCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full bg-[#0EA5A0] text-white text-[10px] font-bold">{activeFilterCount}</span>
             )}
           </button>
         </div>
 
-        <div className="flex gap-8">
+        <div className="flex gap-6">
           {/* Sidebar */}
           <StoreFilterSidebar
             products={canonicalProducts}
@@ -273,49 +259,49 @@ export default function StoreClient({
                 ))}
                 {filters.stockStatus !== "all" && (
                   <Chip
-                    label={filters.stockStatus === "available" ? "Tersedia" : filters.stockStatus === "low" ? "Stok Terbatas" : "Habis"}
+                    label={t(filters.stockStatus === "available" ? "available" : filters.stockStatus === "low" ? "low" : "out")}
                     onRemove={() => handleFilterChange({ stockStatus: "all" })}
                   />
                 )}
                 {filters.priceMin !== "" && (
-                  <Chip label={`Min ${filters.priceMin}`} onRemove={() => handleFilterChange({ priceMin: "" })} />
+                  <Chip label={`${t("minimumPrice")}: ${filters.priceMin}`} onRemove={() => handleFilterChange({ priceMin: "" })} />
                 )}
                 {filters.priceMax !== "" && (
-                  <Chip label={`Max ${filters.priceMax}`} onRemove={() => handleFilterChange({ priceMax: "" })} />
+                  <Chip label={`${t("maximumPrice")}: ${filters.priceMax}`} onRemove={() => handleFilterChange({ priceMax: "" })} />
                 )}
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                  className="min-h-11 inline-flex items-center gap-1 px-3 py-2 rounded text-sm font-medium text-red-700 dark:text-red-400 focus-visible:outline-2"
                 >
                   <RotateCcw size={11} />
-                  Reset Semua
+                  {t("clearAll")}
                 </button>
               </div>
             )}
 
             {rpcEnabled && !active ? (
-              <p role="status" className="py-8 text-sm" style={{ color: "var(--text-secondary)" }}>Memuat produk Komponen...</p>
+              <div role="status" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"><span className="sr-only">{t("loading")}</span>{[0,1,2].map(n => <div key={n} className="rounded border border-base bg-page-alt h-96 motion-safe:animate-pulse" />)}</div>
             ) : active?.error ? (
-              <EmptyState icon={Package} title="Pencarian Komponen belum tersedia" description="Muat ulang pencarian atau coba lagi nanti."
-                action={<button type="button" onClick={() => setRetry(value => value + 1)} className="px-5 py-2 rounded-sm bg-[#0EA5A0] text-white text-sm font-semibold">Coba Lagi</button>} />
+              <EmptyState icon={Package} title={t("error")} description={t("errorHint")}
+                action={<button type="button" onClick={() => setRetry(value => value + 1)} className="min-h-11 px-5 py-2 rounded-sm bg-teal-700 text-white text-sm font-semibold">{t("retry")}</button>} />
             ) : pageItems.length === 0 ? (
               <EmptyState
                 icon={Package}
-                title="Tidak ada produk ditemukan"
-                description="Coba ubah filter pencarian atau reset filter Anda."
+                title={t("empty")}
+                description={t("emptyHint")}
                 action={
                 <button
                   onClick={resetFilters}
-                  className="px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#0EA5A0] hover:bg-[#0D9E98] transition-all shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
+                  className="min-h-11 px-6 py-3 rounded text-sm font-semibold text-white bg-teal-700 hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-600"
                 >
-                  Reset Filter
+                  {t("reset")}
                 </button>
                 }
               />
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 items-stretch">
                   {pageItems.map((product) => (
                     <StoreProductCard key={product.canonical.id} product={product} mikaSalesNumber={mikaSalesNumber} />
                   ))}
@@ -325,16 +311,15 @@ export default function StoreClient({
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between flex-wrap gap-3 pt-8">
                     <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                      Halaman <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{safePage}</span> dari{" "}
-                      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{rpcEnabled ? active?.data?.total_pages : totalPages}</span>
+                      {t("page", { page: safePage, pages: String(rpcEnabled ? active?.data?.total_pages : totalPages) })}
                     </p>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         type="button"
                         disabled={safePage === 1}
                         onClick={() => setPage(Math.max(1, safePage - 1))}
-                        aria-label="Halaman sebelumnya"
-                        className="p-2 rounded-lg border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        aria-label={t("previous")}
+                        className="w-11 h-11 flex items-center justify-center rounded border disabled:opacity-40 focus-visible:outline-2"
                         style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
                       >
                         <ChevronLeft size={16} />
@@ -346,9 +331,9 @@ export default function StoreClient({
                           type="button"
                           onClick={() => setPage(n)}
                           aria-current={n === safePage ? "page" : undefined}
-                          className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
+                          className={`w-11 h-11 rounded text-sm font-semibold focus-visible:outline-2 ${
                             n === safePage
-                              ? "bg-[#0EA5A0] text-white"
+                              ? "bg-teal-700 text-white"
                               : "border hover:bg-slate-100 dark:hover:bg-slate-800"
                           }`}
                           style={n === safePage ? {} : { borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
@@ -360,8 +345,8 @@ export default function StoreClient({
                         type="button"
                         disabled={safePage === totalPages}
                         onClick={() => setPage(Math.min(totalPages, safePage + 1))}
-                        aria-label="Halaman berikutnya"
-                        className="p-2 rounded-lg border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        aria-label={t("next")}
+                        className="w-11 h-11 flex items-center justify-center rounded border disabled:opacity-40 focus-visible:outline-2"
                         style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
                       >
                         <ChevronRight size={16} />
@@ -373,16 +358,18 @@ export default function StoreClient({
             )}
           </div>
         </div>
+        <div className="mt-8"><StorePromoBanner /></div>
       </div>
     </div>
   );
 }
 
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  const t = useTranslations("products.storeUi");
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}>
-      {label}
-      <button type="button" onClick={onRemove} className="hover:text-red-500 transition-colors">
+    <span className="inline-flex max-w-full items-center pl-3 rounded text-sm border border-base text-heading">
+      <span className="min-w-0 break-words">{label}</span>
+      <button type="button" onClick={onRemove} aria-label={t("removeFilter", { label })} className="w-11 h-11 shrink-0 flex items-center justify-center focus-visible:outline-2">
         <X size={12} />
       </button>
     </span>

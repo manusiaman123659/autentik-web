@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
+import { useTranslations } from "next-intl";
 
 export default function CategoryToolbar({
   products,
@@ -15,6 +16,7 @@ export default function CategoryToolbar({
   activeBrands: string[];
   onBrandToggle: (brands: string[]) => void;
 }) {
+  const t = useTranslations("products.storeUi");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -47,12 +49,12 @@ export default function CategoryToolbar({
       el.removeEventListener("scroll", checkScroll);
       window.removeEventListener("resize", checkScroll);
     };
-  }, []);
+  }, [allBrands]);
 
   function scrollBy(direction: "left" | "right") {
     scrollRef.current?.scrollBy({
       left: direction === "left" ? -160 : 160,
-      behavior: "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
     });
   }
 
@@ -65,16 +67,13 @@ export default function CategoryToolbar({
   }
 
   return (
-    <div className="relative">
+    <div className="flex min-w-0 items-center gap-2" aria-label={t("brand")}>
       {canScrollLeft && (
         <button
           type="button"
           onClick={() => scrollBy("left")}
-          className="absolute left-0 top-0 bottom-0 z-10 w-7 flex items-center justify-center"
-          style={{
-            background: "linear-gradient(to right, var(--bg-primary) 60%, transparent)",
-          }}
-          aria-label="Geser ke kiri"
+          className="h-11 w-11 shrink-0 flex items-center justify-center rounded border border-base focus-visible:outline-2"
+          aria-label={t("scrollLeft")}
         >
           <ChevronLeft size={14} className="text-slate-500" />
         </button>
@@ -82,20 +81,21 @@ export default function CategoryToolbar({
 
       <div
         ref={scrollRef}
-        className="flex gap-1.5 overflow-x-auto thin-scrollbar py-1 px-0.5"
+        className="flex min-w-0 flex-1 gap-2 overflow-x-auto scrollbar-thin py-1"
         style={{ scrollbarWidth: "none" }}
       >
         <button
           type="button"
           onClick={() => onBrandToggle([])}
-          className={`shrink-0 px-3 py-1.5 rounded-sm text-[11px] font-semibold border transition-colors whitespace-nowrap ${
+          aria-pressed={activeBrands.length === 0}
+          className={`min-h-11 shrink-0 px-4 py-2 rounded text-sm font-medium border focus-visible:outline-2 whitespace-nowrap ${
             activeBrands.length === 0
-              ? "bg-[#0EA5A0] text-white border-[#0EA5A0]"
+              ? "bg-teal-700 text-white border-teal-700"
               : "hover:bg-slate-100 dark:hover:bg-slate-800"
           }`}
           style={activeBrands.length === 0 ? {} : { borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
         >
-          Semua
+          {t("all")}
         </button>
         {allBrands.map(({ name, count }) => {
           const active = activeBrands.includes(name);
@@ -104,15 +104,16 @@ export default function CategoryToolbar({
               key={name}
               type="button"
               onClick={() => toggleBrand(name)}
-              className={`shrink-0 px-3 py-1.5 rounded-sm text-[11px] font-semibold border transition-colors whitespace-nowrap ${
+              aria-pressed={active}
+              className={`min-h-11 shrink-0 px-4 py-2 rounded text-sm font-medium border focus-visible:outline-2 whitespace-nowrap ${
                 active
-                  ? "bg-[#0EA5A0] text-white border-[#0EA5A0]"
+                  ? "bg-teal-700 text-white border-teal-700"
                   : "hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
               style={active ? {} : { borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
             >
               {name}
-              <span className={`ml-1 text-[9px] ${active ? "text-white/70" : "text-slate-400"}`}>
+              <span className={`ml-2 text-xs ${active ? "text-white" : "text-body"}`}>
                 {count}
               </span>
             </button>
@@ -124,11 +125,8 @@ export default function CategoryToolbar({
         <button
           type="button"
           onClick={() => scrollBy("right")}
-          className="absolute right-0 top-0 bottom-0 z-10 w-7 flex items-center justify-center"
-          style={{
-            background: "linear-gradient(to left, var(--bg-primary) 60%, transparent)",
-          }}
-          aria-label="Geser ke kanan"
+          className="h-11 w-11 shrink-0 flex items-center justify-center rounded border border-base focus-visible:outline-2"
+          aria-label={t("scrollRight")}
         >
           <ChevronRight size={14} className="text-slate-500" />
         </button>

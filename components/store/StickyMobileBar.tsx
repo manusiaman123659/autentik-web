@@ -5,7 +5,7 @@ import { ShoppingCart, MessageCircle, Share2, Check } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 import type { ProductRow } from "@/lib/admin-data";
 import type { StoreVariant } from "@/components/store/StoreProductDetail";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import WishlistButton from "@/components/store/WishlistButton";
 import { useTranslations } from "next-intl";
 import { minimumPurchase, purchaseQuantity } from "@/lib/product-attributes";
@@ -13,6 +13,7 @@ import { minimumPurchase, purchaseQuantity } from "@/lib/product-attributes";
 interface StickyMobileBarProps {
   product: ProductRow;
   displayName: string;
+  clearanceTarget?: RefObject<HTMLDivElement | null>;
   onAddToCart: () => void;
   onBuyNow: () => void;
   waNumber: string | null;
@@ -25,6 +26,7 @@ interface StickyMobileBarProps {
 export default function StickyMobileBar({
   product,
   displayName,
+  clearanceTarget,
   onAddToCart,
   onBuyNow,
   waNumber,
@@ -35,6 +37,17 @@ export default function StickyMobileBar({
 }: StickyMobileBarProps) {
   const [added, setAdded] = useState(false);
   const t = useTranslations("products.attributes");
+  const ui = useTranslations("products.storeUi");
+  const barRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = barRef.current;
+    if (!element) return;
+    const target = clearanceTarget?.current;
+    const measure = () => target?.style.setProperty("--store-bar-clearance", `${element.getBoundingClientRect().height + 24}px`);
+    const observer = new ResizeObserver(measure);
+    observer.observe(element); measure();
+    return () => { observer.disconnect(); target?.style.removeProperty("--store-bar-clearance"); };
+  }, [clearanceTarget]);
   const minimum = minimumPurchase(product.min_purchase_qty);
   const unit = product.unit ? ` ${product.unit}` : "";
   const [shareCopied, setShareCopied] = useState(false);
@@ -81,6 +94,7 @@ export default function StickyMobileBar({
 
   return (
     <div
+      ref={barRef} data-store-purchase-bar
       className="fixed bottom-0 left-0 right-0 z-40 lg:hidden border-t pb-[env(safe-area-inset-bottom)]"
       style={{
         backgroundColor: "var(--bg-card)",
@@ -88,17 +102,17 @@ export default function StickyMobileBar({
         boxShadow: "0 -2px 8px rgba(0,0,0,0.08)",
       }}
     >
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         {/* Price */}
-        <div className="w-full sm:w-auto flex-shrink-0 min-w-0">
+        <div className="w-full min-w-0">
           <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{stock < minimum && isReady
             ? t("insufficient", { quantity: minimum, unit }) : t("minimumContext", { quantity: minimum, unit })}</p>
           {effectivePrice != null ? (
-            <span className="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
+            <span className="text-base font-bold text-red-700 dark:text-red-400 break-words">
               {formatRupiah(effectivePrice)}{product.unit ? ` / ${product.unit}` : ""}
             </span>
           ) : (
-            <span className="text-sm font-medium text-body">Harga: hubungi</span>
+            <span className="text-sm font-medium text-body">{ui("contactPrice")}</span>
           )}
         </div>
 
@@ -109,7 +123,7 @@ export default function StickyMobileBar({
           disabled={isReady ? !canAdd : !waHref}
           className="flex-1 min-w-0 h-11 rounded-sm font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
           style={{
-            backgroundColor: isReady ? "#0EA5A0" : "#25D366",
+            backgroundColor: isReady ? "#0f766e" : "#15803d",
             color: "#fff",
           }}
         >
@@ -120,7 +134,7 @@ export default function StickyMobileBar({
                <><ShoppingCart size={14} /> {t("cart")}</>
             )
           ) : (
-            "Beli Sekarang"
+             ui("buy")
           )}
         </button>
 
@@ -130,13 +144,8 @@ export default function StickyMobileBar({
             href={waHref}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Hubungi melalui WhatsApp"
-            className="flex-shrink-0 w-10 h-10 rounded-sm flex items-center justify-center transition-colors"
-            style={{
-              border: "1px solid #25D36640",
-              color: "#25D366",
-              backgroundColor: "transparent",
-            }}
+            aria-label={ui("consult")}
+            className="flex-shrink-0 w-11 h-11 rounded border border-teal-700 text-teal-800 dark:text-teal-200 flex items-center justify-center focus-visible:outline-2"
           >
             <MessageCircle size={16} />
           </a>
@@ -146,11 +155,12 @@ export default function StickyMobileBar({
         <button
           type="button"
           onClick={handleShare}
-          title={shareCopied ? "Tersalin!" : "Bagikan"}
-          className="flex-shrink-0 w-10 h-10 rounded-sm flex items-center justify-center transition-colors"
+          title={shareCopied ? ui("copied") : ui("share")}
+          aria-label={shareCopied ? ui("copied") : ui("share")}
+          className="flex-shrink-0 w-11 h-11 rounded flex items-center justify-center focus-visible:outline-2"
           style={{
             border: "1px solid var(--border-subtle)",
-            color: shareCopied ? "#0EA5A0" : "var(--text-muted)",
+            color: "var(--text-secondary)",
             backgroundColor: "var(--bg-card)",
           }}
         >

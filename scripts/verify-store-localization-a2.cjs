@@ -37,6 +37,7 @@ async function main() {
   const view = current => ({ canonical, display: displays[current] });
   const links = loader(new Map())('i18n/locales.ts');
   const mocks = new Map([
+    ['next-intl', { useTranslations: namespace => require('use-intl/core').createTranslator({ locale, messages: { products: require('../messages/'+locale+'/products.json') }, namespace }) }],
     ['next-intl/server', { getLocale: async () => locale, getTranslations: async () => key => ({title:'Store '+locale,description:'Store description '+locale})[key] }],
     ['next/navigation', { notFound: () => { throw Error('404'); } }],
     ['@/lib/public-store-products', {
@@ -125,7 +126,7 @@ async function main() {
   listingMocks.set('@/components/ui/WhatsAppButton',mini('wa'));
   const StoreClient=loader(listingMocks)('app/(public)/[locale]/(site)/store/StoreClient.tsx').default;
   const filtered=renderToStaticMarkup(React.createElement(StoreClient,{products:[localized],compatible:null,ppicAkaNumber:null,mikaSalesNumber:null,initialQuery:'english display'}));
-  eq(filtered.includes('Tidak ada produk ditemukan'),true,'Listing search remains canonical-only in A2');
+  eq(filtered.includes(require('../messages/en/products.json').storeUi.empty),true,'Listing search remains canonical-only in A2');
   const matched=renderToStaticMarkup(React.createElement(StoreClient,{products:[localized],compatible:null,ppicAkaNumber:null,mikaSalesNumber:null,initialQuery:'Nama kanonis'}));
   eq(matched.includes('English display'),true,'Canonical search result renders localized card');
   const route = load('app/api/store/recent/route.ts');

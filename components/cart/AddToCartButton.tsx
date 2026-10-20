@@ -31,6 +31,7 @@ export default function AddToCartButton({
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const t = useTranslations("products.attributes");
+  const ui = useTranslations("products.storeUi");
   const minimum = minimumPurchase(product.min_purchase_qty);
   const [requestedQty, setQty] = useState(() => minimum);
   const [added, setAdded] = useState(false);
@@ -46,7 +47,7 @@ export default function AddToCartButton({
     && (!(hasVariants || product.has_active_variants) || selectedVariant != null);
   const unit = product.unit ? ` ${product.unit}` : "";
   const minimumMessage = t("minimumContext", { quantity: minimum, unit });
-  const unavailableMessage = stock < minimum ? t("insufficient", { quantity: minimum, unit }) : "Harga: hubungi kami";
+  const unavailableMessage = stock < minimum ? t("insufficient", { quantity: minimum, unit }) : ui("contactPrice");
 
   useEffect(() => {
     return () => {
@@ -82,11 +83,11 @@ export default function AddToCartButton({
         disabled={!canAdd}
         aria-label={`${product.name}: ${canAdd ? minimumMessage : unavailableMessage}`}
         title={canAdd ? minimumMessage : unavailableMessage}
-        className={`w-full flex-shrink-0 flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-medium transition-colors rounded-sm ${
+        className={`min-h-11 w-full flex-shrink-0 flex items-center justify-center gap-2 py-2 px-3 text-sm font-medium rounded focus-visible:outline-2 focus-visible:outline-offset-2 ${
           canAdd
             ? added
-              ? "bg-[#0EA5A0] text-white"
-              : "bg-[#0EA5A0] hover:bg-[#0EA5A0]/90 text-white"
+              ? "bg-teal-700 text-white"
+              : "bg-teal-700 hover:bg-teal-800 text-white"
             : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
         }`}
       >
@@ -101,14 +102,14 @@ export default function AddToCartButton({
       <p className="text-xs" style={{ color: "var(--text-secondary)" }}>{minimumMessage}</p>
       {stock < minimum && <p role="status" className="text-xs text-red-600">{unavailableMessage}</p>}
       {/* Quantity row */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap gap-3 items-center justify-between">
         <div className="inline-flex items-center rounded-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
           <button
             type="button"
             onClick={() => clampQty(qty - 1)}
             disabled={qty <= minimum || !canAdd}
             aria-label={t("decrease")}
-            className="w-7 h-7 flex items-center justify-center disabled:opacity-40 transition-colors text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
+            className="w-11 h-11 flex items-center justify-center disabled:opacity-40 text-slate-700 dark:text-slate-200 focus-visible:outline-2"
           >
             <Minus size={12} />
           </button>
@@ -120,12 +121,12 @@ export default function AddToCartButton({
             onClick={() => clampQty(qty + 1)}
             disabled={qty >= Math.min(stock, 999) || !canAdd}
             aria-label={t("increase")}
-            className="w-7 h-7 flex items-center justify-center disabled:opacity-40 transition-colors text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
+            className="w-11 h-11 flex items-center justify-center disabled:opacity-40 text-slate-700 dark:text-slate-200 focus-visible:outline-2"
           >
             <Plus size={12} />
           </button>
         </div>
-        <span className="text-xs text-slate-500 font-medium">
+        <span className="text-xs text-body font-medium">
           {t("remaining", { stock, unit })}
         </span>
       </div>
@@ -137,7 +138,7 @@ export default function AddToCartButton({
             type="button"
             onClick={() => onBuyNow(qty)}
             disabled={!canAdd}
-            className="w-full py-2 rounded-sm font-semibold text-xs bg-[#0EA5A0] hover:bg-[#0EA5A0]/90 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+            className="min-h-12 w-full py-3 rounded font-semibold text-sm bg-teal-700 hover:bg-teal-800 text-white disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center justify-center gap-2"
           >
             {t("buy")}
           </button>
@@ -147,13 +148,13 @@ export default function AddToCartButton({
           onClick={handleAdd}
           disabled={!canAdd}
           title={!canAdd ? unavailableMessage : minimumMessage}
-          className="w-full py-2 rounded-sm font-semibold text-xs border border-[#0EA5A0] text-[#0EA5A0] hover:bg-[#0EA5A0]/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+          className="min-h-12 w-full py-3 rounded font-semibold text-sm border border-teal-700 text-teal-800 dark:text-teal-200 hover:bg-teal-700/10 disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center justify-center gap-2"
         >
           {added ? <Check size={13} /> : <ShoppingCart size={13} />}
           {!canAdd
             ? stock === 0
-              ? "Stok Habis"
-              : "Hubungi Kami"
+              ? ui("out")
+              : ui("consult")
             : added
                ? t("added")
                : `+ ${t("cart")}`}

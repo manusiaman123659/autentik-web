@@ -1,25 +1,15 @@
-import { ShieldCheck, CheckCircle2, Package, Truck } from "lucide-react";
-
-const items = [
-  { icon: ShieldCheck, label: "100% Original" },
-  { icon: CheckCircle2, label: "Garansi Toko" },
-  { icon: Package, label: "Ready Stock" },
-  { icon: Truck, label: "Pengiriman Cepat" },
-];
+"use client";
+import { ShieldCheck, CheckCircle2, Truck } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function StoreTrustStrip() {
-  return (
-    <div className="border-y overflow-x-auto thin-scrollbar" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-secondary)" }}>
-      <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between gap-4 py-2 min-w-max">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-center gap-1.5">
-            <item.icon size={13} className="text-[#0EA5A0] flex-shrink-0" />
-            <span className="text-[11px] font-semibold whitespace-nowrap" style={{ color: "var(--text-primary)" }}>
-              {item.label}
-            </span>
-          </div>
-        ))}
-      </div>
+  const t = useTranslations("products.storeUi");
+  const items = [{ icon: ShieldCheck, key: "original" }, { icon: CheckCircle2, key: "warranty" }, { icon: Truck, key: "shipping" }];
+  return <div className="border-b border-base bg-page-alt">
+    <div className="container-custom flex flex-wrap gap-x-6 gap-y-2 py-3">
+      {items.map(({ icon: Icon, key }) => <div key={key} className="flex items-center gap-2 text-xs text-body">
+        <Icon size={16} aria-hidden="true" className="text-teal-700 dark:text-teal-300" />{t(key)}
+      </div>)}
     </div>
-  );
+  </div>;
 }
