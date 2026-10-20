@@ -1,15 +1,38 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "@/i18n/navigation";
 import Image from "next/image";
 import { Package } from "lucide-react";
 import { useRecentlyViewed } from "@/components/store/useRecentlyViewed";
 import { formatRupiah } from "@/lib/format";
+import type { PublicLocale } from "@/i18n/locales";
+import type { toStoreRecentView } from "@/lib/public-store-presentation";
 
-export default function RecentlyViewed() {
+type RecentView = ReturnType<typeof toStoreRecentView>;
+
+export default function RecentlyViewed({ locale }: { locale: PublicLocale }) {
   const { items, hydrated } = useRecentlyViewed();
+  const key = JSON.stringify([locale, ...items.slice(0, 8).map(item => item.id)]);
+  const [resolved, setResolved] = useState<{ key: string; items: RecentView[] } | null>(null);
 
-  if (!hydrated || items.length === 0) return null;
+  useEffect(() => {
+    if (!hydrated || !items.length) return;
+    const controller = new AbortController();
+    fetch("/api/store/recent", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale, ids: items.slice(0, 8).map(item => item.id) }),
+      signal: controller.signal,
+    }).then(async response => {
+      if (!response.ok) throw new Error("recent");
+      const result: unknown = await response.json();
+      if (!result || typeof result !== "object" || !Array.isArray((result as { data?: unknown }).data)) throw new Error("recent");
+      setResolved({ key, items: (result as { data: RecentView[] }).data });
+    }).catch(() => { if (!controller.signal.aborted) setResolved({ key, items: [] }); });
+    return () => controller.abort();
+  }, [hydrated, key, locale, items]);
+
+  if (!hydrated || resolved?.key !== key || resolved.items.length === 0) return null;
 
   return (
     <div className="border-t pt-8 mt-8" style={{ borderColor: "var(--border-subtle)" }}>
@@ -17,7 +40,7 @@ export default function RecentlyViewed() {
         Baru Dilihat
       </h2>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
-        {items.map((item) => (
+        {resolved.items.map((item) => (
           <Link
             key={item.id}
             href={`/store/${item.slug}`}
@@ -29,7 +52,7 @@ export default function RecentlyViewed() {
               {item.image_url ? (
                 <Image
                   src={item.image_url}
-                  alt={item.name}
+                  alt={item.displayName}
                   fill
                   className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                   sizes="180px"
@@ -44,7 +67,7 @@ export default function RecentlyViewed() {
             {/* Info */}
             <div className="p-2">
               <p className="text-[11px] font-semibold line-clamp-2 leading-snug min-h-[2rem]" style={{ color: "var(--text-primary)" }}>
-                {item.name}
+                {item.displayName}
               </p>
               <p className="text-[10px] text-slate-400 mt-0.5 truncate">{item.brand}</p>
               <div className="mt-1">

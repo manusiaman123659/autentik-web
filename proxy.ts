@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/middleware";
 import { getCareerRoutingResponse } from "@/lib/api/career-routing";
 import createLocaleRouting from "next-intl/middleware";
@@ -46,6 +46,23 @@ async function refreshSession(request: NextRequest) {
 export async function proxy(request: NextRequest) {
   // Existing session-refresh logic runs first and is otherwise unchanged.
   const sessionResponse = await refreshSession(request);
+  const internalPath = request.nextUrl.pathname.replace(/^\/zh-CN(?=\/|$)/, "/zh-cn");
+  const internalRoute = getPublicRoute(internalPath);
+  if (/^\/(?:id|zh-CN)(?:\/|$)/.test(request.nextUrl.pathname)
+    && internalRoute?.prefixed
+    && request.headers.get("x-public-pathname") === internalRoute.pathname) {
+    // Next 16 re-enters proxy on next-intl's internal rewrite; do not redirect it back to its public URL.
+    const careerRequest = internalPath !== request.nextUrl.pathname
+      && (request.method === "GET" || request.method === "HEAD")
+      ? new NextRequest(new URL(internalPath + request.nextUrl.search, request.url), {
+          method: request.method, headers: request.headers,
+        })
+      : request;
+    const careerResponse = await getCareerRoutingResponse(careerRequest);
+    const response = careerResponse ?? sessionResponse;
+    for (const cookie of sessionResponse.cookies.getAll()) response.cookies.set(cookie);
+    return response;
+  }
   if (/^\/zh-CN(?:\/|$)/.test(request.nextUrl.pathname)) {
     const normalized = request.nextUrl.clone();
     normalized.pathname = normalized.pathname.replace(/^\/zh-CN/, "/zh-cn");

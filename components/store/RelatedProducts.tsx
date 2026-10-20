@@ -1,9 +1,9 @@
 import Link from "@/i18n/navigation";
-import type { ProductRow } from "@/lib/admin-data";
+import type { StoreSearchItem } from "@/lib/store-search-types";
 import StoreProductCard from "@/components/store/StoreProductCard";
 
 interface RelatedProductsProps {
-  products: ProductRow[];
+  products: StoreSearchItem[];
   mikaSalesNumber: string | null;
 }
 
@@ -25,7 +25,7 @@ export default function RelatedProducts({ products, mikaSalesNumber }: RelatedPr
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {products.map((p) => (
-          <StoreProductCard key={p.id} product={p} mikaSalesNumber={mikaSalesNumber} />
+          <StoreProductCard key={p.canonical.id} product={p} mikaSalesNumber={mikaSalesNumber} />
         ))}
       </div>
     </div>

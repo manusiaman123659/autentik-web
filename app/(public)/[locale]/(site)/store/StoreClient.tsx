@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   X,
   RotateCcw,
@@ -11,7 +11,8 @@ import {
   Package,
   SlidersHorizontal,
 } from "lucide-react";
-import type { ProductRow } from "@/lib/admin-data";
+import type { PublicLocale } from "@/i18n/locales";
+import type { StoreListingResult, StoreSearchItem } from "@/lib/store-search-types";
 import StoreFilterSidebar, { type FilterState } from "@/components/store/StoreFilterSidebar";
 import StoreProductCard from "@/components/store/StoreProductCard";
 import StoreSearchBar from "@/components/store/StoreSearchBar";
@@ -34,12 +35,16 @@ const INITIAL_FILTERS: FilterState = {
 
 export default function StoreClient({
   products,
+  locale,
+  rpcEnabled,
   compatible,
   ppicAkaNumber,
   mikaSalesNumber,
   initialQuery,
 }: {
-  products: ProductRow[];
+  products: StoreSearchItem[];
+  locale: PublicLocale;
+  rpcEnabled: boolean;
   compatible: string | null;
   ppicAkaNumber: string | null;
   mikaSalesNumber: string | null;
@@ -51,6 +56,29 @@ export default function StoreClient({
   });
   const [page, setPage] = useState(1);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [remote, setRemote] = useState<{ key: string; data?: StoreListingResult; error?: boolean } | null>(null);
+  const canonicalProducts = useMemo(() => products.map(({ canonical }) => canonical), [products]);
+  const requestKey = JSON.stringify([locale, filters, page, retry]);
+
+  useEffect(() => {
+    if (!rpcEnabled) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({ locale, mode: "listing", q: filters.query,
+      stock: filters.stockStatus, page: String(page) });
+    filters.brands.forEach(brand => params.append("brand", brand));
+    filters.categories.forEach(category => params.append("category", category));
+    if (filters.priceMin !== "") params.set("min", filters.priceMin);
+    if (filters.priceMax !== "") params.set("max", filters.priceMax);
+    fetch(`/api/store/search?${params}`, { signal: controller.signal, cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error("search");
+        const result: unknown = await response.json();
+        if (!result || typeof result !== "object" || (result as { data?: { mode?: string } }).data?.mode !== "listing") throw new Error("search");
+        setRemote({ key: requestKey, data: (result as { data: StoreListingResult }).data });
+      }).catch(() => { if (!controller.signal.aborted) setRemote({ key: requestKey, error: true }); });
+    return () => controller.abort();
+  }, [rpcEnabled, requestKey, locale, filters, page]);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -60,54 +88,58 @@ export default function StoreClient({
       const q = filters.query.trim().toLowerCase();
       list = list.filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.slug.toLowerCase().includes(q) ||
-          p.brand.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          (p.sku && p.sku.toLowerCase().includes(q)),
+          p.canonical.name.toLowerCase().includes(q) ||
+          p.canonical.slug.toLowerCase().includes(q) ||
+          p.canonical.brand.toLowerCase().includes(q) ||
+          p.canonical.category.toLowerCase().includes(q) ||
+          (p.canonical.sku && p.canonical.sku.toLowerCase().includes(q)),
       );
     }
 
     // Brand filter
     if (filters.brands.length > 0) {
-      list = list.filter((p) => filters.brands.includes(p.brand));
+      list = list.filter((p) => filters.brands.includes(p.canonical.brand));
     }
 
     // Category filter
     if (filters.categories.length > 0) {
-      list = list.filter((p) => filters.categories.includes(p.category));
+      list = list.filter((p) => filters.categories.includes(p.canonical.category));
     }
 
     // Stock status filter
     if (filters.stockStatus === "available") {
-      list = list.filter((p) => (p.stock ?? 0) > 0);
+      list = list.filter((p) => (p.canonical.stock ?? 0) > 0);
     } else if (filters.stockStatus === "low") {
       list = list.filter((p) => {
-        const s = p.stock ?? 0;
-        const l = p.low_stock_threshold ?? 5;
+        const s = p.canonical.stock ?? 0;
+        const l = p.canonical.low_stock_threshold ?? 5;
         return s > 0 && s <= l;
       });
     } else if (filters.stockStatus === "out") {
-      list = list.filter((p) => (p.stock ?? 0) === 0);
+      list = list.filter((p) => (p.canonical.stock ?? 0) === 0);
     }
 
     // Price range filter
     if (filters.priceMin !== "") {
       const min = Number(filters.priceMin);
-      if (!Number.isNaN(min)) list = list.filter((p) => (p.price ?? 0) >= min);
+      if (!Number.isNaN(min)) list = list.filter((p) => (p.canonical.price ?? 0) >= min);
     }
     if (filters.priceMax !== "") {
       const max = Number(filters.priceMax);
-      if (!Number.isNaN(max)) list = list.filter((p) => (p.price ?? 0) <= max);
+      if (!Number.isNaN(max)) list = list.filter((p) => (p.canonical.price ?? 0) <= max);
     }
 
     return list;
   }, [products, filters]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const safePage = Math.min(page, totalPages);
+  const active = rpcEnabled && remote?.key === requestKey ? remote : null;
+  const totalPages = rpcEnabled ? Math.max(1, Math.min(2147483647, Number(active?.data?.total_pages ?? "1"))) : Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safePage = rpcEnabled ? active?.data?.resolved_page ?? page : Math.min(page, totalPages);
   const startIdx = (safePage - 1) * ITEMS_PER_PAGE;
-  const pageItems = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  const pageItems = rpcEnabled ? active?.data?.items ?? [] : filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  const totalCount = rpcEnabled ? active?.data?.total ?? "0" : String(filtered.length);
+  const facetBrands = active?.data?.facets.brands;
+  const facetCategories = active?.data?.facets.categories;
 
   function handleFilterChange(patch: Partial<FilterState>) {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -175,10 +207,11 @@ export default function StoreClient({
       <div className="border-b" style={{ backgroundColor: "var(--bg-secondary)", borderColor: "var(--border-subtle)" }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-12 py-3 space-y-2.5">
           <Suspense fallback={<div className="h-9" />}>
-            <StoreSearchBar products={products} onQueryChange={(q) => handleFilterChange({ query: q })} />
+            <StoreSearchBar products={products} locale={locale} rpcEnabled={rpcEnabled} onQueryChange={(q) => handleFilterChange({ query: q })} />
           </Suspense>
           <CategoryToolbar
-            products={products}
+            products={canonicalProducts}
+            brands={facetBrands}
             activeBrands={filters.brands}
             onBrandToggle={(brands) => handleFilterChange({ brands })}
           />
@@ -194,7 +227,7 @@ export default function StoreClient({
         {/* Mobile filter toggle + result count */}
         <div className="flex items-center justify-between mb-4 lg:mb-6">
           <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{filtered.length}</span> produk ditemukan
+            <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{totalCount}</span> produk ditemukan
           </p>
           <button
             type="button"
@@ -213,7 +246,9 @@ export default function StoreClient({
         <div className="flex gap-8">
           {/* Sidebar */}
           <StoreFilterSidebar
-            products={products}
+            products={canonicalProducts}
+            brands={facetBrands}
+            categories={facetCategories}
             filters={filters}
             onFilterChange={handleFilterChange}
             onReset={resetFilters}
@@ -259,7 +294,12 @@ export default function StoreClient({
               </div>
             )}
 
-            {filtered.length === 0 ? (
+            {rpcEnabled && !active ? (
+              <p role="status" className="py-8 text-sm" style={{ color: "var(--text-secondary)" }}>Memuat produk Komponen...</p>
+            ) : active?.error ? (
+              <EmptyState icon={Package} title="Pencarian Komponen belum tersedia" description="Muat ulang pencarian atau coba lagi nanti."
+                action={<button type="button" onClick={() => setRetry(value => value + 1)} className="px-5 py-2 rounded-sm bg-[#0EA5A0] text-white text-sm font-semibold">Coba Lagi</button>} />
+            ) : pageItems.length === 0 ? (
               <EmptyState
                 icon={Package}
                 title="Tidak ada produk ditemukan"
@@ -277,7 +317,7 @@ export default function StoreClient({
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                   {pageItems.map((product) => (
-                    <StoreProductCard key={product.id} product={product} mikaSalesNumber={mikaSalesNumber} />
+                    <StoreProductCard key={product.canonical.id} product={product} mikaSalesNumber={mikaSalesNumber} />
                   ))}
                 </div>
 
@@ -286,20 +326,21 @@ export default function StoreClient({
                   <div className="flex items-center justify-between flex-wrap gap-3 pt-8">
                     <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
                       Halaman <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{safePage}</span> dari{" "}
-                      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{totalPages}</span>
+                      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{rpcEnabled ? active?.data?.total_pages : totalPages}</span>
                     </p>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         type="button"
                         disabled={safePage === 1}
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        onClick={() => setPage(Math.max(1, safePage - 1))}
                         aria-label="Halaman sebelumnya"
                         className="p-2 rounded-lg border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
                       >
                         <ChevronLeft size={16} />
                       </button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                      {Array.from({ length: rpcEnabled ? Math.min(totalPages, 7) : totalPages }, (_, i) => rpcEnabled ? Math.min(totalPages, Math.max(1, safePage - 3)) + i : i + 1)
+                        .filter(n => n <= totalPages).map((n) => (
                         <button
                           key={n}
                           type="button"
@@ -318,7 +359,7 @@ export default function StoreClient({
                       <button
                         type="button"
                         disabled={safePage === totalPages}
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        onClick={() => setPage(Math.min(totalPages, safePage + 1))}
                         aria-label="Halaman berikutnya"
                         className="p-2 rounded-lg border disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                         style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}

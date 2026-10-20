@@ -12,6 +12,7 @@ import { minimumPurchase, purchaseQuantity } from "@/lib/product-attributes";
 
 interface StickyMobileBarProps {
   product: ProductRow;
+  displayName: string;
   onAddToCart: () => void;
   onBuyNow: () => void;
   waNumber: string | null;
@@ -23,6 +24,7 @@ interface StickyMobileBarProps {
 
 export default function StickyMobileBar({
   product,
+  displayName,
   onAddToCart,
   onBuyNow,
   waNumber,
@@ -58,7 +60,7 @@ export default function StickyMobileBar({
     const url = `${window.location.origin}${localizeHref(`/store/${product.slug}`, getPublicRoute(window.location.pathname)?.locale ?? "id")}`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: `${product.name} — Autentik`, url });
+        await navigator.share({ title: `${displayName} — Autentik`, url });
         return;
       } catch {
         // User cancelled
@@ -71,7 +73,7 @@ export default function StickyMobileBar({
     } catch {
       // Silent fail
     }
-  }, [product.slug, product.name]);
+  }, [product.slug, displayName]);
 
   const waHref = waNumber
     ? `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`

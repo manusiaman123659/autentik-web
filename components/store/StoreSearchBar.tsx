@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { Search, X, Package } from "lucide-react";
-import type { ProductRow } from "@/lib/admin-data";
+import type { PublicLocale } from "@/i18n/locales";
+import type { StoreSearchItem, StoreSuggestion, StoreSuggestResult } from "@/lib/store-search-types";
 import { formatRupiah } from "@/lib/format";
 
 const MAX_SUGGESTIONS = 6;
@@ -12,9 +13,13 @@ const DEBOUNCE_MS = 250;
 
 export default function StoreSearchBar({
   products,
+  locale,
+  rpcEnabled,
   onQueryChange,
 }: {
-  products: ProductRow[];
+  products: StoreSearchItem[];
+  locale: PublicLocale;
+  rpcEnabled: boolean;
   onQueryChange: (q: string) => void;
 }) {
   const router = useRouter();
@@ -27,20 +32,43 @@ export default function StoreSearchBar({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const [remote, setRemote] = useState<{ key: string; items?: StoreSuggestion[]; error?: boolean } | null>(null);
+  const key = JSON.stringify([locale, input.trim()]);
 
-  const suggestions = useMemo(() => {
+  const localSuggestions = useMemo(() => {
     const q = input.trim().toLowerCase();
     if (q.length < 2) return [];
     return products
       .filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.brand.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          (p.sku && p.sku.toLowerCase().includes(q)),
+          p.canonical.name.toLowerCase().includes(q) ||
+          p.canonical.brand.toLowerCase().includes(q) ||
+          p.canonical.category.toLowerCase().includes(q) ||
+          (p.canonical.sku && p.canonical.sku.toLowerCase().includes(q)),
       )
-      .slice(0, MAX_SUGGESTIONS);
+      .slice(0, MAX_SUGGESTIONS)
+      .map(p => ({ id: p.canonical.id, slug: p.canonical.slug, displayName: p.display.name,
+        brand: p.canonical.brand, sku: p.canonical.sku ?? null, image_url: p.canonical.image_url ?? null,
+        price: p.canonical.price ?? null }));
   }, [input, products]);
+  useEffect(() => {
+    if (!rpcEnabled || [...input.trim()].length < 2) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams({ mode: "suggest", locale, q: input.trim() });
+      fetch(`/api/store/search?${params}`, { signal: controller.signal, cache: "no-store" })
+        .then(async response => {
+          if (!response.ok) throw new Error("suggest");
+          const result: unknown = await response.json();
+          const data = (result as { data?: StoreSuggestResult } | null)?.data;
+          if (data?.mode !== "suggest" || !Array.isArray(data.items)) throw new Error("suggest");
+          setRemote({ key, items: data.items });
+        }).catch(() => { if (!controller.signal.aborted) setRemote({ key, error: true }); });
+    }, DEBOUNCE_MS);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [rpcEnabled, key, locale, input]);
+  const active = remote?.key === key ? remote : null;
+  const suggestions = rpcEnabled ? active?.items ?? [] : localSuggestions;
 
   const syncToURL = useCallback(
     (value: string) => {
@@ -76,7 +104,7 @@ export default function StoreSearchBar({
     inputRef.current?.blur();
   }
 
-  function selectSuggestion(product: ProductRow) {
+  function selectSuggestion(product: StoreSuggestion) {
     setInput("");
     setOpen(false);
     onQueryChange("");
@@ -119,7 +147,7 @@ export default function StoreSearchBar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const showDropdown = open && input.trim().length >= 2;
+  const showDropdown = open && [...input.trim()].length >= 2;
 
   return (
     <div ref={wrapperRef} className="relative w-full max-w-xl">
@@ -159,7 +187,13 @@ export default function StoreSearchBar({
             borderColor: "var(--border-subtle)",
           }}
         >
-          {suggestions.length === 0 ? (
+          {rpcEnabled && active?.error ? (
+            <div role="alert" className="px-3 py-4 text-center text-[11px]" style={{ color: "var(--text-secondary)" }}>
+              Pencarian Komponen belum tersedia. Silakan coba lagi.
+            </div>
+          ) : rpcEnabled && !active ? (
+            <div role="status" className="px-3 py-4 text-center text-[11px]" style={{ color: "var(--text-secondary)" }}>Sedang mencari...</div>
+          ) : suggestions.length === 0 ? (
             <div className="px-3 py-4 text-center">
               <p className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
                 Tidak ada hasil untuk &quot;{input.trim()}&quot;
@@ -181,7 +215,7 @@ export default function StoreSearchBar({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={product.image_url}
-                        alt={product.name}
+                        alt={product.displayName}
                         className="w-8 h-8 rounded-sm object-cover flex-shrink-0"
                       />
                     ) : (
@@ -191,7 +225,7 @@ export default function StoreSearchBar({
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>
-                        {product.name}
+                        {product.displayName}
                       </p>
                       <p className="text-[10px] truncate" style={{ color: "var(--text-secondary)" }}>
                         {product.brand}

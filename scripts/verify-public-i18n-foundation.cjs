@@ -106,6 +106,18 @@ async function main() {
     equal(new URL(response.headers.get('location')).pathname, alias.startsWith('/id') ? '/products' : '/zh-cn/products', 'Compatibility alias normalizes');
     equal(new URL(response.headers.get('location')).search, '?q=test', 'Normalization retains query');
   }
+  for (const internal of ['/id/store', '/zh-CN/store']) {
+    const rewritten = request(internal);
+    rewritten.headers.set('x-public-pathname', '/store');
+    const response = await proxy(rewritten);
+    equal(response.headers.get('location'), null, 'Internal locale rewrite must not redirect to the same public URL');
+    equal(response.cookies.get('session-fixture').value, 'refreshed', 'Internal rewrite preserves refreshed auth cookies');
+  }
+  for (const internal of ['/id/careers/not-a-job', '/zh-CN/careers/not-a-job']) for (const method of ['GET', 'HEAD']) {
+    const rewritten = request(internal, method);
+    rewritten.headers.set('x-public-pathname', '/careers/not-a-job');
+    equal((await proxy(rewritten)).status, 404, 'Forged rewrite marker cannot bypass pre-stream career 404');
+  }
   for (const prefix of ['', '/en', '/zh-cn']) for (const method of ['GET','HEAD']) {
     const response = await proxy(request(prefix + '/careers/not-a-job', method));
     equal(response.status, 404, 'Localized careers pre-stream 404');

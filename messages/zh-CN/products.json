@@ -1,6 +1,7 @@
 {
   "attributes": { "title": "产品属性", "minimum": "最小订购量", "unit": "销售单位", "weight": "重量", "dimensions": "尺寸", "note": "尺寸说明", "length": "长度", "width": "宽度", "height": "高度", "axes": "长 × 宽 × 高", "minimumContext": "每个产品/规格最少购买 {quantity}{unit}", "insufficient": "库存不足以满足最小订购量 {quantity}{unit}。", "review": "数量不符合当前最小订购量或库存。请检查产品并在结账前修改数量。", "refreshFailed": "无法加载购买规则。请重新加载购物车后再结账。", "checking": "正在检查购买规则…", "correct": "将数量改为 {quantity}", "checkoutError": "产品最小订购量已更改。请打开购物车或产品页面，检查当前最小订购量并修改数量后重试。", "cart": "购物车", "added": "已添加", "buy": "立即购买", "decrease": "减少数量", "increase": "增加数量", "remaining": "剩余：{stock}{unit}" },
   "metadata": { "title": "产品目录 | PT Autentik Karya Analitika", "description": "实验室设备与技术：精密仪器、水净化设备、干燥柜及物联网监测系统。" },
+  "store": { "title": "组件商城 | PT Autentik Karya Analitika", "description": "PT Autentik Karya Analitika 为 Talpha、Cylab、Ullun 和 Epal 设备提供原装保修组件。" },
   "catalogue": {
     "eyebrow": "PT AUTENTIK KARYA ANALITIKA 产品",
     "title": "实验室设备与技术目录", "description": "符合国际标准的精密仪器、水净化设备、干燥柜及物联网监测系统。",

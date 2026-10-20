@@ -6,10 +6,12 @@ import type { ProductRow } from "@/lib/admin-data";
 
 export default function CategoryToolbar({
   products,
+  brands,
   activeBrands,
   onBrandToggle,
 }: {
-  products: ProductRow[];
+  products: Pick<ProductRow, "brand">[];
+  brands?: { name: string; count: string }[];
   activeBrands: string[];
   onBrandToggle: (brands: string[]) => void;
 }) {
@@ -18,6 +20,7 @@ export default function CategoryToolbar({
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   const allBrands = useMemo(() => {
+    if (brands) return brands;
     const counts: Record<string, number> = {};
     products.forEach((p) => {
       if (p.brand) counts[p.brand] = (counts[p.brand] || 0) + 1;
@@ -25,7 +28,7 @@ export default function CategoryToolbar({
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .map(([name, count]) => ({ name, count }));
-  }, [products]);
+  }, [products, brands]);
 
   function checkScroll() {
     const el = scrollRef.current;

@@ -52,7 +52,7 @@ export function productSchema(product: ProductRow, locale: PublicLocale = "id", 
   };
 }
 
-export function productOfferSchema(product: ProductRow, locale: PublicLocale = "id") {
+export function productOfferSchema(product: ProductRow, locale: PublicLocale = "id", display?: Pick<ResolvedProductContent, "name" | "description">) {
   const availability =
     product.stock != null && product.stock > 0
       ? "https://schema.org/InStock"
@@ -61,9 +61,9 @@ export function productOfferSchema(product: ProductRow, locale: PublicLocale = "
   return {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: product.name,
+    name: display?.name ?? product.name,
     image: product.image_url || undefined,
-    description: product.description,
+    description: display?.description ?? product.description,
     brand: {
       "@type": "Brand",
       name: product.brand,

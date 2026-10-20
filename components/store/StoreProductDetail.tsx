@@ -8,6 +8,9 @@ import {
   Check,
 } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
+import type { ResolvedProductContent } from "@/lib/product-translation-types";
+import type { PublicLocale } from "@/i18n/locales";
+import type { ResolvedStoreProduct } from "@/lib/public-store-presentation";
 import { formatRupiah } from "@/lib/format";
 import { createClient } from "@/utils/supabase/client";
 import { useCart } from "@/components/cart/CartProvider";
@@ -39,14 +42,18 @@ export interface StoreVariant {
 
 interface StoreProductDetailProps {
   product: ProductRow;
+  display: ResolvedProductContent;
+  locale: PublicLocale;
   ppicAkaNumber: string | null;
   mikaSalesNumber: string | null;
-  relatedProducts?: ProductRow[];
+  relatedProducts?: ResolvedStoreProduct[];
   variants?: StoreVariant[];
 }
 
 export default function StoreProductDetail({
   product,
+  display,
+  locale,
   ppicAkaNumber,
   mikaSalesNumber,
   relatedProducts = [],
@@ -97,8 +104,8 @@ export default function StoreProductDetail({
     ? Math.round(((product.compare_at_price! - (product.price ?? 0)) / product.compare_at_price!) * 100)
     : 0;
 
-  const specs: { label: string; value: string }[] = product.specs ?? [];
-  const features: string[] = (product.features ?? []).map(String);
+  const specs = display.specs;
+  const features = display.features;
 
   async function handleBuyNow(qty: number) {
     if (!isReady || effectivePrice == null || (hasVariants && !selectedVariant)
@@ -141,7 +148,7 @@ export default function StoreProductDetail({
             <Link href="/store" className="hover:text-[#0EA5A0] transition-colors">Marketplace Komponen</Link>
             <ChevronRight size={10} />
             <span className="font-medium truncate max-w-[180px]" style={{ color: "var(--text-primary)" }}>
-              {product.name}
+              {display.name}
             </span>
           </nav>
         </div>
@@ -158,7 +165,7 @@ export default function StoreProductDetail({
               imageUrl={product.image_url ?? null}
               gallery={Array.isArray(product.gallery) ? product.gallery : []}
               brand={product.brand}
-              name={product.name}
+              name={display.name}
               badges={
                 <>
                   {/* Stock badge */}
@@ -192,7 +199,7 @@ export default function StoreProductDetail({
               </p>
               <div className="flex items-start justify-between gap-2 mb-1">
                 <h1 className="text-lg md:text-xl font-bold leading-snug flex-1" style={{ color: "var(--text-primary)" }}>
-                  {product.name}
+                  {display.name}
                 </h1>
                 <WishlistButton
                   product={{
@@ -266,7 +273,7 @@ export default function StoreProductDetail({
                 {activeTab === "description" ? (
                   <div className="space-y-3">
                     <p className="text-sm leading-relaxed break-words" style={{ color: "var(--text-secondary)" }}>
-                      {product.description}
+                      {display.description}
                     </p>
 
                     {/* Features */}
@@ -418,7 +425,7 @@ export default function StoreProductDetail({
               {/* Share row — desktop */}
               <div className="hidden lg:flex items-center gap-2 border-t pt-3 mt-3" style={{ borderColor: "var(--border-subtle)" }}>
                 <CopyLinkButton slug={product.slug} />
-                <ShareProductButton slug={product.slug} name={product.name} />
+                <ShareProductButton slug={product.slug} name={display.name} />
               </div>
 
               {/* Trust info — merged into purchase box */}
@@ -489,13 +496,14 @@ export default function StoreProductDetail({
         )}
 
         {/* Recently Viewed */}
-        <RecentlyViewed />
+        <RecentlyViewed locale={locale} />
 
       </div>
 
       {/* Sticky Mobile Bottom Bar */}
       <StickyMobileBar
         product={product}
+        displayName={display.name}
         onAddToCart={() => addItem({
           ...product,
           price: effectivePrice,

@@ -14,7 +14,9 @@ export interface FilterState {
 }
 
 interface StoreFilterSidebarProps {
-  products: ProductRow[];
+  products: Pick<ProductRow, "brand" | "category">[];
+  brands?: { name: string; count: string }[];
+  categories?: { name: string; count: string }[];
   filters: FilterState;
   onFilterChange: (patch: Partial<FilterState>) => void;
   onReset: () => void;
@@ -25,6 +27,8 @@ interface StoreFilterSidebarProps {
 
 export default function StoreFilterSidebar({
   products,
+  brands,
+  categories,
   filters,
   onFilterChange,
   onReset,
@@ -33,6 +37,7 @@ export default function StoreFilterSidebar({
   onMobileClose,
 }: StoreFilterSidebarProps) {
   const allBrands = useMemo(() => {
+    if (brands) return brands;
     const counts: Record<string, number> = {};
     products.forEach((p) => {
       if (p.brand) counts[p.brand] = (counts[p.brand] || 0) + 1;
@@ -40,9 +45,10 @@ export default function StoreFilterSidebar({
     return Object.entries(counts)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([name, count]) => ({ name, count }));
-  }, [products]);
+  }, [products, brands]);
 
   const allCategories = useMemo(() => {
+    if (categories) return categories;
     const counts: Record<string, number> = {};
     products.forEach((p) => {
       if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
@@ -50,7 +56,7 @@ export default function StoreFilterSidebar({
     return Object.entries(counts)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([name, count]) => ({ name, count }));
-  }, [products]);
+  }, [products, categories]);
 
   function toggleArrayFilter(key: "brands" | "categories", value: string) {
     const current = filters[key];

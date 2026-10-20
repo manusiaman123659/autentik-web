@@ -95,7 +95,6 @@ async function surfaceChecks(source,row) {
   for(const file of allFiles)check(fs.readFileSync(path.join(root,file),'utf8').includes(file.includes('SearchModal')?'matchesCanonicalB2BSearch':file.includes('page.tsx')?'resolvePublicB2BProducts':'.display.name'),true,'Consumer uses shared display '+file);
   const catalogue=fs.readFileSync(path.join(root,'app/(public)/[locale]/(site)/products/KatalogClient.tsx'),'utf8');check(catalogue.includes('productName={rfqProduct?.canonicalName}'),true,'Catalogue RFQ canonical name');check(catalogue.includes('p.canonicalName.toLowerCase()'),true,'Catalogue matching remains canonical');check(catalogue.includes('t("detail")'),true,'Detail CTA messages');
   const viewer=fs.readFileSync(path.join(root,'components/product/Product3DViewer.tsx'),'utf8');check(viewer.includes('useTranslations'),false,'Shared Admin viewer has no next-intl hook');check(viewer.includes('loading: "Memuat model 3D..."'),true,'Admin Indonesian default retained');
-  const store=fs.readFileSync(path.join(root,'components/store/RelatedProducts.tsx'),'utf8');check(store,require('node:child_process').execFileSync('git',['show','HEAD:components/store/RelatedProducts.tsx'],{cwd:root,encoding:'utf8'}),'Store related remains unchanged');
   for(const value of ['en','zh-CN'])check(catalogs[value].products.catalogue.detail!=='Detail',true,'Translated Detail CTA '+value);
 }
 async function mutationInvalidationChecks() {

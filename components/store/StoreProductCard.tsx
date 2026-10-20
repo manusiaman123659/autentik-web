@@ -3,18 +3,18 @@
 import Link from "@/i18n/navigation";
 import Image from "next/image";
 import { Package } from "lucide-react";
-import type { ProductRow } from "@/lib/admin-data";
+import type { StoreSearchItem } from "@/lib/store-search-types";
 import { formatRupiah } from "@/lib/format";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import ProductFulfillmentCta from "@/components/requests/ProductFulfillmentCta";
 import WishlistButton from "@/components/store/WishlistButton";
 
 interface StoreProductCardProps {
-  product: ProductRow;
+  product: StoreSearchItem;
   mikaSalesNumber: string | null;
 }
 
-export default function StoreProductCard({ product, mikaSalesNumber }: StoreProductCardProps) {
+export default function StoreProductCard({ product: { canonical: product, display }, mikaSalesNumber }: StoreProductCardProps) {
   const stock = product.stock ?? 0;
   const low = product.low_stock_threshold ?? 5;
   const fulfillment = product.fulfillment_type ?? "ready_stock";
@@ -32,7 +32,7 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
         {product.image_url ? (
           <Image
             src={product.image_url}
-            alt={product.name}
+            alt={display.name}
             fill
             className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1023px) 50vw, (max-width: 1279px) 35vw, (max-width: 1440px) 25vw, 320px"
@@ -94,7 +94,7 @@ export default function StoreProductCard({ product, mikaSalesNumber }: StoreProd
             className="text-sm font-medium line-clamp-2 leading-relaxed hover:text-[#0EA5A0] transition-colors min-h-[2.5rem] break-words"
             style={{ color: "var(--text-primary)" }}
           >
-            {product.name}
+            {display.name}
           </h3>
         </Link>
 
