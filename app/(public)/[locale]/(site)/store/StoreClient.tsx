@@ -17,7 +17,6 @@ import StoreProductCard from "@/components/store/StoreProductCard";
 import StoreSearchBar from "@/components/store/StoreSearchBar";
 import CategoryToolbar from "@/components/store/CategoryToolbar";
 import StoreTrustStrip from "@/components/store/StoreTrustStrip";
-import StorePromoBanner from "@/components/store/StorePromoBanner";
 import WhatsAppButton from "@/components/ui/WhatsAppButton";
 import EmptyState from "@/components/ui/EmptyState";
 import { useTranslations } from "next-intl";
@@ -358,7 +357,6 @@ export default function StoreClient({
             )}
           </div>
         </div>
-        <div className="mt-8"><StorePromoBanner /></div>
       </div>
     </div>
   );

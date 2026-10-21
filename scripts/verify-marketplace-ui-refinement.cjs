@@ -11,6 +11,7 @@ const { connection } = require('./verify-product-translation-editor-browser.cjs'
 const root = path.resolve(__dirname, '..');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let checks = 0;
+const polish = process.argv.includes('--polish');
 
 async function main() {
   const parent = path.join(os.tmpdir(), 'opencode');
@@ -19,7 +20,12 @@ async function main() {
   const cssRoot = process.env.MARKETPLACE_QA_BUILD || path.join(parent, 'pt004-runtime-build');
   const cssDir = path.join(cssRoot, '.next/static');
   assert.ok(fs.existsSync(cssDir), 'Run the isolated current-source production build first');
-  const css = fs.readdirSync(cssDir, { recursive: true }).filter(f => f.endsWith('.css')).map(f => fs.readFileSync(path.join(cssDir, f), 'utf8')).join('\n').replaceAll('../media/', '/_next/static/media/');
+  let css = fs.readdirSync(cssDir, { recursive: true }).filter(f => f.endsWith('.css')).map(f => fs.readFileSync(path.join(cssDir, f), 'utf8')).join('\n').replaceAll('../media/', '/_next/static/media/');
+  if (polish) {
+    const from = path.join(root, 'app/globals.css');
+    const fresh = await require('postcss')([require('@tailwindcss/postcss')({ base: root })]).process(fs.readFileSync(from, 'utf8'), { from });
+    css = (css.match(/@font-face\{[^}]+\}/g) ?? []).join('\n') + '\n' + fresh.css;
+  }
   const bundle = await esbuild.build({ stdin: { resolveDir: root, loader: 'jsx', contents: `
     import React from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';
     import {NextIntlClientProvider} from 'next-intl';
@@ -48,6 +54,7 @@ async function main() {
       flushSync(()=>app.render(<NextIntlClientProvider key={++version} locale={locale} messages={window.catalogs[locale]} timeZone='Asia/Jakarta'>
         <header className='sticky top-0 z-50 border-b border-base bg-card-base'><div className='container-custom h-16 flex items-center font-bold text-heading'>AUTENTIK</div></header>
         <main>{mode==='listing-loading'?<ListingLoading/>:mode==='detail-loading'?<DetailLoading/>:mode==='detail'?<Detail product={product} display={display} locale={locale} ppicAkaNumber='62000000001' mikaSalesNumber='62000000002' variants={scenario==='normal'?window.variants:[]} relatedProducts={window.rows().slice(0,4)}/>:<Store products={window.rows()} locale={locale} rpcEnabled={scenario==='error'||scenario==='pending'} compatible={null} ppicAkaNumber='62000000001' mikaSalesNumber='62000000002'/>}</main><FaqWidget/>
+        ${polish ? "<footer data-fixture-footer className='border-t border-base bg-page-alt'><div className='container-custom py-6 text-body'>PT Autentik Karya Analitika</div></footer>" : ''}
       </NextIntlClientProvider>));window.scrollTo(0,0);
     };
     const nativeFetch=window.fetch.bind(window);window.fetch=async(input,options)=>{
@@ -96,6 +103,24 @@ async function main() {
         await test('document.documentElement.scrollWidth<=innerWidth',true,label+' no page overflow');
         await test('document.querySelectorAll("h1").length',1,label+' single heading');
         await test('document.querySelectorAll("[data-store-placeholder]").length>0',true,label+' honest no-image state');
+        if (polish && mode === 'listing') {
+          await test(`(()=>{
+            const items=[...document.querySelector('[data-store-trust]').firstElementChild.children];
+            const labels=items.map(e=>[...e.querySelectorAll('span')].find(s=>s.getClientRects().length));
+            const expected=window.catalogs[window.locale].products.storeUi;
+            return items.length===3 && labels.every((span,i)=>{
+              const r=span.getBoundingClientRect(),item=items[i].getBoundingClientRect(),icon=items[i].querySelector('svg').getBoundingClientRect();
+              const key=['original','warranty','shipping'][i];
+              return span.textContent===(innerWidth<640?expected.trustCompact[key]:expected[key])
+                && parseFloat(getComputedStyle(span).fontSize)>=12 && r.height<=parseFloat(getComputedStyle(span).lineHeight)+1
+                && Math.abs(item.top-items[0].getBoundingClientRect().top)<1
+                && icon.right<=r.left && r.right<=item.right+1
+                && (i===0||items[i-1].getBoundingClientRect().right<=item.left);
+            });
+          })()`,true,label+' ordered single-row trust labels, 12px minimum, no overlap');
+          await test('!document.querySelector("main").textContent.includes(window.catalogs[window.locale].products.storeUi.serviceTitle)&&!document.querySelector("main").textContent.includes(window.catalogs[window.locale].products.storeUi.serviceText)',true,label+' procurement promo absent');
+          await test(`(()=>{const button=document.querySelector('button[aria-label="'+window.catalogs[window.locale].products.storeUi.next+'"]');const pagination=button.parentElement.parentElement;return Math.abs(document.querySelector('[data-fixture-footer]').getBoundingClientRect().top-pagination.getBoundingClientRect().bottom-24)<1})()`,true,label+' pagination-to-footer gap 24px');
+        }
         await test(`(()=>{
           const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const ctx=canvas.getContext('2d');
           const rgb=color=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=color;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data]};
@@ -114,12 +139,14 @@ async function main() {
             await test(`document.querySelector('button[aria-label="Buka pusat bantuan"]').getBoundingClientRect().bottom<=document.querySelector('[data-store-purchase-bar]').getBoundingClientRect().top`,true,label+' FAQ clearance');
           }
         }
-        const shot=await d.cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:{x:0,y:0,width,height:await d.evaluate('document.documentElement.scrollHeight'),scale:1}});
+        if (polish && !(mode==='listing' && width===320)) continue;
+        const shot=await d.cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:{x:0,y:0,width,height:polish?900:await d.evaluate('document.documentElement.scrollHeight'),scale:1}});
         const file=path.join(output,label+'.png');fs.writeFileSync(file,Buffer.from(shot.data,'base64'));shots.push(label);
+        if (polish) continue;
         const tile=await sharp(file).extract({left:0,top:0,width,height:900}).resize(320,900*320/width|0).extend({top:30,bottom:0,left:0,right:0,background:theme==='dark'?'#111827':'#fff'}).png().toBuffer();
         tiles.push({input:tile,left:tiles.length*320,top:0});
       }
-      await sharp({create:{width:1920,height:940,channels:3,background:theme==='dark'?'#111827':'#fff'}}).composite(tiles).png().toFile(path.join(output,`${mode}-${locale}-${theme}-review.png`));
+      if (!polish) await sharp({create:{width:1920,height:940,channels:3,background:theme==='dark'?'#111827':'#fff'}}).composite(tiles).png().toFile(path.join(output,`${mode}-${locale}-${theme}-review.png`));
     }
     await d.cdp('Emulation.setDeviceMetricsOverride',{width:390,height:900,deviceScaleFactor:1,mobile:false});
     await d.evaluate("window.renderCase('en','listing');document.querySelector('button[aria-controls=\"store-filter-drawer\"]').focus();document.activeElement.click()");
@@ -141,6 +168,12 @@ async function main() {
     await d.evaluate("window.renderCase('en','listing')");
     await d.evaluate(`document.querySelector('button[aria-label="Next page"]').click()`);
     await test('document.querySelectorAll("[data-store-card]").length',3,'Pagination renders remaining canonical rows');
+    if (polish) {
+      await d.evaluate('window.scrollTo(0,document.documentElement.scrollHeight)');await sleep(350);
+      const shot=await d.cdp('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(path.join(output,'pagination-en-light-390.png'),Buffer.from(shot.data,'base64'));shots.push('pagination-en-light-390');
+      await test('document.querySelector("[data-fixture-footer]").getBoundingClientRect().top<innerHeight',true,'Pagination bottom reaches footer');
+    }
     await d.evaluate("window.renderCase('en','listing')");
     await d.fill('input[role=combobox]','Nama kanonis'); await sleep(400);
     await test('document.querySelectorAll("[role=option]").length',6,'Canonical suggestions capped at six');
@@ -184,9 +217,9 @@ async function main() {
     await d.cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
     await test('window.matchMedia("(prefers-reduced-motion: reduce)").matches',true,'Reduced motion environment');
     await test('window.errors',[],'No browser/translation exceptions');
-    assert.equal(shots.length,72);
+    assert.equal(shots.length,polish?7:72);
     fs.writeFileSync(path.join(output,'report.json'),JSON.stringify({checks,screenshots:shots,scope:'Real Store components, production CSS; Next/navigation/auth/cart transport mocked; synthetic fixtures; no backend writes.'},null,2));
-    console.log(`PASS: ${checks} browser assertions; ${shots.length} screenshots and 12 review sheets.\nArtifacts: ${output}`);
+    console.log(`PASS: ${checks} browser assertions; ${shots.length} screenshots${polish?' (focused polish)':' and 12 review sheets'}.\nArtifacts: ${output}`);
   } finally { d?.socket.close();browser.kill();await new Promise(resolve=>server.close(resolve)); }
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
