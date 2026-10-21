@@ -75,7 +75,8 @@ export async function upsertBrand(input: unknown): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const id = b.id && b.id.trim() ? b.id.trim() : b.slug.replace(/[^a-z0-9-]/g, "");
+  const isUpdate = Boolean(b.id?.trim());
+  const id = b.id?.trim() || b.slug.replace(/[^a-z0-9-]/g, "");
 
   const record = {
     id,
@@ -91,16 +92,20 @@ export async function upsertBrand(input: unknown): Promise<ActionResult> {
     sort_order: b.sortOrder,
   };
 
-  const { error } = await supabase
-    .from("brands")
-    .upsert(record as never, { onConflict: "id" });
-  if (error) {
-    console.error("[action] upsert brand", error);
-    return { success: false, message: "Gagal menyimpan merek. " + error.message };
+  const query = isUpdate
+    ? supabase.from("brands").update(record as never).eq("id", id)
+    : supabase.from("brands").insert(record as never);
+  const { data: saved, error } = await query.select("id").maybeSingle();
+  if (error || !saved) {
+    console.error("[action] save brand", { code: error?.code ?? "no_row" });
+    const message = error?.code === "23505"
+      ? "ID merek sudah digunakan. Buka merek yang ada untuk mengeditnya."
+      : "Merek gagal disimpan atau tidak ditemukan. Muat ulang halaman dan coba lagi.";
+    return { success: false, message, errors: { [error?.code === "23505" ? "slug" : "id"]: message } };
   }
 
   await recordAudit(
-    b.id && b.id.trim() ? "brand.updated" : "brand.created",
+    isUpdate ? "brand.updated" : "brand.created",
     "brand",
     id,
     { name: b.name, segment: b.segment, is_active: b.isActive }
@@ -109,7 +114,7 @@ export async function upsertBrand(input: unknown): Promise<ActionResult> {
 
   return {
     success: true,
-    message: b.id && b.id.trim()
+    message: isUpdate
       ? "Merek berhasil diperbarui."
       : "Merek berhasil ditambahkan.",
   };

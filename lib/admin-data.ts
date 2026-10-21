@@ -442,11 +442,11 @@ export async function getProductHotspots(productId: string): Promise<HotspotRow[
     .eq("product_id", productId)
     .is("deleted_at", null)
     .order("sort_order", { ascending: true });
-  if (error) {
-    console.error("[admin-data] product hotspots", error);
-    return [];
+  if (error || !Array.isArray(data)) {
+    console.error("[admin-data] product hotspots", { code: error?.code ?? "invalid_response" });
+    throw new Error("Data hotspot produk belum dapat dimuat. Silakan coba lagi.");
   }
-  return (data ?? []) as HotspotRow[];
+  return data as HotspotRow[];
 }
 
 export interface PhotoHotspotRow {
@@ -471,11 +471,11 @@ export async function getProductPhotoHotspots(productId: string): Promise<PhotoH
     .eq("product_id", productId)
     .is("deleted_at", null)
     .order("sort_order", { ascending: true });
-  if (error) {
-    console.error("[admin-data] product photo hotspots", error);
-    return [];
+  if (error || !Array.isArray(data)) {
+    console.error("[admin-data] product photo hotspots", { code: error?.code ?? "invalid_response" });
+    throw new Error("Data hotspot foto produk belum dapat dimuat. Silakan coba lagi.");
   }
-  return (data ?? []) as PhotoHotspotRow[];
+  return data as PhotoHotspotRow[];
 }
 
 export async function listStaff(): Promise<StaffRow[]> {
@@ -731,13 +731,17 @@ export async function listBrands(): Promise<BrandRow[]> {
 export async function getProductVariants(productId: string) {
   await requireCapability("operations");
   const supabase = await getSupabase();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("product_variants")
     .select("id, label, sku, price_override, stock, variant_group")
     .eq("product_id", productId)
     .is("deleted_at", null)
     .order("sort_order");
-  return data ?? [];
+  if (error || !Array.isArray(data)) {
+    console.error("[admin-data] product variants", { code: error?.code ?? "invalid_response" });
+    throw new Error("Data varian produk belum dapat dimuat. Silakan coba lagi.");
+  }
+  return data;
 }
 
 export async function getBrand(id: string): Promise<BrandRow | null> {

@@ -80,7 +80,9 @@ export async function upsertProduct(
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const id = p.id && p.id.trim() ? p.id.trim() : p.slug.replace(/[^a-z0-9-]/g, "");
+  const existingId = p.id?.trim();
+  const isUpdate = Boolean(existingId);
+  const id = existingId || p.slug.replace(/[^a-z0-9-]/g, "");
 
   const isB2B = p.productType === "b2b_system";
 
@@ -103,11 +105,11 @@ export async function upsertProduct(
   let oldBrochureUrl: string | null = null;
   let oldModel3dUrl: string | null = null;
   let oldSlug: string | null = null;
-  if (isB2B && p.id?.trim()) {
+  if (isB2B && isUpdate) {
     const { data: existing } = await supabase
       .from("products")
       .select("brochure_url, model_3d_url, slug")
-      .eq("id", p.id.trim())
+      .eq("id", id)
       .maybeSingle();
     oldBrochureUrl = existing?.brochure_url ?? null;
     oldModel3dUrl = existing?.model_3d_url ?? null;
@@ -182,10 +184,16 @@ export async function upsertProduct(
         seo_description: p.seoDescription || null,
       };
 
-  const { error } = await supabase.from("products").upsert(record as never, { onConflict: "id" });
-  if (error) {
-    console.error("[action] upsert product", error);
-    return { success: false, message: "Gagal menyimpan produk. " + error.message };
+  const query = isUpdate
+    ? supabase.from("products").update(record as never).eq("id", id)
+    : supabase.from("products").insert(record as never);
+  const { data: saved, error } = await query.select("id").maybeSingle();
+  if (error || !saved) {
+    console.error("[action] save product", { code: error?.code ?? "no_row" });
+    const message = error?.code === "23505"
+      ? "ID atau slug produk sudah digunakan. Buka produk yang ada untuk mengeditnya."
+      : "Produk gagal disimpan atau tidak ditemukan. Muat ulang halaman dan coba lagi.";
+    return { success: false, message, errors: { [error?.code === "23505" ? "slug" : "id"]: message } };
   }
 
   // Remove the previous brochure/model PDF/GLB when it was replaced or removed.
@@ -203,7 +211,7 @@ export async function upsertProduct(
   }
 
   await recordAudit(
-    p.id ? "product.updated" : "product.created",
+    isUpdate ? "product.updated" : "product.created",
     "product",
     id,
     { name: p.name, type: p.productType }
@@ -230,7 +238,7 @@ export async function upsertProduct(
       console.error("[action] upsert product variants", variantError);
       return {
         success: true,
-        message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+        message: isUpdate ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
         productId: id,
         variantWarning: "Gagal menyimpan varian: " + variantError.message,
       };
@@ -255,7 +263,7 @@ export async function upsertProduct(
       console.error("[action] upsert product hotspots", hotspotError);
       return {
         success: true,
-        message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+        message: isUpdate ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
         productId: id,
         hotspotWarning: "Gagal menyimpan hotspot: " + hotspotError.message,
       };
@@ -266,7 +274,7 @@ export async function upsertProduct(
   if (photoHotspotsPayload && isB2B) {
     // Patch 7: Capture old callout URLs before upsert for safe cleanup
     let oldCalloutUrls: string[] = [];
-    if (p.id?.trim()) {
+    if (isUpdate) {
       const { data: existingHotspots } = await supabase
         .from("product_photo_hotspots")
         .select("callout_image_url")
@@ -294,7 +302,7 @@ export async function upsertProduct(
       console.error("[action] upsert product photo hotspots", photoHotspotError);
       return {
         success: true,
-        message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+        message: isUpdate ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
         productId: id,
         photoHotspotWarning: "Gagal menyimpan photo hotspot: " + photoHotspotError.message,
       };
@@ -322,7 +330,7 @@ export async function upsertProduct(
 
   return {
     success: true,
-    message: p.id ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
+    message: isUpdate ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.",
     productId: id,
   };
 }

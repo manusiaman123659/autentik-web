@@ -97,11 +97,19 @@ if (process.argv.includes('--print-checkout')) console.log(patched);
 
 async function actionChecks() {
   const records = new Map(); const writes = []; let allowed = true; let writeCount = 0;
-  const client = { from(table) { let id; return {
+  const client = { from(table) { let id; let record; let operation; return {
     select() { return this; }, eq(key, value) { if (key === 'id') id = value; return this; },
     is() { return this; }, ilike() { return this; },
-    async maybeSingle() { return { data: table === 'products' ? records.get(id) ?? null : null, error: null }; },
-    async upsert(record) { writeCount++; writes.push(record); records.set(record.id, { ...records.get(record.id), ...record }); return { error: null }; },
+    insert(value) { record = value; operation = 'insert'; return this; },
+    update(value) { record = value; operation = 'update'; return this; },
+    async maybeSingle() {
+      if (!record) return { data: table === 'products' ? records.get(id) ?? null : null, error: null };
+      const key = operation === 'insert' ? record.id : id;
+      if (operation === 'insert' && records.has(key)) return { data: null, error: { code: '23505' } };
+      if (operation === 'update' && !records.has(key)) return { data: null, error: null };
+      writeCount++; writes.push(record); records.set(key, { ...records.get(key), ...record });
+      return { data: records.get(key), error: null };
+    },
   }; } };
   mocks.set('next/cache', { revalidatePath() {} }); mocks.set('next/headers', { cookies: async () => ({}) });
   mocks.set('@/lib/admin', { requireOperationalStaff: async () => allowed ? { id: 'owned-actor' } : null });
@@ -111,6 +119,7 @@ async function actionChecks() {
   const { upsertProduct } = load('lib/actions/products.ts');
   for (const input of [component]) {
     const id = 'owned-attributes-' + input.productType;
+    records.set(id, { id, product_type: input.productType });
     const data = { ...input, id, minPurchaseQty: 10, unit: ' Pack ', length: '12.5', dimensionUnit: 'cm', dimensionsNote: 'Diameter 20 mm', weightGrams: 500 };
     eq((await upsertProduct(data)).success, true, 'Actual server action accepts attributes ' + input.productType);
     const row = records.get(id);

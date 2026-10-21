@@ -65,15 +65,16 @@ async function persistRow(
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { error } = await supabase
-    .from(table)
-    .upsert(record as never, { onConflict: "id" });
-  if (error) {
-    console.error(`[action] upsert ${entity}`, error);
-    return {
-      success: false,
-      message: `Gagal menyimpan ${entityLabel}. ${error.message}`,
-    };
+  const query = isUpdate
+    ? supabase.from(table).update(record as never).eq("id", id)
+    : supabase.from(table).insert(record as never);
+  const { data: saved, error } = await query.select("id").maybeSingle();
+  if (error || !saved) {
+    console.error(`[action] save ${entity}`, { code: error?.code ?? "no_row" });
+    const message = error?.code === "23505"
+      ? `ID ${entityLabel} sudah digunakan. Buka entri yang ada untuk mengeditnya.`
+      : `${entityLabel} gagal disimpan atau tidak ditemukan. Muat ulang halaman dan coba lagi.`;
+    return { success: false, message, errors: { [error?.code === "23505" ? "name" : "id"]: message } };
   }
 
   await recordAudit(

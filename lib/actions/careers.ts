@@ -41,7 +41,8 @@ export async function upsertCareer(input: unknown): Promise<ActionResult> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const id = c.id && c.id.trim() ? c.id.trim() : c.slug.replace(/[^a-z0-9-]/g, "");
+  const isUpdate = Boolean(c.id?.trim());
+  const id = c.id?.trim() || c.slug.replace(/[^a-z0-9-]/g, "");
 
   const record = {
     id,
@@ -60,16 +61,20 @@ export async function upsertCareer(input: unknown): Promise<ActionResult> {
     sort_order: c.sortOrder,
   };
 
-  const { error } = await supabase
-    .from("careers")
-    .upsert(record as never, { onConflict: "id" });
-  if (error) {
-    console.error("[action] upsert career", error);
-    return { success: false, message: "Gagal menyimpan lowongan. " + error.message };
+  const query = isUpdate
+    ? supabase.from("careers").update(record as never).eq("id", id)
+    : supabase.from("careers").insert(record as never);
+  const { data: saved, error } = await query.select("id").maybeSingle();
+  if (error || !saved) {
+    console.error("[action] save career", { code: error?.code ?? "no_row" });
+    const message = error?.code === "23505"
+      ? "ID atau slug lowongan sudah digunakan. Buka lowongan yang ada untuk mengeditnya."
+      : "Lowongan gagal disimpan atau tidak ditemukan. Muat ulang halaman dan coba lagi.";
+    return { success: false, message, errors: { [error?.code === "23505" ? "slug" : "id"]: message } };
   }
 
   await recordAudit(
-    c.id && c.id.trim() ? "career.updated" : "career.created",
+    isUpdate ? "career.updated" : "career.created",
     "career",
     id,
     { title: c.title, status: c.status }
@@ -78,7 +83,7 @@ export async function upsertCareer(input: unknown): Promise<ActionResult> {
 
   return {
     success: true,
-    message: c.id && c.id.trim()
+    message: isUpdate
       ? "Lowongan berhasil diperbarui."
       : "Lowongan berhasil ditambahkan.",
   };
