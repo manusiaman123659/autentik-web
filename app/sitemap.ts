@@ -38,6 +38,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .select("slug, updated_at")
         .eq("product_type", "sparepart")
         .eq("is_store_visible", true)
+        .eq("status", "published")
+        .eq("is_active", true)
         .is("deleted_at", null),
       getAllPublicMikaJobs(),
     ]);

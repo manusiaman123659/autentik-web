@@ -102,7 +102,7 @@ async function main() {
         await test(`window.visible(document.querySelector('${menu} a[href="/admin"]'))`, eligible, context + ' Trusted CMS shortcut eligibility');
         await test(`document.querySelector('${menu} a[href="/en/admin"],${menu} a[href="/zh-cn/admin"]')===null`, true, context + ' Admin never localized');
         await test(`document.querySelector('${menu} a[href="${prefix}/store/orders"]')!==null`, true, context + ' Customer order history retained');
-        await test(`document.querySelector('${menu} a[href="${prefix}/store"]')!==null`, true, context + ' Wishlist retained');
+        await test(`document.querySelector('${menu} a:has(svg.lucide-heart)')===null`, true, context + ' R-02 misleading Wishlist shortcut removed; legitimate Store CTA retained');
         if (eligible) {
           await test(`document.querySelector('${menu} a[href="/admin"]').textContent.trim()`, { id: 'Dashboard Admin', en: 'Admin Dashboard', 'zh-CN': '管理后台' }[locale], context + ' Translated Admin label');
           await evaluate(`window.deferNavigation=true;document.querySelector('${menu} a[href="/admin"]').click()`);

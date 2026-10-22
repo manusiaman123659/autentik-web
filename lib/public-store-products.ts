@@ -61,12 +61,16 @@ async function relatedProducts(client: PublicClient, product: ProductRow, limit 
     .eq("brand", product.brand).neq("id", product.id).limit(limit);
   const brandResults = ((byBrand ?? []) as ProductRow[]).filter(isPublicStoreProduct);
   if (brandResults.length >= limit) return brandResults.slice(0, limit);
+  // Brand matches can also occupy category slots, so fetch up to the full limit.
   const { data: byCategory } = await publicProducts(client)
-    .eq("category", product.category).neq("id", product.id).limit(limit - brandResults.length);
+    .eq("category", product.category).neq("id", product.id).limit(limit);
   const categoryResults = ((byCategory ?? []) as ProductRow[]).filter(isPublicStoreProduct);
-  // Preserve existing getRelatedProducts() category fallback behavior in 004.
-  const seen = new Set([...brandResults.map(row => row.id), ...categoryResults.map(row => row.id)]);
-  return [...brandResults, ...categoryResults.filter(row => !seen.has(row.id))].slice(0, limit);
+  const seen = new Set(brandResults.map(row => row.id));
+  return [...brandResults, ...categoryResults.filter(row => {
+    if (seen.has(row.id)) return false;
+    seen.add(row.id);
+    return true;
+  })].slice(0, limit);
 }
 
 // Request-only memoization lets page and metadata share a canonical/translation snapshot.

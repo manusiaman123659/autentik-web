@@ -132,7 +132,7 @@ async function main() {
     check(recent.some(item => 'status' in item || 'source_revision' in item || 'version' in item), false, state + ' recent does not serialize management metadata');
   }
   catalog.splice(0, catalog.length, base, { ...another, brand: 'Other' }); memo.clear();
-  check((await api.getPublicStoreDetail(base.slug, 'id'))?.related.length, 0, 'Existing category-only related fallback remains unchanged');
+  check((await api.getPublicStoreDetail(base.slug, 'id'))?.related.map(item => item.canonical.id), [another.id], 'R-03 category-only fallback returns the eligible product');
   catalog.splice(0, catalog.length, base, ...Array.from({ length: 8 }, (_, index) => ({ ...another, id: `recent-${index}` })));
   const capped = await api.getPublicStoreRecentProducts([base.id, base.id, ...catalog.slice(1).map(item => item.id)], 'id');
   check(capped.map(item => item.id), [base.id, ...catalog.slice(1, 7).map(item => item.id)], 'Only first eight caller entries can influence recent lookup');

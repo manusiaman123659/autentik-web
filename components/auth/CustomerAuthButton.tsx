@@ -11,11 +11,9 @@ import {
   ChevronDown,
   LayoutDashboard,
   ShoppingBag,
-  Heart,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { Session } from "@supabase/supabase-js";
-import { useWishlist } from "@/components/store/useWishlist";
 
 interface CustomerAuthButtonProps {
   variant?: "desktop" | "mobile";
@@ -37,7 +35,6 @@ export default function CustomerAuthButton({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
   const supabase = createClient();
-  const { items: wishlistItems, hydrated: wishlistHydrated } = useWishlist();
 
   useEffect(() => {
     let active = true;
@@ -183,23 +180,6 @@ export default function CustomerAuthButton({
               <ShoppingBag size={15} />
               {t("orders")}
             </Link>
-            <Link
-              href="/store"
-              role="menuitem"
-              onClick={() => setDropdownOpen(false)}
-              className="flex min-h-11 items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-[var(--bg-card-hover)] focus-visible:outline-2 focus-visible:outline-[#0EA5A0]"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              <div className="flex items-center gap-2.5">
-                <Heart size={15} className="text-red-500" />
-                <span>{t("wishlist")}</span>
-              </div>
-              {wishlistHydrated && wishlistItems.length > 0 && (
-                <span className="min-w-[18px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                  {wishlistItems.length > 99 ? "99+" : wishlistItems.length}
-                </span>
-              )}
-            </Link>
             {isAdmin && (
               <Link
                 href="/admin"
@@ -240,13 +220,6 @@ export default function CustomerAuthButton({
     );
   }
 
-  const mobileWishlist = <Link href="/store" onClick={onNavigate}
-    className="flex min-h-11 items-center justify-between gap-2 w-full px-3 py-2.5 text-sm font-medium rounded-sm border focus-visible:outline-2 focus-visible:outline-[#0EA5A0]"
-    style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
-    <span className="flex items-center gap-2"><Heart size={16} className="text-red-500" />{t("wishlist")}</span>
-    {wishlistHydrated && wishlistItems.length > 0 && <span className="min-w-[18px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{wishlistItems.length > 99 ? "99+" : wishlistItems.length}</span>}
-  </Link>;
-
   return isSignedIn ? (
     <div className="space-y-2">
       <p className="flex items-start gap-2 px-3 py-2 text-sm font-semibold [overflow-wrap:anywhere]" style={{ color: "var(--text-primary)" }}><User size={16} className="mt-0.5 shrink-0" />{displayName}</p>
@@ -262,7 +235,6 @@ export default function CustomerAuthButton({
         <ShoppingBag size={16} />
         {t("orders")}
       </Link>
-      {mobileWishlist}
       {isAdmin && (
         <Link
           href="/admin"
@@ -289,7 +261,6 @@ export default function CustomerAuthButton({
     </div>
   ) : (
     <div className="space-y-2">
-    {mobileWishlist}
     <Link
       href="/auth/login"
       onClick={onNavigate}
