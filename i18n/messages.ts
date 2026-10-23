@@ -31,6 +31,9 @@ import type { PublicLocale } from "./locales";
 import products from "@/messages/id/products.json";
 import englishProducts from "@/messages/en/products.json";
 import chineseProducts from "@/messages/zh-CN/products.json";
+import careers from "@/messages/id/careers.json";
+import englishCareers from "@/messages/en/careers.json";
+import chineseCareers from "@/messages/zh-CN/careers.json";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -47,17 +50,17 @@ export function mergeMessages<T>(base: T, translated: unknown): T {
 }
 
 export async function loadMessages(locale: PublicLocale) {
-  const base = { common, navigation, home, company, documents, services, distribution, research, contact, requests, legal, products };
+  const base = { common, navigation, home, company, documents, services, distribution, research, contact, requests, legal, products, careers };
   if (locale === "id") return base;
   const translated = locale === "en"
     ? { common: (await import("@/messages/en/common.json")).default, navigation: (await import("@/messages/en/navigation.json")).default,
       // Explicit server imports keep the new catalog leaves in Turbopack's HMR graph.
       home: englishHome, company: englishCompany, documents: englishDocuments,
       services: englishServices, distribution: englishDistribution, research: englishResearch,
-      contact: englishContact, requests: englishRequests, legal: englishLegal, products: englishProducts }
+      contact: englishContact, requests: englishRequests, legal: englishLegal, products: englishProducts, careers: englishCareers }
     : { common: (await import("@/messages/zh-CN/common.json")).default, navigation: (await import("@/messages/zh-CN/navigation.json")).default,
       home: chineseHome, company: chineseCompany, documents: chineseDocuments,
       services: chineseServices, distribution: chineseDistribution, research: chineseResearch,
-      contact: chineseContact, requests: chineseRequests, legal: chineseLegal, products: chineseProducts };
+      contact: chineseContact, requests: chineseRequests, legal: chineseLegal, products: chineseProducts, careers: chineseCareers };
   return mergeMessages(base, translated);
 }

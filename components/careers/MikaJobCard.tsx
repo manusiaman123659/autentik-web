@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/i18n/navigation";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   MapPin,
   Banknote,
@@ -47,12 +48,14 @@ function getEmploymentBadgeStyle(type: string) {
 }
 
 export default function MikaJobCard({ job }: MikaJobCardProps) {
+  const t = useTranslations("careers.ui.card");
+  const format = useFormatter();
   const isExpiringSoon = job.deadline_info.days_remaining <= 7 && !job.deadline_info.is_expired;
   const badgeStyle = getEmploymentBadgeStyle(job.employment_type);
 
   // Format deadline date
   const deadlineText = job.deadline_info.days_remaining > 0
-    ? `Batas: ${new Date(job.deadline).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}`
+    ? t("deadline", { date: format.dateTime(new Date(job.deadline), { day: "2-digit", month: "short", year: "numeric" }) })
     : job.deadline_info.badge.label;
 
   return (
@@ -167,7 +170,7 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
           <div className="flex items-center gap-2.5">
             <Banknote size={15} className="shrink-0" style={{ color: "#0EA5A0" }} />
             <span className="text-sm font-semibold" style={{ color: "#0EA5A0" }}>
-              {job.salary.formatted || "Gaji Dinegosiasikan"}
+              {job.salary.formatted || t("salaryFallback")}
             </span>
           </div>
 
@@ -200,7 +203,7 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
         <div className="flex items-center gap-1.5">
           <Users size={14} style={{ color: "var(--text-muted)" }} />
           <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Kuota:{" "}
+            {t("quota")}{" "}
             <strong style={{ color: "var(--text-primary)" }}>
               {job.quota > 0 ? job.quota : "—"}
             </strong>
@@ -213,7 +216,7 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
           className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-[#0EA5A0] text-white hover:bg-[#0c8e8a] active:scale-95 transition-all"
         >
           <Send size={12} />
-          Detail & Lamar
+          {t("detail")}
         </Link>
       </div>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 import Link from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 
 import { useState, useTransition, useEffect, useCallback, useRef } from "react";
 import {
@@ -35,6 +36,7 @@ export default function CareersClient({
   recruitmentUrl,
   apiMessage,
 }: CareersClientProps) {
+  const t = useTranslations("careers.ui");
   const [jobs, setJobs] = useState<MikaJob[]>(initialJobs);
   const [meta, setMeta] = useState<MikaPaginationMeta>(initialMeta);
   const [statusMessage, setStatusMessage] = useState(apiMessage);
@@ -148,15 +150,15 @@ export default function CareersClient({
           <AnimatedElement type="fade-up" className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0EA5A0]/15 border border-[#0EA5A0]/30 text-[#14B8A6] text-xs font-semibold uppercase tracking-wider mb-6">
               <Sparkles size={14} />
-              Karier AKA — Mika Career
+              {t("hero.eyebrow")}
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-heading mb-6 leading-tight">
-              Wujudkan Potensi Terbaik Anda Bersama Kami
+              {t("hero.title")}
             </h1>
 
             <p className="text-lg sm:text-xl text-body dark:text-slate-300 leading-relaxed mb-8">
-              Jelajahi berbagai peluang karir menarik di bidang teknologi instrumentasi, IoT, software engineering, dan technical sales. Kami mengundang talenta berdedikasi untuk bertumbuh bersama.
+              {t("hero.description")}
             </p>
 
             {/* Quick Stats Strip */}
@@ -165,19 +167,19 @@ export default function CareersClient({
                 <span className="block text-2xl font-bold text-heading">
                    {isAvailable ? meta.total_items : "—"}
                 </span>
-                <span className="text-sm text-body">Posisi Lowongan Aktif</span>
+                <span className="text-sm text-body">{t("hero.positions")}</span>
               </div>
               <div className="w-px h-8 bg-slate-700" />
               <div>
                 <span className="block text-2xl font-bold text-teal-400">
                   {departments.length}
                 </span>
-                <span className="text-sm text-body">Departemen Kerja</span>
+                <span className="text-sm text-body">{t("hero.departments")}</span>
               </div>
               <div className="w-px h-8 bg-slate-700" />
               <div>
                 <span className="block text-2xl font-bold text-heading">100%</span>
-                <span className="text-sm text-body">Peluang Pertumbuhan Karir</span>
+                <span className="text-sm text-body">{t("hero.growth")}</span>
               </div>
             </div>
           </AnimatedElement>
@@ -190,16 +192,16 @@ export default function CareersClient({
           <div className="text-center max-w-2xl mx-auto mb-14">
             <AnimatedElement type="fade-up">
               <span className="text-xs font-semibold uppercase tracking-wider text-[#0EA5A0] mb-2 block">
-                Budaya & Nilai
+                {t("culture.eyebrow")}
               </span>
               <h2
                 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4"
                 style={{ color: "var(--text-primary)" }}
               >
-                Mengapa Membangun Karir di Sini?
+                {t("culture.title")}
               </h2>
               <p className="text-sm sm:text-base leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                Kami percaya inovasi lahir dari kolaborasi yang sehat, apresiasi terhadap kontribusi, dan ruang bertumbuh yang terbuka lebar bagi setiap individu.
+                {t("culture.description")}
               </p>
             </AnimatedElement>
           </div>
@@ -218,10 +220,10 @@ export default function CareersClient({
                     <Lightbulb size={24} />
                   </div>
                   <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-                    Inovasi Tanpa Batas
+                    {t("culture.innovationTitle")}
                   </h3>
                   <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                    Bekerja langsung dengan teknologi modern: IoT, Next.js, sensor industri, dan analitika data presisi tinggi.
+                    {t("culture.innovationDescription")}
                   </p>
                 </div>
               </div>
@@ -240,10 +242,10 @@ export default function CareersClient({
                     <Users size={24} />
                   </div>
                   <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-                    Tim Kolaboratif
+                    {t("culture.teamTitle")}
                   </h3>
                   <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                    Lingkungan kerja suportif, komunikasi terbuka tanpa sekat birokrasi kaku, serta saling mendorong kemajuan.
+                    {t("culture.teamDescription")}
                   </p>
                 </div>
               </div>
@@ -262,10 +264,10 @@ export default function CareersClient({
                     <TrendingUp size={24} />
                   </div>
                   <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-                    Jenjang Karir Terarah
+                    {t("culture.careerTitle")}
                   </h3>
                   <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                    Evaluasi kinerja transparan, program mentoring, serta dukungan anggaran sertifikasi dan pelatihan profesional.
+                    {t("culture.careerDescription")}
                   </p>
                 </div>
               </div>
@@ -284,10 +286,10 @@ export default function CareersClient({
                     <HeartHandshake size={24} />
                   </div>
                   <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-                    Kesejahteraan Karyawan
+                    {t("culture.welfareTitle")}
                   </h3>
                   <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                    Kompensasi kompetitif, asuransi BPJS lengkap, waktu kerja fleksibel/hybrid, dan penghargaan apresiasi berkala.
+                    {t("culture.welfareDescription")}
                   </p>
                 </div>
               </div>
@@ -306,13 +308,13 @@ export default function CareersClient({
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
             <div>
               <span className="text-xs font-semibold uppercase tracking-wider text-[#0EA5A0] mb-2 block">
-                Peluang Tersedia
+                {t("listing.eyebrow")}
               </span>
               <h2
                 className="text-3xl font-bold tracking-tight"
                 style={{ color: "var(--text-primary)" }}
               >
-                Daftar Lowongan Pekerjaan
+                {t("listing.title")}
               </h2>
             </div>
 
@@ -326,7 +328,7 @@ export default function CareersClient({
                 }}
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>{statusMessage}</span>
+                <span>{t(isAvailable ? "listing.available" : "states.unavailableDescription")}</span>
               </div>
             )}
           </div>
@@ -358,7 +360,7 @@ export default function CareersClient({
             <div className="text-center py-8">
               <div className="inline-flex items-center gap-2 text-xs font-medium text-[#0EA5A0]">
                 <div className="w-4 h-4 rounded-full border-2 border-[#0EA5A0] border-t-transparent animate-spin" />
-                Memperbarui lowongan...
+                {t("listing.loading")}
               </div>
             </div>
           )}
@@ -373,18 +375,18 @@ export default function CareersClient({
           ) : (
             <EmptyState
               icon={Search}
-              title={!isAvailable ? "Lowongan sementara tidak tersedia" : hasFilters ? "Tidak ada lowongan yang sesuai" : "Belum ada lowongan"}
+              title={t(!isAvailable ? "states.unavailable" : hasFilters ? "states.noMatches" : "states.empty")}
               description={!isAvailable
-                ? "Informasi lowongan sedang tidak tersedia. Silakan coba lagi beberapa saat."
-                : hasFilters ? "Kami tidak menemukan lowongan dengan kriteria filter yang Anda pilih. Coba sesuaikan kata kunci atau reset filter pencarian."
-                : "Saat ini belum ada lowongan yang tersedia di PT Autentik Karya Analitika."}
+                ? t("states.unavailableDescription")
+                : hasFilters ? t("states.noMatchesDescription")
+                : t("states.emptyDescription")}
               action={
               <button
                 type="button"
                 onClick={!isAvailable ? () => fetchFilteredJobs(1) : handleResetFilters}
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0c8e8a] transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-500"
               >
-                {!isAvailable ? "Coba Lagi" : "Reset Semua Filter"}
+                {t(!isAvailable ? "states.retry" : "states.resetAll")}
               </button>
               }
             />
@@ -400,19 +402,19 @@ export default function CareersClient({
         <div className="max-w-4xl mx-auto text-center">
           <AnimatedElement type="fade-up">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#0EA5A0] mb-2 block">
-              Inisiatif Karir
+              {t("cta.eyebrow")}
             </span>
             <h2
               className="text-2xl sm:text-3xl font-bold tracking-tight mb-4"
               style={{ color: "var(--text-primary)" }}
             >
-              Belum Menemukan Posisi yang Sesuai?
+              {t("cta.title")}
             </h2>
             <p
               className="text-sm sm:text-base leading-relaxed max-w-2xl mx-auto mb-8"
               style={{ color: "var(--text-secondary)" }}
             >
-              Kami selalu terbuka bagi talenta-talenta luar biasa. Kirimkan CV dan portofolio Anda ke basis data rekrutmen kami untuk dihubungi saat posisi yang relevan dibuka.
+              {t("cta.description")}
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4">
@@ -424,7 +426,7 @@ export default function CareersClient({
                   className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0c8e8a] transition-all shadow-md shadow-teal-600/10 hover:shadow-teal-600/20"
                 >
                   <Send size={16} />
-                  Kirim Lamaran Terbuka
+                  {t("cta.apply")}
                 </a>
               ) : (
                 <Link
@@ -432,7 +434,7 @@ export default function CareersClient({
                   className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#0EA5A0] text-white text-sm font-semibold hover:bg-[#0c8e8a] transition-all shadow-md shadow-teal-600/10 hover:shadow-teal-600/20"
                 >
                   <Send size={16} />
-                  Hubungi Tim Rekrutmen
+                  {t("cta.contact")}
                 </Link>
               )}
             </div>

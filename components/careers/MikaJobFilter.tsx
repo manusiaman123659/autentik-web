@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, X, Filter, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { MikaDepartment } from "@/types/mika-career";
 
 interface MikaJobFilterProps {
@@ -16,11 +17,11 @@ interface MikaJobFilterProps {
 }
 
 const EMPLOYMENT_TYPES = [
-  { label: "Semua Tipe", value: "all" },
-  { label: "Full-time", value: "Full-time" },
-  { label: "Internship", value: "Internship" },
-  { label: "Part-time", value: "Part-time" },
-  { label: "Contract", value: "Contract" },
+  { label: "filter.allTypes", value: "all" },
+  { label: "employment.Full-time", value: "Full-time" },
+  { label: "employment.Internship", value: "Internship" },
+  { label: "employment.Part-time", value: "Part-time" },
+  { label: "employment.Contract", value: "Contract" },
 ];
 
 export default function MikaJobFilter({
@@ -34,6 +35,7 @@ export default function MikaJobFilter({
   onReset,
   totalResults,
 }: MikaJobFilterProps) {
+  const t = useTranslations("careers.ui");
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     selectedDepartment !== "all" ||
@@ -56,10 +58,10 @@ export default function MikaJobFilter({
         />
         <input
           type="text"
-          aria-label="Cari lowongan pekerjaan"
+          aria-label={t("filter.search")}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Cari posisi pekerjaan, skill (Next.js, IoT, Sales), atau kata kunci..."
+          placeholder={t("filter.placeholder")}
           className="w-full pl-11 pr-10 py-3.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/20 focus:border-[#0EA5A0]"
           style={{
             backgroundColor: "var(--bg-secondary)",
@@ -73,7 +75,7 @@ export default function MikaJobFilter({
             onClick={() => onSearchChange("")}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             style={{ color: "var(--text-muted)" }}
-            title="Hapus pencarian"
+            title={t("filter.clear")}
           >
             <X size={16} />
           </button>
@@ -88,11 +90,11 @@ export default function MikaJobFilter({
             className="block text-sm font-semibold mb-1.5 uppercase tracking-wider"
             style={{ color: "var(--text-secondary)" }}
           >
-            Departemen
+            {t("filter.department")}
           </label>
           <div className="relative">
             <select
-              aria-label="Filter departemen"
+              aria-label={t("filter.departmentLabel")}
               value={selectedDepartment}
               onChange={(e) => onDepartmentChange(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-lg border text-sm font-medium transition-all focus:outline-none focus:border-[#0EA5A0] appearance-none"
@@ -102,7 +104,7 @@ export default function MikaJobFilter({
                 color: "var(--text-primary)",
               }}
             >
-              <option value="all">Semua Departemen</option>
+              <option value="all">{t("filter.allDepartments")}</option>
               {departments.map((dept) => (
                 <option key={dept.id} value={String(dept.id)}>
                   {dept.name}
@@ -124,11 +126,11 @@ export default function MikaJobFilter({
             className="block text-sm font-semibold mb-1.5 uppercase tracking-wider"
             style={{ color: "var(--text-secondary)" }}
           >
-            Tipe Pekerjaan
+            {t("filter.employment")}
           </label>
           <div className="relative">
             <select
-              aria-label="Filter tipe pekerjaan"
+              aria-label={t("filter.employmentLabel")}
               value={selectedEmploymentType}
               onChange={(e) => onEmploymentTypeChange(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-lg border text-sm font-medium transition-all focus:outline-none focus:border-[#0EA5A0] appearance-none"
@@ -140,7 +142,7 @@ export default function MikaJobFilter({
             >
               {EMPLOYMENT_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
-                  {type.label}
+                  {t(type.label)}
                 </option>
               ))}
             </select>
@@ -159,7 +161,7 @@ export default function MikaJobFilter({
         <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text-secondary)" }}>
           <Filter size={13} className="text-[#0EA5A0]" />
           <span>
-            Menampilkan <strong style={{ color: "var(--text-primary)" }}>{totalResults}</strong> posisi lowongan
+            {t.rich("filter.results", { count: totalResults, strong: chunks => <strong style={{ color: "var(--text-primary)" }}>{chunks}</strong> })}
           </span>
         </div>
 
@@ -170,7 +172,7 @@ export default function MikaJobFilter({
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors"
           >
             <RotateCcw size={12} />
-            Reset Filter
+            {t("filter.reset")}
           </button>
         )}
       </div>

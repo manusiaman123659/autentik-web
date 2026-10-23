@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { MikaPaginationMeta } from "@/types/mika-career";
 
 interface MikaPaginationProps {
@@ -9,6 +10,7 @@ interface MikaPaginationProps {
 }
 
 export default function MikaPagination({ meta, onPageChange }: MikaPaginationProps) {
+  const t = useTranslations("careers.ui.pagination");
   if (meta.total_pages <= 1) return null;
 
   const pages = Array.from({ length: meta.total_pages }, (_, i) => i + 1);
@@ -16,8 +18,9 @@ export default function MikaPagination({ meta, onPageChange }: MikaPaginationPro
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-10 pt-6 border-t" style={{ borderColor: "var(--border-subtle)" }}>
       <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
-        Menampilkan halaman <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{meta.current_page}</span> dari{" "}
-        <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{meta.total_pages}</span> (Total {meta.total_items} posisi)
+        {t.rich("summary", { page: meta.current_page, pages: meta.total_pages, count: meta.total_items,
+          current: chunks => <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{chunks}</span>,
+          total: chunks => <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{chunks}</span> })}
       </div>
 
       <div className="flex flex-wrap justify-center items-center gap-2">
@@ -34,7 +37,7 @@ export default function MikaPagination({ meta, onPageChange }: MikaPaginationPro
           }}
         >
           <ChevronLeft size={14} />
-          Sebelumnya
+          {t("previous")}
         </button>
 
         {/* Page Numbers */}
@@ -80,7 +83,7 @@ export default function MikaPagination({ meta, onPageChange }: MikaPaginationPro
             backgroundColor: "var(--bg-card)",
           }}
         >
-          Selanjutnya
+          {t("next")}
           <ChevronRight size={14} />
         </button>
       </div>

@@ -1,0 +1,72 @@
+{
+  "metadata": {
+    "title": "Lowongan Kerja & Karir | PT Autentik Karya Analitika",
+    "description": "Temukan lowongan kerja PT Autentik Karya Analitika melalui portal rekrutmen resmi."
+  },
+  "ui": {
+    "hero": {
+      "eyebrow": "Karier AKA — Mika Career",
+      "title": "Wujudkan Potensi Terbaik Anda Bersama Kami",
+      "description": "Jelajahi berbagai peluang karir menarik di bidang teknologi instrumentasi, IoT, software engineering, dan technical sales. Kami mengundang talenta berdedikasi untuk bertumbuh bersama.",
+      "positions": "Posisi Lowongan Aktif",
+      "departments": "Departemen Kerja",
+      "growth": "Peluang Pertumbuhan Karir"
+    },
+    "culture": {
+      "eyebrow": "Budaya & Nilai",
+      "title": "Mengapa Membangun Karir di Sini?",
+      "description": "Kami percaya inovasi lahir dari kolaborasi yang sehat, apresiasi terhadap kontribusi, dan ruang bertumbuh yang terbuka lebar bagi setiap individu.",
+      "innovationTitle": "Inovasi Tanpa Batas",
+      "innovationDescription": "Bekerja langsung dengan teknologi modern: IoT, Next.js, sensor industri, dan analitika data presisi tinggi.",
+      "teamTitle": "Tim Kolaboratif",
+      "teamDescription": "Lingkungan kerja suportif, komunikasi terbuka tanpa sekat birokrasi kaku, serta saling mendorong kemajuan.",
+      "careerTitle": "Jenjang Karir Terarah",
+      "careerDescription": "Evaluasi kinerja transparan, program mentoring, serta dukungan anggaran sertifikasi dan pelatihan profesional.",
+      "welfareTitle": "Kesejahteraan Karyawan",
+      "welfareDescription": "Kompensasi kompetitif, asuransi BPJS lengkap, waktu kerja fleksibel/hybrid, dan penghargaan apresiasi berkala."
+    },
+    "listing": {
+      "eyebrow": "Peluang Tersedia",
+      "title": "Daftar Lowongan Pekerjaan",
+      "available": "Lowongan PT Autentik Karya Analitika berhasil dimuat.",
+      "loading": "Memperbarui lowongan..."
+    },
+    "filter": {
+      "search": "Cari lowongan pekerjaan",
+      "placeholder": "Cari posisi pekerjaan, skill (Next.js, IoT, Sales), atau kata kunci...",
+      "clear": "Hapus pencarian",
+      "department": "Departemen",
+      "departmentLabel": "Filter departemen",
+      "allDepartments": "Semua Departemen",
+      "employment": "Tipe Pekerjaan",
+      "employmentLabel": "Filter tipe pekerjaan",
+      "allTypes": "Semua Tipe",
+      "results": "Menampilkan <strong>{count}</strong> posisi lowongan",
+      "reset": "Reset Filter"
+    },
+    "employment": { "Full-time": "Full-time", "Internship": "Internship", "Part-time": "Part-time", "Contract": "Contract" },
+    "states": {
+      "empty": "Belum ada lowongan",
+      "emptyDescription": "Saat ini belum ada lowongan yang tersedia di PT Autentik Karya Analitika.",
+      "unavailable": "Lowongan sementara tidak tersedia",
+      "unavailableDescription": "Informasi lowongan sedang tidak tersedia. Silakan coba lagi beberapa saat.",
+      "noMatches": "Tidak ada lowongan yang sesuai",
+      "noMatchesDescription": "Kami tidak menemukan lowongan dengan kriteria filter yang Anda pilih. Coba sesuaikan kata kunci atau reset filter pencarian.",
+      "retry": "Coba Lagi",
+      "resetAll": "Reset Semua Filter"
+    },
+    "cta": {
+      "eyebrow": "Inisiatif Karir",
+      "title": "Belum Menemukan Posisi yang Sesuai?",
+      "description": "Kami selalu terbuka bagi talenta-talenta luar biasa. Kirimkan CV dan portofolio Anda ke basis data rekrutmen kami untuk dihubungi saat posisi yang relevan dibuka.",
+      "apply": "Kirim Lamaran Terbuka",
+      "contact": "Hubungi Tim Rekrutmen"
+    },
+    "card": { "salaryFallback": "Gaji Dinegosiasikan", "deadline": "Batas: {date}", "quota": "Kuota:", "detail": "Detail & Lamar" },
+    "pagination": {
+      "summary": "Menampilkan halaman <current>{page}</current> dari <total>{pages}</total> (Total {count} posisi)",
+      "previous": "Sebelumnya",
+      "next": "Selanjutnya"
+    }
+  }
+}

@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const os=require('node:os');const http=require('node:http');
 const {spawn}=require('node:child_process');const esbuild=require('esbuild');const ReactDOMServer=require('react-dom/server');
+const React=require('react');const {NextIntlClientProvider}=require('next-intl');
 const {harness,aka,foreign}=require('./verify-aka-careers.cjs');
 const root=path.resolve(__dirname,'..');const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function main(){
@@ -9,11 +10,12 @@ async function main(){
   const css=fs.readdirSync(cssRoot,{recursive:true}).filter(name=>name.endsWith('.css')).map(name=>fs.readFileSync(path.join(cssRoot,name),'utf8')).join('\n');
   assert.ok(css.length,'Run npm run build first');
   const jobs=[aka(42),aka(73),aka(99)].map(job=>({...job,company:{...job.company,logo:null}}));
+  const presentation=node=>React.createElement(NextIntlClientProvider,{locale:'id',timeZone:'Asia/Jakarta',messages:{common:require('../messages/id/common.json'),navigation:require('../messages/id/navigation.json'),careers:require('../messages/id/careers.json')}},node);
   const detailHarness=harness({jobs:[jobs[0]],related:[jobs[1]],realPresentation:true});
-  const detailHtml=ReactDOMServer.renderToStaticMarkup(await detailHarness.load('@/app/(site)/careers/[slug]/page').default({params:Promise.resolve({slug:'42'})}));
+  const detailHtml=ReactDOMServer.renderToStaticMarkup(presentation(await detailHarness.load('@/app/(site)/careers/[slug]/page').default({params:Promise.resolve({slug:'42'})})));
   const attackDescription='</script><script>window.__aka_xss=1</script><p onclick="window.__aka_xss=1">Klik</p><img src=x onerror="window.__aka_xss=1"><a href="javascript:window.__aka_xss=1" target="_blank">Lamar</a><iframe src="https://evil.example/"></iframe><svg onload="window.__aka_xss=1"></svg>';
   const attackHarness=harness({jobs:[{...jobs[0],description:attackDescription}],realPresentation:true});
-  const attackHtml=ReactDOMServer.renderToStaticMarkup(await attackHarness.load('@/app/(site)/careers/[slug]/page').default({params:Promise.resolve({slug:'42'})}));
+  const attackHtml=ReactDOMServer.renderToStaticMarkup(presentation(await attackHarness.load('@/app/(site)/careers/[slug]/page').default({params:Promise.resolve({slug:'42'})})));
   const homePresentation=harness({realPresentation:true}).load('@/components/home/HomeCareers').default;
   const homeEmptyHtml=ReactDOMServer.renderToStaticMarkup(await homePresentation({items:[],available:true}));
   const homeUnavailableHtml=ReactDOMServer.renderToStaticMarkup(await homePresentation({items:[],available:false}));
@@ -24,7 +26,8 @@ async function main(){
     import React from 'react';import {createRoot} from 'react-dom/client';
      import CareersClient from './app/(public)/[locale]/(site)/careers/CareersClient';
      import {NextIntlClientProvider} from 'next-intl';
-     import common from './messages/id/common.json';import navigation from './messages/id/navigation.json';
+      import common from './messages/id/common.json';import navigation from './messages/id/navigation.json';
+      import careers from './messages/id/careers.json';
      import SearchModal from './components/layout/SearchModal';
     const root=createRoot(document.getElementById('app'));const jobs=${JSON.stringify(jobs)};let key=0;
     window.renderCase=(mode)=>{const data=mode==='multiple'?jobs:mode==='one'?[jobs[0]]:[];const available=mode!=='unavailable';
@@ -33,7 +36,7 @@ async function main(){
       else if(mode==='html-attack')root.render(<div key={++key} dangerouslySetInnerHTML={{__html:${JSON.stringify(attackHtml)}}}/>);
        else if(mode==='home-empty'||mode==='home-unavailable')root.render(<div key={++key} dangerouslySetInnerHTML={{__html:mode==='home-empty'?${JSON.stringify(homeEmptyHtml)}:${JSON.stringify(homeUnavailableHtml)}}}/>);
        else if(mode==='search')root.render(<NextIntlClientProvider locale='id' messages={{common,navigation}}><SearchModal key={++key} isOpen={true} onClose={()=>{}}/></NextIntlClientProvider>);
-      else root.render(<CareersClient key={++key} initialJobs={data} initialMeta={meta} departments={[jobs[0].department]} available={available} recruitmentUrl='https://recruitment.tekna.id/'/>);
+       else root.render(<NextIntlClientProvider locale='id' timeZone='Asia/Jakarta' messages={{common,navigation,careers}}><CareersClient key={++key} initialJobs={data} initialMeta={meta} departments={[jobs[0].department]} available={available} recruitmentUrl='https://recruitment.tekna.id/'/></NextIntlClientProvider>);
     };window.renderCase('one');
   `},bundle:true,write:false,platform:'browser',jsx:'automatic',alias:{'@':root},plugins:[{name:'boundaries',setup(build){
      build.onResolve({filter:/^(next\/link|next\/navigation|@\/i18n\/navigation|@\/components\/ui\/ScrollAnimations|@\/utils\/supabase\/client)$/},args=>({path:args.path,namespace:'fixture'}));

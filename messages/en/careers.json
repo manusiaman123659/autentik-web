@@ -1,0 +1,72 @@
+{
+  "metadata": {
+    "title": "Careers & Job Opportunities | PT Autentik Karya Analitika",
+    "description": "Explore job opportunities at PT Autentik Karya Analitika through the official recruitment portal."
+  },
+  "ui": {
+    "hero": {
+      "eyebrow": "AKA Careers — Mika Career",
+      "title": "Build Your Future With Us",
+      "description": "Explore career opportunities in instrumentation technology, IoT, software engineering, and technical sales. We invite dedicated talent to grow with us.",
+      "positions": "Open Positions",
+      "departments": "Departments",
+      "growth": "Career Growth Opportunities"
+    },
+    "culture": {
+      "eyebrow": "Culture & Values",
+      "title": "Why Build Your Career Here?",
+      "description": "We believe innovation grows through healthy collaboration, recognition of contributions, and room for everyone to develop.",
+      "innovationTitle": "Innovation Without Limits",
+      "innovationDescription": "Work directly with modern technologies: IoT, Next.js, industrial sensors, and high-precision data analytics.",
+      "teamTitle": "A Collaborative Team",
+      "teamDescription": "A supportive work environment, open communication without rigid bureaucracy, and encouragement to progress together.",
+      "careerTitle": "A Clear Career Path",
+      "careerDescription": "Transparent performance reviews, mentoring programmes, and budget support for professional certification and training.",
+      "welfareTitle": "Employee Wellbeing",
+      "welfareDescription": "Competitive compensation, comprehensive BPJS coverage, flexible/hybrid working hours, and regular recognition."
+    },
+    "listing": {
+      "eyebrow": "Available Opportunities",
+      "title": "Job Openings",
+      "available": "Job openings at PT Autentik Karya Analitika loaded successfully.",
+      "loading": "Updating job openings..."
+    },
+    "filter": {
+      "search": "Search job openings",
+      "placeholder": "Search job titles, skills (Next.js, IoT, Sales), or keywords...",
+      "clear": "Clear search",
+      "department": "Department",
+      "departmentLabel": "Filter by department",
+      "allDepartments": "All Departments",
+      "employment": "Employment Type",
+      "employmentLabel": "Filter by employment type",
+      "allTypes": "All Types",
+      "results": "{count, plural, one {Showing <strong>#</strong> open position} other {Showing <strong>#</strong> open positions}}",
+      "reset": "Reset Filters"
+    },
+    "employment": { "Full-time": "Full-time", "Internship": "Internship", "Part-time": "Part-time", "Contract": "Contract" },
+    "states": {
+      "empty": "No open positions yet",
+      "emptyDescription": "There are currently no open positions at PT Autentik Karya Analitika.",
+      "unavailable": "Job openings temporarily unavailable",
+      "unavailableDescription": "Job information is currently unavailable. Please try again shortly.",
+      "noMatches": "No matching positions",
+      "noMatchesDescription": "We could not find any positions matching your filters. Try different keywords or reset the search filters.",
+      "retry": "Try Again",
+      "resetAll": "Reset All Filters"
+    },
+    "cta": {
+      "eyebrow": "Take the Initiative",
+      "title": "Haven't Found the Right Position?",
+      "description": "We are always open to exceptional talent. Submit your CV and portfolio to our recruitment database so we can contact you when a relevant position opens.",
+      "apply": "Send an Open Application",
+      "contact": "Contact the Recruitment Team"
+    },
+    "card": { "salaryFallback": "Salary Negotiable", "deadline": "Deadline: {date}", "quota": "Openings:", "detail": "Details & Apply" },
+    "pagination": {
+      "summary": "Showing page <current>{page}</current> of <total>{pages}</total> ({count} positions in total)",
+      "previous": "Previous",
+      "next": "Next"
+    }
+  }
+}
