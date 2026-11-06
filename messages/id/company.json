@@ -18,11 +18,11 @@
     },
     "valuesTitle": "Nilai Inti",
     "values": {
-      "F": { "title": "Iman kepada Tuhan", "description": "Kami percaya akan keberadaan dan kuasa Tuhan" },
-      "I": { "title": "Inovatif", "description": "Selalu berinovasi dan melakukan tindakan perbaikan yang berkelanjutan" },
-      "R": { "title": "Ketangguhan", "description": "Menghadapi perubahan dengan percaya diri" },
-      "S": { "title": "Melayani", "description": "Memberikan layanan terbaik kepada pelanggan secara profesional" },
-      "T": { "title": "Totalitas", "description": "Secara sadar dan penuh integritas melaksanakan tugas dan tanggung jawab dengan memberi solusi yang tuntas" }
+      "F": { "description": "Kami percaya akan keberadaan dan kuasa Tuhan" },
+      "I": { "description": "Selalu berinovasi dan melakukan tindakan perbaikan yang berkelanjutan" },
+      "R": { "description": "Menghadapi perubahan dengan percaya diri" },
+      "S": { "description": "Memberikan layanan terbaik kepada pelanggan secara profesional" },
+      "T": { "description": "Secara sadar dan penuh integritas melaksanakan tugas dan tanggung jawab dengan memberi solusi yang tuntas" }
     },
     "quality": {
       "title": "Kebijakan Mutu", "introduction": "<company>PT. Autentik Karya Analitika</company> adalah perusahaan teknologi pintar yang senantiasa berkomitmen untuk memberikan dan meningkatkan kepuasan pelanggan dengan cara:",

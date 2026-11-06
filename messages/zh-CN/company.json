@@ -18,11 +18,11 @@
     },
     "valuesTitle": "核心价值观",
     "values": {
-      "F": { "title": "信仰上帝", "description": "我们相信上帝的存在与力量" },
-      "I": { "title": "创新", "description": "持续创新，并采取行动实现持续改进" },
-      "R": { "title": "坚韧", "description": "以信心面对变化" },
-      "S": { "title": "服务", "description": "以专业态度为客户提供优质服务" },
-      "T": { "title": "全力以赴", "description": "自觉、诚信地履行职责，提供完整的解决方案" }
+      "F": { "description": "我们相信上帝的存在与力量" },
+      "I": { "description": "持续创新，并采取行动实现持续改进" },
+      "R": { "description": "以信心面对变化" },
+      "S": { "description": "以专业态度为客户提供优质服务" },
+      "T": { "description": "自觉、诚信地履行职责，提供完整的解决方案" }
     },
     "quality": {
       "title": "质量方针", "introduction": "<company>PT. Autentik Karya Analitika</company> 是一家智能技术企业，始终致力于通过以下方式实现并提升客户满意度：",

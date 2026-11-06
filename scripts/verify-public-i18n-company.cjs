@@ -113,7 +113,10 @@ async function main(){
     equal(home.includes('/products/model-ss1500'),true,'Product identity URL unchanged');
     const about=await renderPage('app/(public)/[locale]/(site)/about/page.tsx');
     for(const value of ['ANGGOTA ASLI','Jabatan asli CMS','GRUP ASLI','PT GRUP ASLI','PARTNER ASLI','JUDUL PDF ASLI','https://fixture.supabase.co/original.pdf','FIRST','ISO 9001:2015','Smart Technology is Yours'])equal(about.includes(value),true,'About entity/document identity preserved');
-    for(const value of [catalogs[locale].company.about.vision,catalogs[locale].company.about.mission.opportunities,catalogs[locale].company.about.values.F.description,catalogs[locale].company.about.quality.title])equal(about.includes(value),true,'Selected-language About content');
+    for(const value of [catalogs[locale].company.about.vision,catalogs[locale].company.about.mission.opportunities,catalogs[locale].company.about.quality.title])equal(about.includes(value),true,'Selected-language About content');
+    for(const [letter,title] of [['F','Faith in God'],['I','Innovative'],['R','Resilience'],['S','Service'],['T','Totality']])equal(about.includes(title),true,'English FIRST title '+locale+'/'+letter);
+    for(const letter of ['F','I','R','S','T'])equal(about.includes(catalogs[locale].company.about.values[letter].description),true,'Localized FIRST description '+locale+'/'+letter);
+    equal([...about.matchAll(/class="text-6xl font-black text-slate-300[^"]*"[^>]*>([FIRST])<\/div>/g)].map(match=>match[1]).join(''),'FIRST','FIRST card letters '+locale);
     for(const other of ['id','en','zh-CN'].filter(value=>value!==locale))equal(about.includes(catalogs[other].company.about.vision),false,'No parallel translated vision');
     const metadata=await load('app/(public)/[locale]/(site)/page.tsx').generateMetadata();
     equal(metadata.title,catalogs[locale].home.metadata.title,'Localized Home title');

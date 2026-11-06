@@ -56,18 +56,23 @@ const missionPoints = [
 const firstValues = [
   {
     letter: "F",
+    title: "Faith in God",
   },
   {
     letter: "I",
+    title: "Innovative",
   },
   {
     letter: "R",
+    title: "Resilience",
   },
   {
     letter: "S",
+    title: "Service",
   },
   {
     letter: "T",
+    title: "Totality",
   },
 ];
 
@@ -231,7 +236,7 @@ export default async function AboutPage() {
                   className="text-xl md:text-2xl font-bold mb-3"
                   style={{ color: "var(--text-primary)" }}
                 >
-                  {t(`about.values.${val.letter}.title`)}
+                  {val.title}
                 </h3>
                 <p className="font-light leading-relaxed text-sm sm:text-base" style={{ color: "var(--text-secondary)" }}>
                   {t(`about.values.${val.letter}.description`)}

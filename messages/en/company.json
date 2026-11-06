@@ -18,11 +18,11 @@
     },
     "valuesTitle": "Core Values",
     "values": {
-      "F": { "title": "Faith in God", "description": "We believe in the existence and power of God" },
-      "I": { "title": "Innovative", "description": "We continually innovate and take action for continuous improvement" },
-      "R": { "title": "Resilience", "description": "We face change with confidence" },
-      "S": { "title": "Serve", "description": "We provide customers with excellent service in a professional manner" },
-      "T": { "title": "Totality", "description": "We carry out our duties and responsibilities conscientiously and with integrity, delivering complete solutions" }
+      "F": { "description": "We believe in the existence and power of God" },
+      "I": { "description": "We continually innovate and take action for continuous improvement" },
+      "R": { "description": "We face change with confidence" },
+      "S": { "description": "We provide customers with excellent service in a professional manner" },
+      "T": { "description": "We carry out our duties and responsibilities conscientiously and with integrity, delivering complete solutions" }
     },
     "quality": {
       "title": "Quality Policy", "introduction": "<company>PT. Autentik Karya Analitika</company> is a smart technology company committed to achieving and improving customer satisfaction by:",
