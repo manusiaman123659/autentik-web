@@ -7,6 +7,15 @@ import { getPublicRoute } from "@/i18n/locales";
 
 const routeLocale = createLocaleRouting(routing);
 
+function applyAuthResponse(response: NextResponse, sessionResponse: NextResponse) {
+  for (const cookie of sessionResponse.cookies.getAll()) response.cookies.set(cookie);
+  for (const name of ["Cache-Control", "Expires", "Pragma"]) {
+    const value = sessionResponse.headers.get(name);
+    if (value !== null) response.headers.set(name, value);
+  }
+  return response;
+}
+
 async function refreshSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -21,12 +30,12 @@ async function refreshSession(request: NextRequest) {
   }
 
   try {
-    const { supabase, supabaseResponse } = createClient(request);
+    const client = createClient(request);
 
     // Refresh the auth session (if expired) and propagate the new cookies.
     // Do not run code between createServerClient and auth.getUser().
-    await supabase.auth.getUser();
-    return supabaseResponse;
+    await client.supabase.auth.getUser();
+    return client.supabaseResponse;
   } catch (error) {
     const isRefreshTokenError =
       error instanceof Error && "code" in error && error.code === "refresh_token_not_found";
@@ -44,6 +53,16 @@ async function refreshSession(request: NextRequest) {
 }
 
 export async function proxy(request: NextRequest) {
+  // Recovery handlers verify their own session and own all auth cookie writes.
+  if ((request.method === "GET" && request.nextUrl.pathname === "/auth/recovery")
+    || ["/api/admin/auth/forgot-password", "/api/admin/auth/reset-password"].includes(request.nextUrl.pathname)) {
+    return NextResponse.next({ request: { headers: request.headers } });
+  }
+  // The OAuth handler exchanges/verifies its own session; a prior refresh emits competing Set-Cookie values.
+  if (request.method === "GET" && request.nextUrl.pathname === "/auth/callback"
+    && request.nextUrl.searchParams.get("code")) {
+    return NextResponse.next({ request: { headers: request.headers } });
+  }
   // Existing session-refresh logic runs first and is otherwise unchanged.
   const sessionResponse = await refreshSession(request);
   const internalPath = request.nextUrl.pathname.replace(/^\/zh-CN(?=\/|$)/, "/zh-cn");
@@ -60,36 +79,31 @@ export async function proxy(request: NextRequest) {
       : request;
     const careerResponse = await getCareerRoutingResponse(careerRequest);
     const response = careerResponse ?? sessionResponse;
-    for (const cookie of sessionResponse.cookies.getAll()) response.cookies.set(cookie);
-    return response;
+    return applyAuthResponse(response, sessionResponse);
   }
   if (/^\/zh-CN(?:\/|$)/.test(request.nextUrl.pathname)) {
     const normalized = request.nextUrl.clone();
     normalized.pathname = normalized.pathname.replace(/^\/zh-CN/, "/zh-cn");
     if (getPublicRoute(normalized.pathname)) {
       const response = NextResponse.redirect(normalized, 308);
-      for (const cookie of sessionResponse.cookies.getAll()) response.cookies.set(cookie);
-      return response;
+      return applyAuthResponse(response, sessionResponse);
     }
   }
   const route = getPublicRoute(request.nextUrl.pathname);
   if (!route) {
     const careerResponse = await getCareerRoutingResponse(request);
     if (!careerResponse) return sessionResponse;
-    for (const cookie of sessionResponse.cookies.getAll()) careerResponse.cookies.set(cookie);
-    return careerResponse;
+    return applyAuthResponse(careerResponse, sessionResponse);
   }
   // Overwrite incoming values; metadata must describe the actual public route.
   request.headers.set("x-public-pathname", route.pathname);
   const localeResponse = routeLocale(request);
   if (localeResponse.headers.has("location")) {
-    for (const cookie of sessionResponse.cookies.getAll()) localeResponse.cookies.set(cookie);
-    return localeResponse;
+    return applyAuthResponse(localeResponse, sessionResponse);
   }
   const careerResponse = await getCareerRoutingResponse(request);
   const response = careerResponse ?? localeResponse;
-  for (const cookie of sessionResponse.cookies.getAll()) response.cookies.set(cookie);
-  return response;
+  return applyAuthResponse(response, sessionResponse);
 }
 
 export const config = {

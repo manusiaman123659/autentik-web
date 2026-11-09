@@ -20,9 +20,22 @@ export async function GET(request: NextRequest) {
     && request.nextUrl.origin === "http://localhost:3000"
     ? request.nextUrl.origin
     : getCanonicalOrigin(request.nextUrl.origin);
-  const redirect = (path: string) => NextResponse.redirect(new URL(
-    localizeHref(path, getPublicRoute(safeNext.split("?")[0])?.locale ?? "id"), callbackOrigin,
-  ));
+  const authResponseHeaders = new Headers();
+  const redirect = (path: string) => {
+    const response = NextResponse.redirect(new URL(
+      localizeHref(path, getPublicRoute(safeNext.split("?")[0])?.locale ?? "id"), callbackOrigin,
+    ));
+    for (const name of ["Cache-Control", "Expires", "Pragma"]) {
+      const value = authResponseHeaders.get(name);
+      if (value === null) continue;
+      const existingPolicy = response.headers.get("Cache-Control");
+      // Quoted field names are not directives; keep an existing no-store policy.
+      if (name === "Cache-Control" && existingPolicy?.replace(/"(?:\\.|[^"\\])*"/g, '""')
+        .split(",").some((directive) => directive.trim().toLowerCase() === "no-store")) continue;
+      response.headers.set(name, value);
+    }
+    return response;
+  };
 
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -42,7 +55,7 @@ export async function GET(request: NextRequest) {
   }
 
   const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = createClient(cookieStore, authResponseHeaders);
 
   // 1. Exchange PKCE code for session
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);

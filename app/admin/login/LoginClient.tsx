@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Lock, Mail, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { loginSchema, type LoginFormData } from "@/lib/validations/loginSchema";
-import { createClient } from "@/utils/supabase/client";
+import { signInAdmin } from "@/utils/supabase/client";
 
 function translateAuthError(error: { code?: string; message?: string }): string {
   if (error.code === "invalid_credentials")
@@ -23,12 +23,12 @@ function translateAuthError(error: { code?: string; message?: string }): string 
     : "Terjadi kesalahan. Silakan coba lagi.";
 }
 
-export default function LoginClient() {
+export default function LoginClient({ passwordReset = false }: { passwordReset?: boolean }) {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [remember, setRemember] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const {
     register,
@@ -42,12 +42,9 @@ export default function LoginClient() {
     setErrorMsg(null);
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
-      if (error) {
-        setErrorMsg(translateAuthError(error));
+      const { data: auth, error } = await signInAdmin(data.email, data.password, remember);
+      if (error || !auth.session) {
+        setErrorMsg(error ? translateAuthError(error) : "Sesi belum dapat dibuat. Silakan coba kembali.");
         return;
       }
       router.push("/admin");
@@ -84,6 +81,7 @@ export default function LoginClient() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="px-8 pb-8 space-y-5">
+            {passwordReset && <p role="status" className="rounded-xl border border-[#0EA5A0]/40 p-3 text-sm text-[#0EA5A0]">Kata sandi berhasil diperbarui. Silakan masuk kembali.</p>}
             {errorMsg && (
               <div
                 role="alert"
@@ -160,6 +158,15 @@ export default function LoginClient() {
                 <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
               )}
             </div>
+
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                <input type="checkbox" checked={remember} onChange={event => setRemember(event.target.checked)} disabled={submitting} className="size-4 accent-[#0EA5A0]" />
+                Ingat saya
+              </label>
+              <Link href="/admin/forgot-password" className="font-semibold text-[#0EA5A0] hover:underline">Lupa password?</Link>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Ingat saya menyimpan sesi selama 30 hari bergulir. Browser tertentu dapat memulihkan sesi meskipun opsi ini tidak dipilih.</p>
 
             <button
               type="submit"

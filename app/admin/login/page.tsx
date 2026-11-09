@@ -8,9 +8,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminLoginPage() {
+export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<{ reset?: string }> }) {
   const admin = await getAdminUser();
   if (admin) redirect("/admin");
 
-  return <LoginClient />;
+  const query = await searchParams;
+  return <LoginClient passwordReset={query.reset === "success"} />;
 }

@@ -133,7 +133,13 @@ async function main(){
   equal(fallbackHome.includes(catalogs['zh-CN'].home.hero.companySubtitle),true,'Company hero fallback localizes');
   equal(fallbackHome.includes('PT Autentik Karya Analitika'),true,'Company fallback identity unchanged');
   const protectedDiff=execFileSync('git',['diff','--name-only','--','supabase','lib/actions','lib/validations','lib/public-data.ts','lib/portfolio-data.ts','utils/supabase','components/admin'],{cwd:root,encoding:'utf8'});
-  equal(require('./product-translation-scope.cjs')(protectedDiff),'','No unrelated protected changes outside approved i18n/Product foundation scope');
+  // Exact-file waiver matching the approved Release 2 Auth adapter overlay; no directory-wide exemption.
+  const authAdapters=new Set(['utils/supabase/client.ts','utils/supabase/middleware.ts','utils/supabase/server.ts']);
+  const withoutAuthAdapters=diff=>diff.split(/\r?\n/).filter(file=>file&&!authAdapters.has(file)).join('\n');
+  const translationScope=require('./product-translation-scope.cjs');
+  equal(translationScope(withoutAuthAdapters(protectedDiff)),'','No unrelated protected changes outside approved i18n/Product foundation scope');
+  equal(withoutAuthAdapters([...authAdapters].join('\n')),'','Only the three exact approved Auth adapter paths are exempt');
+  for(const file of ['utils/supabase/admin.ts','utils/supabase/server.ts.bak','utils/supabase/nested/server.ts','utils/supabase/middleware.tsx'])equal(translationScope(withoutAuthAdapters([...authAdapters,file].join('\n'))),file,'Unapproved Auth sibling/lookalike remains protected: '+file);
   const publicRoot=await load('app/(public)/[locale]/layout.tsx').default({params:Promise.resolve({locale:'en'}),children:'fixture'});
   equal(Object.keys(publicRoot.props.children.props.messages).sort(),['common','navigation'],'Root client payload remains Foundation-only');
   const homeTree=await load('app/(public)/[locale]/(site)/page.tsx').default();
