@@ -5,7 +5,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams } from "next/navigation";
+import Link from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2, Lock, Mail, Eye, EyeOff } from "lucide-react";
 import {
   customerLoginSchema,
@@ -44,6 +46,7 @@ function translateOAuthError(errorCode: string | null): string | null {
 }
 
 export default function LoginForm() {
+  const authT = useTranslations("auth.login");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -212,6 +215,15 @@ export default function LoginForm() {
         {errors.password && (
           <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
         )}
+      </div>
+
+      <div className="flex justify-end">
+        <Link
+          href="/auth/forgot-password"
+          className="text-xs font-semibold text-[#0EA5A0] hover:underline"
+        >
+          {authT("forgotPassword")}
+        </Link>
       </div>
 
       <button

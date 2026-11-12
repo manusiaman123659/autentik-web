@@ -19,7 +19,7 @@ export function getPublicRoute(pathname: string): { locale: PublicLocale; pathna
   const prefixed = prefix === "en" || prefix === "zh-cn" || prefix === "id";
   const bare = prefixed ? `/${segments.slice(2).join("/")}` : pathname;
   const section = bare.split("/")[1];
-  const authPage = /^\/auth\/(login|register)\/?$/.test(bare);
+  const authPage = /^\/auth\/(login|register|forgot-password|customer-recovery|reset-password)\/?$/.test(bare);
   if (bare !== "/" && !publicSections.has(section) && !authPage) return null;
   return { locale, pathname: bare, prefixed };
 }

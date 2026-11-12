@@ -1,5 +1,8 @@
 import common from "@/messages/id/common.json";
 import navigation from "@/messages/id/navigation.json";
+import auth from "@/messages/id/auth.json";
+import englishAuth from "@/messages/en/auth.json";
+import chineseAuth from "@/messages/zh-CN/auth.json";
 import home from "@/messages/id/home.json";
 import englishHome from "@/messages/en/home.json";
 import englishCompany from "@/messages/en/company.json";
@@ -50,15 +53,15 @@ export function mergeMessages<T>(base: T, translated: unknown): T {
 }
 
 export async function loadMessages(locale: PublicLocale) {
-  const base = { common, navigation, home, company, documents, services, distribution, research, contact, requests, legal, products, careers };
+  const base = { common, navigation, auth, home, company, documents, services, distribution, research, contact, requests, legal, products, careers };
   if (locale === "id") return base;
   const translated = locale === "en"
-    ? { common: (await import("@/messages/en/common.json")).default, navigation: (await import("@/messages/en/navigation.json")).default,
+    ? { common: (await import("@/messages/en/common.json")).default, navigation: (await import("@/messages/en/navigation.json")).default, auth: englishAuth,
       // Explicit server imports keep the new catalog leaves in Turbopack's HMR graph.
       home: englishHome, company: englishCompany, documents: englishDocuments,
       services: englishServices, distribution: englishDistribution, research: englishResearch,
       contact: englishContact, requests: englishRequests, legal: englishLegal, products: englishProducts, careers: englishCareers }
-    : { common: (await import("@/messages/zh-CN/common.json")).default, navigation: (await import("@/messages/zh-CN/navigation.json")).default,
+    : { common: (await import("@/messages/zh-CN/common.json")).default, navigation: (await import("@/messages/zh-CN/navigation.json")).default, auth: chineseAuth,
       home: chineseHome, company: chineseCompany, documents: chineseDocuments,
       services: chineseServices, distribution: chineseDistribution, research: chineseResearch,
       contact: chineseContact, requests: chineseRequests, legal: chineseLegal, products: chineseProducts, careers: chineseCareers };
