@@ -23,11 +23,12 @@ type CustomerRecoveryValues = {
   confirmPassword: string;
 };
 
-type RecoveryOutcome = "success" | "partial" | "invalid" | "unavailable" | null;
+type RecoveryOutcome = "success" | "partial" | "invalid" | "passwordRejected" | "unavailable" | null;
 type TokenStatus = "checking" | "ready" | "invalid";
 
 type ResetResponse = {
   success?: boolean;
+  code?: string;
   passwordUpdated?: boolean | null;
   sessionsRevoked?: boolean;
   needsNewLink?: boolean;
@@ -123,9 +124,26 @@ export default function CustomerRecoveryForm() {
         return;
       }
 
-      if (response.status === 502 || payload?.passwordUpdated === null) {
+      if (payload?.code === "password_rejected") {
+        setToken(null);
+        setOutcome("passwordRejected");
+        return;
+      }
+
+      if (response.status === 502 || payload?.code === "unavailable" || payload?.passwordUpdated === null) {
         setToken(null);
         setOutcome("unavailable");
+        return;
+      }
+
+      if (payload?.code === "invalid_token") {
+        setToken(null);
+        setOutcome("invalid");
+        return;
+      }
+
+      if (response.status === 400 && payload?.needsNewLink !== true) {
+        setErrorMsg(t("errors.validation"));
         return;
       }
 
@@ -158,15 +176,20 @@ export default function CustomerRecoveryForm() {
     );
   }
 
-  if (tokenStatus === "invalid" || outcome === "invalid") {
+  if (tokenStatus === "invalid" || outcome === "invalid" || outcome === "passwordRejected") {
+    const passwordRejected = outcome === "passwordRejected";
     return (
       <div className="space-y-4" role="alert">
         <div className="px-4 py-4 rounded-xl text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900">
           <div className="flex items-start gap-3">
             <AlertCircle size={18} className="mt-0.5 shrink-0" />
             <div>
-              <p className="font-semibold">{t("invalidTitle")}</p>
-              <p className="mt-1 leading-relaxed">{t("invalidBody")}</p>
+              <p className="font-semibold">
+                {passwordRejected ? t("passwordRejectedTitle") : t("invalidTitle")}
+              </p>
+              <p className="mt-1 leading-relaxed">
+                {passwordRejected ? t("passwordRejectedBody") : t("invalidBody")}
+              </p>
             </div>
           </div>
         </div>

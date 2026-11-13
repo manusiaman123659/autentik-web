@@ -410,6 +410,7 @@ async function runHttpTests(users, secret) {
     const result = await reset(resetToken, resetNewPassword, freshIp());
     eq(result.response.status, 200, "200 success");
     eq(result.json?.success, true, "success true");
+    eq(result.json?.code, "success", "success code");
     eq(result.json?.passwordUpdated, true, "password updated");
     eq(result.json?.sessionsRevoked, true, "global sessions revoked");
     expectNoCookies(result);
@@ -434,6 +435,7 @@ async function runHttpTests(users, secret) {
     const replay = await reset(resetToken, `Replay-${randomUUID()}`, freshIp());
     eq(replay.response.status, 400, "replay rejected");
     eq(replay.json?.success, false, "replay failure");
+    eq(replay.json?.code, "invalid_token", "replay code");
     eq(replay.json?.needsNewLink, true, "replay needs new link");
     expectNoCookies(replay);
     eq(replay.text.includes(resetToken), false, "replay response does not expose token");
@@ -445,6 +447,7 @@ async function runHttpTests(users, secret) {
     const invalid = await reset("a".repeat(64), "Synthetic-new-password-42", freshIp());
     eq(invalid.response.status, 400, "unknown token invalid");
     eq(invalid.json?.success, false, "unknown token failure");
+    eq(invalid.json?.code, "invalid_token", "unknown token code");
     eq(invalid.json?.needsNewLink, true, "unknown token needs new link");
     expectNoCookies(invalid);
 
@@ -458,7 +461,25 @@ async function runHttpTests(users, secret) {
     eq(badJson.response.status, 400, "invalid JSON rejected");
     const mismatch = await post(resetPath, { token: "a".repeat(64), password: "Synthetic-new-password-42", confirmPassword: "Synthetic-other-password-42" }, { ip: freshIp() });
     eq(mismatch.response.status, 400, "confirmation mismatch rejected");
+    eq(mismatch.json?.code, "invalid_input", "confirmation mismatch code");
+    eq(mismatch.json?.needsNewLink, false, "confirmation mismatch keeps the token");
     for (const result of [noOrigin, badOrigin, tooLarge, badJson, mismatch]) expectNoCookies(result);
+  });
+
+  await test("pre-claim validation keeps the token usable", async () => {
+    const requested = await forgot(users.weak.email, freshIp());
+    expectNeutral(requested);
+    const token = extractToken(emails.at(-1));
+    const short = await reset(token, "short", freshIp());
+    eq(short.response.status, 400, "short password rejected");
+    eq(short.json?.code, "invalid_input", "short password code");
+    eq(short.json?.needsNewLink, false, "short password does not consume token");
+    eq(short.text.includes(token), false, "validation response does not expose token");
+    eq((await recoveryRow(users.weak.id))?.state, "issued", "short password leaves row issued");
+    const success = await reset(token, "Synthetic-valid-password-42", freshIp());
+    eq(success.response.status, 200, "same token remains usable");
+    eq(success.json?.code, "success", "success code after validation");
+    eq((await recoveryRow(users.weak.id))?.state, "consumed", "valid reset consumes token");
   });
 
   await test("reset IP and token rate limits", async () => {
@@ -551,6 +572,7 @@ async function main() {
       other: await createUser("other", "customer", true),
       deactivate: await createUser("deactivate", "customer", true),
       concurrent: await createUser("concurrent", "customer", true),
+      weak: await createUser("weak", "customer", true),
     };
     const { error: missingProfileError } = await admin.from("profiles").delete().eq("id", users.missingProfile.id);
     if (missingProfileError) throw missingProfileError;

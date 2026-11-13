@@ -43,6 +43,8 @@ let evidenceDir = "";
 let resetRequests = [];
 let forgotStatuses = [];
 let resetStatuses = [];
+let fetchSession = null;
+let syntheticReset = null;
 
 const idAuth = require("../messages/id/auth.json");
 const enAuth = require("../messages/en/auth.json");
@@ -295,9 +297,22 @@ async function launchEdge(port, profileDir) {
 async function browserSession(port) {
   const { connection } = require("./verify-product-translation-editor-browser.cjs");
   const onEvent = (event) => {
+    if (event.method === "Fetch.requestPaused" && fetchSession) {
+      const { requestId, request } = event.params;
+      if (syntheticReset && request.url.includes("/api/auth/customer/reset-password")) {
+        void fetchSession.cdp("Fetch.fulfillRequest", {
+          requestId,
+          responseCode: syntheticReset.status,
+          responseHeaders: [{ name: "content-type", value: "application/json" }],
+          body: Buffer.from(JSON.stringify(syntheticReset.body)).toString("base64"),
+        }).catch(() => {});
+      } else {
+        void fetchSession.cdp("Fetch.continueRequest", { requestId }).catch(() => {});
+      }
+    }
     if (event.method === "Network.requestWillBeSent") {
       const request = event.params.request;
-      if (request.url.includes("/api/auth/customer/reset-password")) {
+      if (!syntheticReset && request.url.includes("/api/auth/customer/reset-password")) {
         resetRequests.push({ url: request.url, postData: request.postData || "" });
       }
     }
@@ -308,6 +323,7 @@ async function browserSession(port) {
     }
   };
   const session = await connection(port, null, onEvent);
+  fetchSession = session;
   await session.cdp("Network.enable");
   await session.cdp("Page.addScriptToEvaluateOnNewDocument", {
     source: `(() => {
@@ -502,7 +518,50 @@ async function main() {
     eq((await recoveryRow(resetUser.id))?.state, "issued", "row remains issued");
   });
 
+  await test("Password-policy rejection is localized and requires a new link", async () => {
+    ok(typeof idAuth.recovery.passwordRejectedTitle === "string", "id rejected title key");
+    ok(typeof enAuth.recovery.passwordRejectedTitle === "string", "en rejected title key");
+    ok(typeof zhAuth.recovery.passwordRejectedTitle === "string", "zh rejected title key");
+    syntheticReset = {
+      status: 400,
+      body: {
+        success: false,
+        code: "password_rejected",
+        passwordUpdated: false,
+        needsNewLink: true,
+        message: "Synthetic password policy rejection",
+      },
+    };
+    await session.cdp("Fetch.enable", {
+      patterns: [{ urlPattern: "*api/auth/customer/reset-password*" }],
+    });
+    try {
+      for (const [prefix, locale, catalog] of [["", "id", idAuth], ["/en", "en", enAuth], ["/zh-cn", "zh-CN", zhAuth]]) {
+        await setViewport(session, 375, 900);
+        await navigate(session, `${prefix}/auth/customer-recovery#token=${layoutToken}`, "#customer-recovery-password");
+        await session.fill("#customer-recovery-password", "NewPass!234");
+        await session.fill("#customer-recovery-confirm", "NewPass!234");
+        await submitForm(session);
+        await session.wait(`document.body.innerText.includes(${JSON.stringify(catalog.recovery.passwordRejectedTitle)})`);
+        const text = await bodyText(session);
+        ok(text.includes(catalog.recovery.passwordRejectedBody), `${locale} rejected body`);
+        eq(text.includes(catalog.recovery.invalidTitle), false, `${locale} not mislabeled as invalid link`);
+        await noOverflow(session, `${locale} rejected mobile`);
+        if (locale === "id") {
+          await setViewport(session, 1440, 900);
+          await noOverflow(session, "id rejected desktop");
+        }
+      }
+    } finally {
+      syntheticReset = null;
+      await session.cdp("Fetch.disable").catch(() => {});
+    }
+    eq((await recoveryRow(layoutUser.id))?.state, "issued", "synthetic rejection did not consume the token");
+  });
+
   await test("Valid reset succeeds, is replay-safe, and login works", async () => {
+    await setViewport(session, 375, 900);
+    await navigate(session, `/auth/customer-recovery#token=${resetToken}`, "#customer-recovery-password");
     await session.fill("#customer-recovery-password", "NewPass!234");
     await session.fill("#customer-recovery-confirm", "NewPass!234");
     await submitForm(session);
