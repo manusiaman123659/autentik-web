@@ -19,7 +19,6 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  Building2,
   PackageCheck,
 } from "lucide-react";
 import SectionHeading from "@/components/ui/SectionHeading";
@@ -38,32 +37,38 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
 const serviceDetailsData = [
   {
     id: "iot-monitoring",
+    index: "01",
     category: "iot",
     icon: "Cpu",
     subtitle: "Integrasi sensor pintar & sistem peringatan dini otomatis",
   },
   {
     id: "lab-engineering",
+    index: "02",
     category: "lab",
     icon: "LayoutDashboard",
   },
   {
     id: "calibration",
+    index: "03",
     category: "maintenance",
     icon: "Settings",
   },
   {
     id: "water-treatment",
+    index: "04",
     category: "water",
     icon: "Droplets",
   },
   {
     id: "platform-integration",
+    index: "05",
     category: "iot",
     icon: "BarChart2",
   },
   {
     id: "consulting",
+    index: "06",
     category: "lab",
     icon: "Headset",
   },
@@ -112,6 +117,7 @@ const processSteps = [
 ];
 
 const faqs = ["calibration", "system", "warranty", "survey"];
+const categories = ["all", "iot", "lab", "maintenance", "water"] as const;
 
 export default function ServicesClient({
   waNumber,
@@ -131,7 +137,7 @@ export default function ServicesClient({
 
   return (
     <>
-      {/* Hero Section */}
+      {/* Hero Section (Production) */}
       <section
         className="py-24 relative overflow-hidden public-page-hero"
       >
@@ -210,107 +216,133 @@ export default function ServicesClient({
         </div>
       </section>
 
-      {/* Main Services List */}
-      <section id="services-list" className="py-20" style={{ backgroundColor: "var(--bg-secondary)" }}>
+      {/* Main Services List (Gambar 3 — Hairline Editorial Index) */}
+      <section
+        id="services-list"
+        className="py-20 lg:py-24 border-b border-base"
+        style={{ backgroundColor: "var(--bg-primary)" }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedElement type="fade-up">
-            <SectionHeading
-              title={t("catalogue.title")}
-              subtitle={t("catalogue.description")}
-              align="center"
-            />
+          <AnimatedElement
+            type="fade-up"
+            className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-end mb-12"
+          >
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-heading">
+                {t("catalogue.title")}
+              </h2>
+            </div>
+            <div>
+              <p className="text-base text-body leading-relaxed">
+                {t("catalogue.description")}
+              </p>
+            </div>
           </AnimatedElement>
 
-          {/* Filter Categories */}
-          <div className="flex flex-wrap justify-center gap-2 mb-12">
-            {["all", "iot", "lab", "maintenance", "water"].map((category) => (
-              <button
-                key={category}
-                type="button"
-                aria-pressed={activeCategory === category}
-                onClick={() => setActiveCategory(category)}
-                className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  activeCategory === category
-                    ? "bg-[#0EA5A0] text-white shadow-md shadow-cyan-500/20"
-                    : "hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-                }`}
-                style={
-                  activeCategory !== category
-                    ? { backgroundColor: "var(--bg-card)", borderColor: "var(--border-subtle)" }
-                    : {}
-                }
-              >
-                {t(`categories.${category}`)}
-              </button>
-            ))}
+          {/* Minimal Underline Filter Tabs */}
+          <div className="border-b border-base mb-2 overflow-x-auto overflow-y-hidden scrollbar-thin">
+            <div className="flex min-w-max items-center gap-6 sm:gap-8">
+              {categories.map((category) => {
+                const isActive = activeCategory === category;
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setActiveCategory(category)}
+                    className={`relative pb-3.5 text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap border-b-2 -mb-px ${
+                      isActive
+                        ? "border-[#0EA5A0] text-heading"
+                        : "border-transparent text-body hover:text-heading"
+                    }`}
+                  >
+                    {t(`categories.${category}`)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Services Grid */}
-          <AnimatedElement type="stagger" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Structured Hairline Rows */}
+          <AnimatedElement
+            type="stagger"
+            className="divide-y border-b"
+            style={{ borderColor: "var(--border-color)" }}
+          >
             {filteredServices.map((service) => {
               const IconComponent = iconMap[service.icon] || Wrench;
               return (
-                <div
+                <article
                   key={service.id}
                   id={service.id}
-                  className="rounded-2xl p-7 border flex flex-col justify-between shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group"
-                  style={{
-                    backgroundColor: "var(--bg-card)",
-                    borderColor: "var(--border-subtle)",
-                  }}
+                  className="py-10 lg:py-12 grid gap-8 lg:grid-cols-[64px_1fr_1.1fr] lg:items-start"
                 >
-                  <div>
-                    <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 bg-[#0EA5A0]/10 border border-[#0EA5A0]/20 group-hover:bg-[#0EA5A0] group-hover:text-white transition-all duration-300">
-                      <IconComponent size={26} className="text-[#0EA5A0] group-hover:text-white transition-colors" />
-                    </div>
+                  {/* Column 1: Index + Minimal Line Icon */}
+                  <div className="flex items-center gap-3 lg:block">
+                    <span className="text-xs font-bold tracking-[0.18em] text-[#0D9E98] dark:text-[#14B8A6] block">
+                      {service.index}
+                    </span>
+                    <IconComponent
+                      size={20}
+                      className="text-body lg:mt-4 shrink-0"
+                    />
+                  </div>
 
-                    <h3
-                      className="text-xl font-bold mb-3 group-hover:text-[#0EA5A0] transition-colors"
-                      style={{ color: "var(--text-primary)" }}
-                    >
+                  {/* Column 2: Service Title, Summary, Target & Quiet Link */}
+                  <div className="lg:pr-8">
+                    <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-heading">
                       {t(`items.${service.id}.title`)}
                     </h3>
-                    <p
-                      className="text-sm mb-6 leading-relaxed"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
+                    <p className="mt-3 text-sm sm:text-base leading-relaxed text-body">
                       {t(`items.${service.id}.description`)}
                     </p>
+                    <p className="mt-4 text-xs leading-relaxed text-muted-custom">
+                      {t(`items.${service.id}.target`)}
+                    </p>
+                    <div className="mt-5">
+                      <Link
+                        href="/contact"
+                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0D9E98] dark:text-[#2DD4BF] hover:gap-2.5 transition-all"
+                      >
+                        {t("catalogue.consult")}
+                        <ArrowRight size={15} />
+                      </Link>
+                    </div>
+                  </div>
 
-                    <div className="space-y-2.5 mb-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                        {t("catalogue.features")}
-                      </p>
-                      {["one", "two", "three", "four"].map((key) => (
-                        <div key={key} className="flex items-start gap-2.5 text-sm leading-relaxed">
-                          <CheckCircle2 size={16} className="text-[#0EA5A0] flex-shrink-0 mt-0.5" />
-                          <span style={{ color: "var(--text-primary)" }}>{t(`items.${service.id}.highlights.${key}`)}</span>
+                  {/* Column 3: 4 Capabilities */}
+                  <div
+                    className="lg:pl-8 lg:border-l"
+                    style={{ borderColor: "var(--border-subtle)" }}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-custom mb-3.5">
+                      {t("catalogue.features")}
+                    </p>
+                    <div className="space-y-2.5">
+                      {(["one", "two", "three", "four"] as const).map((key) => (
+                        <div
+                          key={key}
+                          className="flex items-baseline gap-3 text-sm leading-relaxed"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="h-1.5 w-1.5 rounded-full bg-[#0EA5A0] shrink-0 translate-y-[-1px]"
+                          />
+                          <span className="text-heading">
+                            {t(`items.${service.id}.highlights.${key}`)}
+                          </span>
                         </div>
                       ))}
                     </div>
                   </div>
-
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-4">
-                      <Building2 size={13} />
-                      <span className="line-clamp-1">{t(`items.${service.id}.target`)}</span>
-                    </div>
-                    <Link
-                      href="/contact"
-                      className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white bg-[#0B1F3A] hover:bg-[#0EA5A0] transition-colors duration-200"
-                    >
-                      {t("catalogue.consult")}
-                      <ArrowRight size={16} />
-                    </Link>
-                  </div>
-                </div>
+                </article>
               );
             })}
           </AnimatedElement>
         </div>
       </section>
 
-      {/* Fulfillment Paths */}
+      {/* Fulfillment Paths (Production) */}
       <section className="py-20" style={{ backgroundColor: "var(--bg-primary)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedElement type="fade-up">
@@ -373,7 +405,7 @@ export default function ServicesClient({
         </div>
       </section>
 
-      {/* Service Process Workflow */}
+      {/* Service Process Workflow (Production) */}
       <section className="py-20" style={{ backgroundColor: "var(--bg-primary)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedElement type="fade-up">
@@ -411,7 +443,7 @@ export default function ServicesClient({
         </div>
       </section>
 
-      {/* FAQ Section */}
+      {/* FAQ Section (Production) */}
       <section className="py-20" style={{ backgroundColor: "var(--bg-secondary)" }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedElement type="fade-up">
@@ -468,7 +500,7 @@ export default function ServicesClient({
         </div>
       </section>
 
-      {/* Call to Action Banner */}
+      {/* Call to Action Banner (Production) */}
       <section
         className="py-20 relative overflow-hidden"
         style={{
