@@ -166,13 +166,15 @@ export default function MikaJobCard({ job }: MikaJobCardProps) {
             </span>
           </div>
 
-          {/* Salary */}
-          <div className="flex items-center gap-2.5">
-            <Banknote size={15} className="shrink-0" style={{ color: "#0EA5A0" }} />
-            <span className="text-sm font-semibold" style={{ color: "#0EA5A0" }}>
-              {job.salary.formatted || t("salaryFallback")}
-            </span>
-          </div>
+          {/* Salary — hanya tampil bila tersedia dari MIKA Career */}
+          {job.salary.formatted && (
+            <div className="flex items-center gap-2.5">
+              <Banknote size={15} className="shrink-0" style={{ color: "#0EA5A0" }} />
+              <span className="text-sm font-semibold" style={{ color: "#0EA5A0" }}>
+                {job.salary.formatted}
+              </span>
+            </div>
+          )}
 
           {/* Deadline */}
           <div className="flex items-center gap-2.5">

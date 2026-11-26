@@ -175,7 +175,7 @@ export function normalizeMikaJob(
     status: job.status,
     employment_type: job.employment_type,
     location: job.location,
-    salary: { min: job.salary.min, max: job.salary.max, currency: job.salary.currency, formatted: job.salary.formatted },
+    salary: { min: job.salary.min, max: job.salary.max, currency: job.salary.currency, formatted: job.salary.formatted ?? null },
     quota: job.quota,
     deadline: job.deadline,
     deadline_info: {
@@ -268,7 +268,7 @@ function isMikaJob(value: unknown): value is MikaJob {
     (salary.min === null || typeof salary.min === "number") &&
     (salary.max === null || typeof salary.max === "number") &&
     typeof salary.currency === "string" &&
-    typeof salary.formatted === "string" &&
+    (salary.formatted === null || typeof salary.formatted === "string") &&
     typeof deadlineInfo.is_expired === "boolean" &&
     typeof deadlineInfo.is_active === "boolean" &&
     typeof deadlineInfo.days_remaining === "number" &&

@@ -2,7 +2,7 @@ export interface MikaSalary {
   min: number | null;
   max: number | null;
   currency: string;
-  formatted: string;
+  formatted: string | null;
 }
 
 export interface MikaDeadlineBadge {
