@@ -46,6 +46,8 @@ export interface ProductRow extends ProductAttributes {
   seo_description?: string | null;
   related_ids?: string[] | null;
   deleted_at?: string | null;
+  trashed_at?: string | null;
+  lifecycle_version?: number;
   has_active_variants?: boolean;
 }
 
@@ -515,7 +517,7 @@ export async function listAudit(limit = 100): Promise<AuditRow[]> {
 export async function listProductsByType(
   productType: "b2b_system" | "sparepart",
   query?: string,
-  options: { includeArchived?: boolean } = {}
+  options: { includeArchived?: boolean; includeTrashed?: boolean } = {}
 ): Promise<ProductRow[]> {
   await requireCapability("operations");
   const supabase = await getSupabase();
@@ -525,6 +527,9 @@ export async function listProductsByType(
     .eq("product_type", productType);
   if (!options.includeArchived) {
     builder = builder.is("deleted_at", null);
+  }
+  if (!options.includeTrashed) {
+    builder = builder.is("trashed_at", null);
   }
   builder = builder.order("sort_order", { ascending: true });
   if (query && query.trim()) {

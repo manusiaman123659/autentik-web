@@ -5,21 +5,30 @@ import Link from "next/link";
 import { Package, Search, X, RotateCcw } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
 import { Badge, TableShell, Th, Td, statusTone } from "@/components/admin/ui";
-import DeleteProductButton from "@/components/admin/DeleteProductButton";
-import RestoreProductButton from "@/components/admin/RestoreProductButton";
+import ProductLifecycleActions from "@/components/admin/ProductLifecycleActions";
+import { PRODUCT_EMPTY_STATES, type ProductLifecycleFilter } from "@/lib/product-lifecycle";
 import PaginationBar from "@/components/admin/PaginationBar";
 
 const ITEMS_PER_PAGE = 8;
 
-export default function ProductListClient({ products }: { products: ProductRow[] }) {
+export default function ProductListClient({
+  products,
+  canManageLifecycle = false,
+  canRestoreTrashed = false,
+}: {
+  products: ProductRow[];
+  canManageLifecycle?: boolean;
+  canRestoreTrashed?: boolean;
+}) {
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState("all");
   const [status, setStatus] = useState("all");
-  const [lifecycle, setLifecycle] = useState<"active" | "archived">("active");
+  const [lifecycle, setLifecycle] = useState<ProductLifecycleFilter>("current");
   const [page, setPage] = useState(1);
 
-  const activeCount = products.filter((p) => p.deleted_at == null).length;
-  const archivedCount = products.length - activeCount;
+  const activeCount = products.filter((p) => p.deleted_at == null && p.trashed_at == null).length;
+  const archivedCount = products.filter((p) => p.deleted_at != null && p.trashed_at == null).length;
+  const trashedCount = products.filter((p) => p.deleted_at != null && p.trashed_at != null).length;
 
   const brands = useMemo(
     () => Array.from(new Set(products.map((p) => p.brand))).filter(Boolean).sort((a, b) => a.localeCompare(b)),
@@ -27,9 +36,11 @@ export default function ProductListClient({ products }: { products: ProductRow[]
   );
 
   const filtered = useMemo(() => {
-    let list = products.filter((p) =>
-      lifecycle === "active" ? p.deleted_at == null : p.deleted_at != null
-    );
+    let list = products.filter((p) => {
+      if (lifecycle === "trashed") return p.deleted_at != null && p.trashed_at != null;
+      if (lifecycle === "archived") return p.deleted_at != null && p.trashed_at == null;
+      return p.deleted_at == null && p.trashed_at == null;
+    });
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(
@@ -71,26 +82,25 @@ export default function ProductListClient({ products }: { products: ProductRow[]
 
   const emptyTitle = filterActive
     ? "Tidak ada produk yang cocok"
-    : lifecycle === "archived"
-      ? "Belum ada produk diarsipkan"
-      : "Belum ada produk B2B aktif";
+    : PRODUCT_EMPTY_STATES.products[lifecycle].title;
 
   const emptyDescription = filterActive
     ? "Coba ubah kata kunci pencarian atau atur ulang filter."
-    : lifecycle === "archived"
-      ? "Produk yang diarsipkan akan tersedia di sini untuk dipulihkan."
-      : "Tambahkan produk utama yang ingin tampil di katalog produk situs.";
+    : PRODUCT_EMPTY_STATES.products[lifecycle].description;
 
   return (
     <div className="space-y-4">
-      <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 shadow-sm" aria-label="Status arsip produk">
+      <div
+        className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 shadow-sm"
+        aria-label="Status arsip produk"
+      >
         <button
           type="button"
-          aria-pressed={lifecycle === "active"}
-          onClick={() => { setLifecycle("active"); setPage(1); }}
-          className={`rounded-md px-3.5 py-2 text-sm font-semibold transition-colors ${lifecycle === "active" ? "bg-[#0EA5A0] text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+          aria-pressed={lifecycle === "current"}
+          onClick={() => { setLifecycle("current"); setPage(1); }}
+          className={`rounded-md px-3.5 py-2 text-sm font-semibold transition-colors ${lifecycle === "current" ? "bg-[#0EA5A0] text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
         >
-          Aktif <span className="ml-1 opacity-75">{activeCount}</span>
+          Belum diarsipkan <span className="ml-1 opacity-75">{activeCount}</span>
         </button>
         <button
           type="button"
@@ -100,6 +110,16 @@ export default function ProductListClient({ products }: { products: ProductRow[]
         >
           Diarsipkan <span className="ml-1 opacity-75">{archivedCount}</span>
         </button>
+        {canRestoreTrashed && (
+          <button
+            type="button"
+            aria-pressed={lifecycle === "trashed"}
+            onClick={() => { setLifecycle("trashed"); setPage(1); }}
+            className={`rounded-md px-3.5 py-2 text-sm font-semibold transition-colors ${lifecycle === "trashed" ? "bg-[#0EA5A0] text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+          >
+            Sampah <span className="ml-1 opacity-75">{trashedCount}</span>
+          </button>
+        )}
       </div>
 
       {/* Filter bar */}
@@ -107,6 +127,7 @@ export default function ProductListClient({ products }: { products: ProductRow[]
         <div className="relative flex-1 min-w-[180px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
+            aria-label="Cari produk"
             value={query}
             onChange={(e) => applyFilter({ query: e.target.value })}
             placeholder="Cari nama, slug, merek, kategori..."
@@ -124,6 +145,7 @@ export default function ProductListClient({ products }: { products: ProductRow[]
           )}
         </div>
         <select
+          aria-label="Filter merek produk"
           value={brand}
           onChange={(e) => applyFilter({ brand: e.target.value })}
           className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
@@ -136,6 +158,7 @@ export default function ProductListClient({ products }: { products: ProductRow[]
           ))}
         </select>
         <select
+          aria-label="Filter status produk"
           value={status}
           onChange={(e) => applyFilter({ status: e.target.value })}
           className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors"
@@ -191,76 +214,93 @@ export default function ProductListClient({ products }: { products: ProductRow[]
             </tr>
           </thead>
           <tbody>
-            {pageItems.map((p) => (
-              <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                <Td>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {p.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+            {pageItems.map((p) => {
+              const isActiveRow = p.deleted_at == null && p.trashed_at == null;
+              const isTrashedRow = p.deleted_at != null && p.trashed_at != null;
+              const isArchivedRow = p.deleted_at != null && p.trashed_at == null;
+              return (
+                <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {p.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <Package size={16} className="text-slate-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        {isActiveRow ? (
+                          <Link
+                            href={`/admin/produk/${p.id}`}
+                            className="font-semibold text-slate-900 dark:text-white hover:text-[#0EA5A0] transition-colors block truncate"
+                          >
+                            {p.name}
+                          </Link>
+                        ) : (
+                          <span className="font-semibold text-slate-900 dark:text-white block truncate">
+                            {p.name}
+                          </span>
+                        )}
+                        <span className="text-xs text-slate-400">/{p.slug}</span>
+                      </div>
+                    </div>
+                  </Td>
+                  <Td className="whitespace-nowrap">
+                    <span
+                      className="inline-flex items-center gap-1.5 text-sm font-medium"
+                      style={{ color: p.brand_color ?? undefined }}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ background: p.brand_color ?? "#94a3b8" }}
+                      />
+                      {p.brand}
+                    </span>
+                  </Td>
+                  <Td>
+                    <Badge label={p.category} className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300" />
+                  </Td>
+                  <Td>
+                    <div className="flex flex-wrap gap-1.5">
+                      {isTrashedRow ? (
+                        <Badge tone="red">Sampah</Badge>
                       ) : (
-                        <Package size={16} className="text-slate-400" />
+                        <>
+                          <Badge tone={statusTone(p.status)}>
+                            {p.status === "published" ? "Tayang" : "Draf"}
+                          </Badge>
+                          {isArchivedRow && <Badge tone="slate">Diarsipkan</Badge>}
+                        </>
                       )}
                     </div>
-                    <div className="min-w-0">
-                      {p.deleted_at == null ? (
+                  </Td>
+                  <Td className="text-right whitespace-nowrap">
+                    <div className="inline-flex items-center justify-end gap-3 whitespace-nowrap">
+                      {isActiveRow && (
                         <Link
                           href={`/admin/produk/${p.id}`}
-                          className="font-semibold text-slate-900 dark:text-white hover:text-[#0EA5A0] transition-colors block truncate"
+                          aria-label={`Edit ${p.name}`}
+                          className="inline-flex text-xs font-semibold text-[#0EA5A0] hover:underline"
                         >
-                          {p.name}
+                          Edit
                         </Link>
-                      ) : (
-                        <span className="font-semibold text-slate-900 dark:text-white block truncate">{p.name}</span>
                       )}
-                      <span className="text-xs text-slate-400">/{p.slug}</span>
+                      <ProductLifecycleActions
+                        product={p}
+                        canManage={canManageLifecycle}
+                        canRestoreTrashed={canRestoreTrashed}
+                      />
                     </div>
-                  </div>
-                </Td>
-                <Td>
-                  <span
-                    className="inline-flex items-center gap-1.5 text-sm font-medium"
-                    style={{ color: p.brand_color ?? undefined }}
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ background: p.brand_color ?? "#94a3b8" }}
-                    />
-                    {p.brand}
-                  </span>
-                </Td>
-                <Td>
-                  <Badge label={p.category} className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300" />
-                </Td>
-                <Td>
-                  <div className="flex flex-wrap gap-1.5">
-                    <Badge tone={statusTone(p.status)}>{p.status === "published" ? "Tayang" : "Draf"}</Badge>
-                    {p.deleted_at != null && <Badge tone="slate">Diarsipkan</Badge>}
-                  </div>
-                </Td>
-                <Td className="text-right whitespace-nowrap">
-                  {p.deleted_at == null ? (
-                    <>
-                      <Link
-                        href={`/admin/produk/${p.id}`}
-                        className="inline-flex mr-3 text-xs font-semibold text-[#0EA5A0] hover:underline"
-                      >
-                        Edit
-                      </Link>
-                      <DeleteProductButton id={p.id} name={p.name} redirectTo="/admin/produk" />
-                    </>
-                  ) : (
-                    <RestoreProductButton id={p.id} name={p.name} />
-                  )}
-                </Td>
-              </tr>
-            ))}
+                  </Td>
+                </tr>
+              );
+            })}
           </tbody>
         </TableShell>
       )}
 
-      {/* Pagination */}
       <PaginationBar
         totalItems={filtered.length}
         itemsPerPage={ITEMS_PER_PAGE}

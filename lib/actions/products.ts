@@ -9,6 +9,8 @@ import { productIdSchema, productSchema, type VariantRow } from "@/lib/validatio
 import { recordAudit } from "@/lib/audit";
 import { resolveAkaProductMediaUrl } from "@/lib/supabase-public-media";
 import { revalidateB2BProduct } from "@/lib/product-public-revalidation";
+import { archiveProduct, restoreArchivedProduct } from "@/lib/actions/productLifecycle";
+import type { ProductLifecycleRequest } from "@/lib/validations/productLifecycleSchema";
 
 export interface ActionResult {
   success: boolean;
@@ -335,37 +337,25 @@ export async function upsertProduct(
   };
 }
 
-export async function deleteProduct(id: string): Promise<ActionResult> {
+export async function deleteProduct(id: string, lifecycle?: ProductLifecycleRequest): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
+  const parsedId = productIdSchema.safeParse(id);
+  if (!parsedId.success) return { success: false, message: "ID produk tidak valid." };
 
-  const { data: archived, error } = await supabase
-    .from("products")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", id)
-    .is("deleted_at", null)
-    .select("id, slug, product_type")
-    .maybeSingle();
-  if (error) {
-    console.error("[action] archive product", { code: error.code, message: error.message });
-    return { success: false, message: "Gagal mengarsipkan produk. Silakan coba lagi." };
+  if (!lifecycle) {
+    return {
+      success: false,
+      message: "Aksi arsip produk memerlukan versi lifecycle dan ID permintaan.",
+      errors: { lifecycle: "invalid" },
+    };
   }
 
-  if (!archived) {
-    return { success: false, message: "Produk tidak ditemukan atau sudah diarsipkan." };
-  }
-
-  await recordAudit("product.archived", "product", id, { id });
-  revalidateProductRoutes();
-  if (archived.product_type === "b2b_system") revalidateB2BProduct([archived.slug]);
-
-  return { success: true, message: "Produk berhasil diarsipkan." };
+  return archiveProduct({ ...lifecycle, productId: parsedId.data });
 }
 
-export async function restoreProduct(id: string): Promise<ActionResult> {
+export async function restoreProduct(id: string, lifecycle?: ProductLifecycleRequest): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (!admin) return { success: false, message: "Anda tidak memiliki akses." };
 
@@ -374,39 +364,13 @@ export async function restoreProduct(id: string): Promise<ActionResult> {
     return { success: false, message: "ID produk tidak valid." };
   }
 
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  const { data: restored, error } = await supabase
-    .from("products")
-    .update({ deleted_at: null })
-    .eq("id", parsedId.data)
-    .not("deleted_at", "is", null)
-    .select("id, slug, product_type")
-    .maybeSingle();
-
-  if (error) {
-    console.error("[action] restore product", { code: error.code, message: error.message });
-    return { success: false, message: "Gagal memulihkan produk. Silakan coba lagi." };
+  if (!lifecycle) {
+    return {
+      success: false,
+      message: "Aksi pemulihan produk memerlukan versi lifecycle dan ID permintaan.",
+      errors: { lifecycle: "invalid" },
+    };
   }
 
-  if (!restored) {
-    return { success: false, message: "Produk tidak ditemukan atau sudah aktif." };
-  }
-
-  await recordAudit("product.restored", "product", restored.id, {
-    id: restored.id,
-    type: restored.product_type,
-  });
-  revalidateProductRoutes();
-  revalidatePath("/products");
-  revalidatePath("/store");
-  if (restored.product_type === "b2b_system") revalidateB2BProduct([restored.slug]);
-  revalidatePath(
-    restored.product_type === "sparepart"
-      ? `/store/${restored.slug}`
-      : `/products/${restored.slug}`
-  );
-
-  return { success: true, message: "Produk berhasil dipulihkan." };
+  return restoreArchivedProduct({ ...lifecycle, productId: parsedId.data });
 }

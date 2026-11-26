@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getAdminUser } from "@/lib/admin";
 import { listProductsByType } from "@/lib/admin-data";
 import { PageHeader } from "@/components/admin/ui";
 import SparepartListClient from "@/components/admin/SparepartListClient";
@@ -8,7 +9,14 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminSparepartPage() {
-  const products = await listProductsByType("sparepart", undefined, { includeArchived: true });
+  const [canManageLifecycle, canRestoreTrashed] = [
+    Boolean(await getAdminUser("shipping")),
+    Boolean(await getAdminUser("sensitive")),
+  ];
+  const products = await listProductsByType("sparepart", undefined, {
+    includeArchived: true,
+    includeTrashed: canRestoreTrashed,
+  });
 
   return (
     <div className="max-w-6xl">
@@ -19,7 +27,11 @@ export default async function AdminSparepartPage() {
         actionHref="/admin/sparepart/new"
       />
 
-      <SparepartListClient products={products} />
+      <SparepartListClient
+        products={products}
+        canManageLifecycle={canManageLifecycle}
+        canRestoreTrashed={canRestoreTrashed}
+      />
     </div>
   );
 }

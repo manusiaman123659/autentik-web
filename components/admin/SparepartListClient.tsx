@@ -5,25 +5,30 @@ import Link from "next/link";
 import { Package, Search, X, RotateCcw } from "lucide-react";
 import type { ProductRow } from "@/lib/admin-data";
 import { Badge, TableShell, Th, Td, statusTone, formatRupiah } from "@/components/admin/ui";
-import DeleteProductButton from "@/components/admin/DeleteProductButton";
-import RestoreProductButton from "@/components/admin/RestoreProductButton";
+import ProductLifecycleActions from "@/components/admin/ProductLifecycleActions";
+import { PRODUCT_EMPTY_STATES, type ProductLifecycleFilter } from "@/lib/product-lifecycle";
 import PaginationBar from "@/components/admin/PaginationBar";
 
 const ITEMS_PER_PAGE = 8;
 
 export default function SparepartListClient({
   products,
+  canManageLifecycle = false,
+  canRestoreTrashed = false,
 }: {
   products: ProductRow[];
+  canManageLifecycle?: boolean;
+  canRestoreTrashed?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState("all");
   const [status, setStatus] = useState("all");
-  const [lifecycle, setLifecycle] = useState<"active" | "archived">("active");
+  const [lifecycle, setLifecycle] = useState<ProductLifecycleFilter>("current");
   const [page, setPage] = useState(1);
 
-  const activeCount = products.filter((p) => p.deleted_at == null).length;
-  const archivedCount = products.length - activeCount;
+  const activeCount = products.filter((p) => p.deleted_at == null && p.trashed_at == null).length;
+  const archivedCount = products.filter((p) => p.deleted_at != null && p.trashed_at == null).length;
+  const trashedCount = products.filter((p) => p.deleted_at != null && p.trashed_at != null).length;
 
   const brands = useMemo(
     () => Array.from(new Set(products.map((p) => p.brand))).filter(Boolean).sort((a, b) => a.localeCompare(b)),
@@ -31,9 +36,11 @@ export default function SparepartListClient({
   );
 
   const filtered = useMemo(() => {
-    let list = products.filter((p) =>
-      lifecycle === "active" ? p.deleted_at == null : p.deleted_at != null
-    );
+    let list = products.filter((p) => {
+      if (lifecycle === "trashed") return p.deleted_at != null && p.trashed_at != null;
+      if (lifecycle === "archived") return p.deleted_at != null && p.trashed_at == null;
+      return p.deleted_at == null && p.trashed_at == null;
+    });
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       list = list.filter(
@@ -76,26 +83,25 @@ export default function SparepartListClient({
 
   const emptyTitle = filterActive
     ? "Tidak ada komponen yang cocok"
-    : lifecycle === "archived"
-      ? "Belum ada komponen diarsipkan"
-      : "Belum ada komponen aktif";
+    : PRODUCT_EMPTY_STATES.components[lifecycle].title;
 
   const emptyDescription = filterActive
     ? "Coba ubah kata kunci pencarian atau atur ulang filter."
-    : lifecycle === "archived"
-      ? "Komponen yang diarsipkan akan tersedia di sini untuk dipulihkan."
-      : "Tambahkan komponen beserta harga, stok, dan berat untuk mulai berjualan.";
+    : PRODUCT_EMPTY_STATES.components[lifecycle].description;
 
   return (
     <div className="min-w-0 space-y-4">
-      <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 shadow-sm" aria-label="Status arsip komponen">
+      <div
+        className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 shadow-sm"
+        aria-label="Status arsip komponen"
+      >
         <button
           type="button"
-          aria-pressed={lifecycle === "active"}
-          onClick={() => { setLifecycle("active"); setPage(1); }}
-          className={`rounded-md px-3.5 py-2 text-sm font-semibold transition-colors ${lifecycle === "active" ? "bg-[#0EA5A0] text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+          aria-pressed={lifecycle === "current"}
+          onClick={() => { setLifecycle("current"); setPage(1); }}
+          className={`rounded-md px-3.5 py-2 text-sm font-semibold transition-colors ${lifecycle === "current" ? "bg-[#0EA5A0] text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
         >
-          Aktif <span className="ml-1 opacity-75">{activeCount}</span>
+          Belum diarsipkan <span className="ml-1 opacity-75">{activeCount}</span>
         </button>
         <button
           type="button"
@@ -105,6 +111,16 @@ export default function SparepartListClient({
         >
           Diarsipkan <span className="ml-1 opacity-75">{archivedCount}</span>
         </button>
+        {canRestoreTrashed && (
+          <button
+            type="button"
+            aria-pressed={lifecycle === "trashed"}
+            onClick={() => { setLifecycle("trashed"); setPage(1); }}
+            className={`rounded-md px-3.5 py-2 text-sm font-semibold transition-colors ${lifecycle === "trashed" ? "bg-[#0EA5A0] text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+          >
+            Sampah <span className="ml-1 opacity-75">{trashedCount}</span>
+          </button>
+        )}
       </div>
 
       {/* Filter bar */}
@@ -112,6 +128,7 @@ export default function SparepartListClient({
         <div className="relative min-w-0 flex-1 sm:min-w-[180px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
+            aria-label="Cari komponen"
             value={query}
             onChange={(e) => applyFilter({ query: e.target.value })}
             placeholder="Cari nama, slug, merek, kategori, SKU..."
@@ -129,6 +146,7 @@ export default function SparepartListClient({
           )}
         </div>
         <select
+          aria-label="Filter merek komponen"
           value={brand}
           onChange={(e) => applyFilter({ brand: e.target.value })}
           className="w-full min-w-0 max-w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors sm:w-48"
@@ -141,6 +159,7 @@ export default function SparepartListClient({
           ))}
         </select>
         <select
+          aria-label="Filter status komponen"
           value={status}
           onChange={(e) => applyFilter({ status: e.target.value })}
           className="w-full min-w-0 max-w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0EA5A0]/50 focus:border-[#0EA5A0] transition-colors sm:w-40"
@@ -185,17 +204,7 @@ export default function SparepartListClient({
           )}
         </div>
       ) : (
-        <div className="min-w-0 space-y-2">
-        <p id="komponen-table-help" className="text-xs text-slate-500 dark:text-slate-400">Geser tabel bila kolom belum terlihat. Fokuskan nama atau SKU untuk melihat teks lengkap.</p>
-        <TableShell tableClassName="table-fixed min-w-[64rem]" scrollLabel="Katalog Komponen" scrollDescriptionId="komponen-table-help">
-          <colgroup>
-            <col />
-            <col className="w-32" />
-            <col className="w-40" />
-            <col className="w-32" />
-            <col className="w-32" />
-            <col className="w-60" />
-          </colgroup>
+        <TableShell>
           <thead>
             <tr>
               <Th>Komponen</Th>
@@ -211,6 +220,9 @@ export default function SparepartListClient({
               const stock = p.stock ?? 0;
               const low = p.low_stock_threshold ?? 5;
               const lowStock = stock > 0 && stock <= low;
+              const isActiveRow = p.deleted_at == null && p.trashed_at == null;
+              const isTrashedRow = p.deleted_at != null && p.trashed_at != null;
+              const isArchivedRow = p.deleted_at != null && p.trashed_at == null;
               return (
                 <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                   <Td>
@@ -223,24 +235,27 @@ export default function SparepartListClient({
                           <Package size={16} className="text-slate-400" />
                         )}
                       </div>
-                      <div className="group/name min-w-0 flex-1">
-                        {p.deleted_at == null ? (
+                      <div className="min-w-0">
+                        {isActiveRow ? (
                           <Link
                             href={`/admin/sparepart/${p.id}`}
-                            title={p.name}
-                            className="block line-clamp-2 font-semibold text-slate-900 dark:text-white [overflow-wrap:anywhere] hover:text-[#0EA5A0] focus:line-clamp-none focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-[#0EA5A0]"
+                            className="font-semibold text-slate-900 dark:text-white hover:text-[#0EA5A0] transition-colors block truncate"
                           >
                             {p.name}
                           </Link>
                         ) : (
-                          <span tabIndex={0} title={p.name} className="block line-clamp-2 font-semibold text-slate-900 dark:text-white [overflow-wrap:anywhere] focus:line-clamp-none focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-[#0EA5A0]">{p.name}</span>
+                          <span className="font-semibold text-slate-900 dark:text-white block truncate">
+                            {p.name}
+                          </span>
                         )}
-                        <span title={p.brand} className="block truncate text-xs text-slate-400 group-focus-within/name:whitespace-normal group-focus-within/name:[overflow-wrap:anywhere]">{p.brand}</span>
+                        <span className="text-xs text-slate-400">{p.brand}</span>
                       </div>
                     </div>
                   </Td>
-                  <Td className="text-xs font-mono whitespace-nowrap"><span tabIndex={0} title={p.sku ?? undefined} aria-label={`SKU ${p.sku ?? "tidak tersedia"}`} className="block overflow-hidden text-ellipsis whitespace-nowrap focus:overflow-x-auto focus:text-clip focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-[#0EA5A0]">{p.sku ?? "—"}</span></Td>
-                  <Td className="font-semibold whitespace-nowrap"><span tabIndex={0} aria-label={`Harga ${p.price != null ? formatRupiah(p.price) : "tidak tersedia"}`} className="block overflow-x-auto whitespace-nowrap tabular-nums focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-[#0EA5A0]">{p.price != null ? formatRupiah(p.price) : "—"}</span></Td>
+                  <Td className="text-xs font-mono whitespace-nowrap">{p.sku ?? "—"}</Td>
+                  <Td className="font-semibold whitespace-nowrap tabular-nums">
+                    {p.price != null ? formatRupiah(p.price) : "—"}
+                  </Td>
                   <Td className="whitespace-nowrap">
                     <Badge tone={stock === 0 ? "red" : lowStock ? "amber" : "green"}>
                       {stock === 0 ? "Habis" : `${stock} pcs`}
@@ -248,28 +263,34 @@ export default function SparepartListClient({
                   </Td>
                   <Td>
                     <div className="flex flex-wrap gap-1.5">
-                      <Badge tone={statusTone(p.status)}>{p.status === "published" ? "Tayang" : "Draf"}</Badge>
-                      {p.deleted_at != null && <Badge tone="slate">Diarsipkan</Badge>}
+                      {isTrashedRow ? (
+                        <Badge tone="red">Sampah</Badge>
+                      ) : (
+                        <>
+                          <Badge tone={statusTone(p.status)}>
+                            {p.status === "published" ? "Tayang" : "Draf"}
+                          </Badge>
+                          {isArchivedRow && <Badge tone="slate">Diarsipkan</Badge>}
+                        </>
+                      )}
                     </div>
                   </Td>
                   <Td className="text-right whitespace-nowrap">
-                    <div className="inline-flex items-center justify-end gap-2 whitespace-nowrap" onFocus={event => {
-                      if (event.target instanceof HTMLElement) event.target.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
-                    }}>
-                    {p.deleted_at == null ? (
-                      <>
+                    <div className="inline-flex items-center justify-end gap-3 whitespace-nowrap">
+                      {isActiveRow && (
                         <Link
                           href={`/admin/sparepart/${p.id}`}
                           aria-label={`Edit ${p.name}`}
-                          className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm text-xs font-semibold text-[#0EA5A0] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0EA5A0]"
+                          className="inline-flex text-xs font-semibold text-[#0EA5A0] hover:underline"
                         >
                           Edit
                         </Link>
-                        <DeleteProductButton id={p.id} name={p.name} redirectTo="/admin/sparepart" />
-                      </>
-                    ) : (
-                      <RestoreProductButton id={p.id} name={p.name} />
-                    )}
+                      )}
+                      <ProductLifecycleActions
+                        product={p}
+                        canManage={canManageLifecycle}
+                        canRestoreTrashed={canRestoreTrashed}
+                      />
                     </div>
                   </Td>
                 </tr>
@@ -277,10 +298,8 @@ export default function SparepartListClient({
             })}
           </tbody>
         </TableShell>
-        </div>
       )}
 
-      {/* Pagination */}
       <PaginationBar
         totalItems={filtered.length}
         itemsPerPage={ITEMS_PER_PAGE}
