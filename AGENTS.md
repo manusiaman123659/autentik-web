@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Project: autentik-web
 
-Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT Indonesia). Next.js 16.3.0, App Router, React 19, TypeScript strict, Tailwind CSS v4, default Turbopack.
+Situs company profile untuk **PT Autentik Karya Analitika** (produk industri/IoT Indonesia). Next.js 16.4.6, App Router, React 19, TypeScript strict, Tailwind CSS v4, `next-intl` (`id`/`en`/`zh-CN`), default Turbopack.
 
 ## Perintah
 - `npm run dev` / `npm run build` / `npm run start` — standar Next.js.
@@ -206,8 +206,11 @@ Komponen viewer 3D produk (`components/product/Product3DViewer.tsx`) dengan hots
 ## Autentikasi Admin & CMS (Supabase)
 - **Tombol login** di navbar/menu mobile adalah `components/auth/AdminNavButton.tsx` (client): "Masuk" → `/admin/login`, berubah jadi "Admin" + logout saat signed in.
 - **Routes**: `app/admin/login` (login publik) dan `app/admin/(dashboard)/*` (ter-guard). `app/admin/(dashboard)/layout.tsx` memanggil `getAdminUser()`; jika gagal `redirect("/admin/login")`.
-- **Status section**: `BUILT_SECTION_KEYS` di `lib/admin-sections.ts` = tepat **14 section keys** yang sudah dibangun: produk, **compro**, sparepart, stok, orders, inquiry, lead, **rfq**, integrasi, akses-staff, riwayat, **karir**, **merek**, **relasi** (dashboard adalah `/admin`, bukan key section). Section compro, karir, merek, relasi, rfq punya route sendiri (`/admin/compro`, `/admin/karir`, `/admin/merek`, `/admin/relasi`, `/admin/rfq`). **Semua section sudah dibangun** — tidak ada lagi placeholder; route catch-all `app/admin/(dashboard)/[section]/` memanggil `notFound()` untuk key apa pun yang ada di `BUILT_SECTION_KEYS` (key yang sudah dibangun ada di folder route sendiri, bukan di catch-all). Cek `BUILT_SECTION_KEYS` sebelum berasumsi sebuah halaman section ada.
-- **`lib/admin.ts`** = server-only; `getAdminUser()` (react `cache`) memvalidasi sesi via `auth.getUser()` lalu memuat baris `profiles` (self-select RLS) dan membutuhkan `role in ('admin','editor')` + `is_active`. **Jangan import ke komponen client** — ia menarik `next/headers`. Data/tipe murni bersama ada di `lib/admin-sections.ts` (re-export dari `lib/admin.ts`; import dari `admin-sections` di kode client, mis. `components/admin/AdminShell.tsx`).
+- **Status section**: `BUILT_SECTION_KEYS` di `lib/admin-sections.ts` = tepat **16 section keys** yang sudah dibangun: `orders`, `sparepart`, `stok`, `produk`, `compro`, `kontak`, `merek`, `karir`, `relasi`, `portfolio`, `inquiry`, `lead`, `rfq`, `akses-staff`, `integrasi`, `riwayat` (dashboard adalah `/admin`, bukan key section). **Semua section sudah dibangun** — route catch-all `app/admin/(dashboard)/[section]/` memanggil `notFound()` untuk key apa pun yang ada di `BUILT_SECTION_KEYS`.
+- **RBAC 5-role** (`lib/admin-permissions.ts`, migration `0061`): `super_admin`, `admin`, `staff`, `editor`, `customer` dengan capability `cms`, `operations`, `content`, `shipping`, `audit`, `sensitive`, `users`.
+- **Product Lifecycle 2-Tahap** (`ACTIVE → ARCHIVED → TRASHED`, migration `20261126090000_product_lifecycle.sql`): berlaku seragam untuk `b2b_system` dan `sparepart` via RPC atomik berversi `transition_product_lifecycle` (`lib/actions/productLifecycle.ts`, `components/admin/ProductLifecycleActions.tsx`). `archive`, `trash`, dan `restore_to_draft` untuk `admin`/`super_admin`; melihat daftar `Sampah` dan `restore_to_archive` **khusus `super_admin`**. Physical `DELETE` pada `public.products` diblokir permanen (`0052` + trigger guard).
+- **Konvensi 2 Remote Git**: `origin` (`manusiaman123659/autentik-web`) untuk pengembangan pribadi dan `magang-origin` (`Magang-Tekan/Autentik-Company-Profile-V2`) untuk production (`autentik.co.id`, memiliki `.github/workflows/deploy.yml`).
+- **`lib/admin.ts`** = server-only; `getAdminUser()` (react `cache`) memvalidasi sesi via `auth.getUser()` lalu memuat baris `profiles` (self-select RLS) dan membutuhkan capability CMS aktif (`isCmsRole` + `is_active`). **Jangan import ke komponen client** — ia menarik `next/headers`. Data/tipe murni bersama ada di `lib/admin-sections.ts` dan `lib/admin-permissions.ts`.
 - `lib/admin-sections.ts` mengekspor `ADMIN_SECTIONS` (link/meta section) dan `AdminUser`. Ikon section: `components/admin/sectionIcons.ts`.
 - Skema dibagi dalam migrasi berurutan, diterapkan berurutan di SQL editor Supabase — kini **`0001_schema.sql` … `0035_revoke_public_grants_admin_rpcs.sql`**:
   - `0001_schema.sql` — skema dasar; trigger `profiles` awalnya membuat `role='editor'` saat signup (diubah `0015` menjadi `'viewer'`).
@@ -274,7 +277,7 @@ Komponen viewer 3D produk (`components/product/Product3DViewer.tsx`) dengan hots
 - `lib/format.ts` — `formatRupiah()` currency formatter
 - `lib/midtrans.ts` — Midtrans Snap client wrapper (`createMidtransTransaction`)
 - `lib/logger.ts` — structured logging (`logError`, `logAudit`)
-- `supabase/migrations/` — 36 SQL migrations (0001–0038, gaps: 0024, 0027, 0031); file baru lanjut `0039_`
+- `supabase/migrations/` — 70 SQL migrations (`0001`–`0071`, `20261109120000`, `20261126090000`); lihat `docs/MIGRATION-LEDGER.md` untuk status apply Dev vs Production
 - `utils/supabase/` — client (browser), server (RSC), middleware (proxy)
 - `.agents/skills/` — 6 custom skills (admin-crud-pattern, no-ai-slop-design, supabase, supabase-migration-safety, supabase-postgres-best-practices, verification-before-done)
 

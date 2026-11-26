@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# autentik-web — PT Autentik Karya Analitika
 
-## Getting Started
+Situs company profile, katalog produk B2B, marketplace **Komponen** (`/store`), dan **Autentik CMS** (`/admin`) untuk **PT Autentik Karya Analitika** (produsen perangkat industri & IoT Indonesia).
 
-First, run the development server:
+## Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Framework**: Next.js `16.4.6` (App Router, Turbopack), React 19, TypeScript strict
+- **Styling & UI**: Tailwind CSS v4 (CSS-first, `app/globals.css`), `lucide-react`, `framer-motion`, GSAP, Three.js (`@react-three/fiber` / `drei`), `pdfjs-dist`
+- **Internasionalisasi (i18n)**: `next-intl` — locale `id` (default, tanpa prefix), `en` (`/en`), dan `zh-CN` (`/zh-cn`)
+- **Backend & Database**: Supabase (PostgreSQL, Auth, RLS, Storage bucket `media` & `technical-documents`, Realtime)
+- **Integrasi**: Midtrans Snap (checkout Komponen), Google Gemini AI (`/api/chat`), MIKA Careers API, MIKA Product Sync API v1 (`/api/integrations/mika/v1/*`), Resend (customer password recovery)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Memulai di Lokal
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Install dependensi**:
+   ```bash
+   npm ci
+   ```
+2. **Siapkan environment variables**:
+   Salin `.env.example` menjadi `.env.local` lalu isi kredensial Supabase (dan layanan opsional lain sesuai kebutuhan):
+   ```bash
+   cp .env.example .env.local
+   ```
+   > **Catatan build produksi**: `NEXT_PUBLIC_SITE_URL` wajib origin HTTPS publik yang valid saat `NODE_ENV=production` (contoh: `https://autentik.co.id`).
+3. **Jalankan server development**:
+   ```bash
+   npm run dev
+   ```
+   Buka `http://localhost:3000`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Perintah Utama
 
-## Learn More
+| Perintah | Fungsi |
+|---|---|
+| `npm run dev` | Menjalankan server development Next.js (Turbopack) |
+| `npm run lint` | Menjalankan ESLint langsung (`next lint` dihapus di Next.js 16) |
+| `npm run build` | Build produksi + TypeScript typecheck |
+| `npm run start` | Menjalankan hasil build produksi |
+| `npm run seed:build` | Regenerasi `supabase/seed.sql` dari `lib/data/*` |
 
-To learn more about Next.js, take a look at the following resources:
+## Struktur Direktori Utama
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `app/(public)/[locale]/(site)/` — Halaman publik multi-bahasa (home, about, products, store, careers, distributors, research-partnership, contact, auth)
+- `app/admin/(dashboard)/` — 16 section Admin CMS dengan RBAC 5-role (`super_admin`, `admin`, `staff`, `editor`, `customer`)
+- `app/api/` — Route handler API (chat AI, contact, RFQ, orders SSE, Midtrans webhook, MIKA Sync v1, auth recovery)
+- `components/` — Komponen UI publik & admin (primitif admin bersama di `components/admin/ui.tsx`)
+- `lib/` — Data layer server-only, server actions (`lib/actions/`), validasi Zod v4 (`lib/validations/`), helper lifecycle & RBAC
+- `i18n/` & `messages/` — Konfigurasi locale `next-intl` dan kamus terjemahan (`id`, `en`, `zh-CN`)
+- `supabase/migrations/` — Migrasi SQL berurutan (lihat [docs/MIGRATION-LEDGER.md](docs/MIGRATION-LEDGER.md))
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Migrasi Database & Deployment
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Semua perubahan skema berada di `supabase/migrations/` dan diterapkan di Supabase SQL Editor secara berurutan. Rujuk [docs/MIGRATION-LEDGER.md](docs/MIGRATION-LEDGER.md) untuk status migrasi terbaru.
+- Panduan teknis dan konvensi repo lengkap tersedia di [AGENTS.md](AGENTS.md).
+- Konvensi remote Git:
+  - `origin` (`https://github.com/manusiaman123659/autentik-web.git`) — repositori pribadi / pengembangan lokal.
+  - `magang-origin` (`https://github.com/Magang-Tekan/Autentik-Company-Profile-V2.git`) — repositori production (`autentik.co.id`, dilengkapi CI/CD `.github/workflows/deploy.yml`).
